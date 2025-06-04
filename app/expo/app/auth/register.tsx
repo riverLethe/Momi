@@ -65,7 +65,6 @@ export default function RegisterScreen() {
             onPress={() => router.back()}
             marginBottom="$6"
             alignSelf="flex-start"
-            padding="$0"
           >
             <ArrowLeft size={24} color="#1F2937" />
           </Button>
@@ -131,7 +130,6 @@ export default function RegisterScreen() {
           <Button
             marginTop="$8"
             borderRadius="$4"
-            padding="$4"
             backgroundColor={isLoading ? "$gray8" : "$blue9"}
             onPress={handleRegister}
             disabled={isLoading}
@@ -145,11 +143,10 @@ export default function RegisterScreen() {
             )}
           </Button>
 
-          <XStack marginTop="$8" justifyContent="center">
+          <XStack marginTop="$8" justifyContent="center" alignItems="center">
             <Text color="$gray10">Already have an account? </Text>
             <Button
               chromeless
-              padding="$0"
               onPress={() => router.push("/auth/login" as any)}
             >
               <Text color="$blue9" fontWeight="$6">

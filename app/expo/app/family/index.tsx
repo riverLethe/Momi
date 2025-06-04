@@ -163,7 +163,6 @@ export default function FamilySpacesScreen() {
       >
         <Button 
           chromeless
-          padding="$0" 
           onPress={() => router.back()} 
           marginRight="$4"
         >
@@ -180,7 +179,6 @@ export default function FamilySpacesScreen() {
             marginRight="$2"
             backgroundColor="$blue9"
             borderRadius="$4"
-            padding="$4"
             alignItems="center"
             onPress={() => {
               setShowCreateForm(true);
@@ -196,7 +194,6 @@ export default function FamilySpacesScreen() {
             marginLeft="$2"
             backgroundColor="$purple9"
             borderRadius="$4"
-            padding="$4"
             alignItems="center"
             onPress={() => {
               setShowJoinForm(true);
@@ -223,7 +220,6 @@ export default function FamilySpacesScreen() {
             />
             <Button
               backgroundColor="$blue9"
-              padding="$3"
               borderRadius="$4"
               onPress={handleCreateFamily}
             >
@@ -250,7 +246,6 @@ export default function FamilySpacesScreen() {
             />
             <Button
               backgroundColor="$purple9"
-              padding="$3"
               borderRadius="$4"
               onPress={handleJoinFamily}
             >
@@ -282,7 +277,6 @@ export default function FamilySpacesScreen() {
               elevate
             >
               <Button
-                padding="$4"
                 borderBottomWidth={1}
                 borderBottomColor="$gray3"
                 chromeless
@@ -309,7 +303,6 @@ export default function FamilySpacesScreen() {
                     </Text>
                     <Button 
                       chromeless
-                      padding="$0"
                       onPress={() => copyInviteCode(family.inviteCode)}
                     >
                       <Copy size={16} color="#3B82F6" />
@@ -325,7 +318,6 @@ export default function FamilySpacesScreen() {
 
               {family.createdBy === user?.id && (
                 <Button
-                  padding="$3"
                   backgroundColor="$red2"
                   flexDirection="row"
                   alignItems="center"

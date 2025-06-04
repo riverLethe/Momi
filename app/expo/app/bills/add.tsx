@@ -113,7 +113,6 @@ export default function AddBillScreen() {
       >
         <Button 
           chromeless
-          padding="$0"
           onPress={() => router.back()}
         >
           <ArrowLeft size={24} color="#1F2937" />
@@ -127,7 +126,6 @@ export default function AddBillScreen() {
 
         <Button 
           chromeless
-          padding="$0" 
           onPress={handleSave}
         >
           <Check size={24} color="#3B82F6" />
@@ -177,7 +175,6 @@ export default function AddBillScreen() {
                 opacity={selectedCategory === category.name ? 1 : 0.5}
                 onPress={() => setSelectedCategory(category.name)}
                 backgroundColor="transparent"
-                padding="$0"
               >
                 <Circle
                   size="$7"
@@ -215,7 +212,6 @@ export default function AddBillScreen() {
                   opacity={selectedAccount === account.name ? 1 : 0.5}
                   onPress={() => setSelectedAccount(account.name)}
                   backgroundColor="transparent"
-                  padding="$0"
                 >
                   <Circle
                     size="$6"
@@ -246,7 +242,6 @@ export default function AddBillScreen() {
             justifyContent="space-between"
             backgroundColor="$background"
             borderRadius="$4"
-            padding="$4"
             borderWidth={1}
             borderColor="$gray4"
             onPress={() => setShowDatePicker(true)}
@@ -303,7 +298,6 @@ export default function AddBillScreen() {
         <Button
           backgroundColor="$blue9"
           borderRadius="$4"
-          padding="$4"
           marginTop="$4"
           marginBottom="$10"
           onPress={handleSave}

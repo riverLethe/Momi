@@ -64,7 +64,7 @@ export default function ProfileScreen() {
           <H2>Profile</H2>
         </YStack>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}>
           {/* User Info Card */}
           <Card padding="$6" marginBottom="$6" alignItems="center" elevate>
             <Avatar circular size="$8" marginBottom="$4" backgroundColor="$gray3">
@@ -96,7 +96,6 @@ export default function ProfileScreen() {
             </Text>
 
             <Button
-              padding="$4"
               borderBottomWidth={1}
               borderBottomColor="$gray3"
               chromeless
@@ -122,12 +121,11 @@ export default function ProfileScreen() {
             </Text>
 
             <Button
-              padding="$4"
               borderBottomWidth={1}
               borderBottomColor="$gray3"
               chromeless
               justifyContent="flex-start"
-              onPress={() => router.push("/budget" as any)}
+              onPress={() => router.push("/budget")}
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
                 <XStack alignItems="center">
@@ -141,10 +139,9 @@ export default function ProfileScreen() {
             </Button>
 
             <Button
-              padding="$4"
               chromeless
               justifyContent="flex-start"
-              onPress={() => router.push("/export" as any)}
+              onPress={() => router.push("/export")}
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
                 <XStack alignItems="center">
@@ -165,12 +162,11 @@ export default function ProfileScreen() {
             </Text>
 
             <Button
-              padding="$4"
               borderBottomWidth={1}
               borderBottomColor="$gray3"
               chromeless
               justifyContent="flex-start"
-              onPress={() => router.push("/settings" as any)}
+              onPress={() => router.push("/settings")}
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
                 <XStack alignItems="center">
@@ -184,12 +180,9 @@ export default function ProfileScreen() {
             </Button>
 
             <Button
-              padding="$4"
               chromeless
               justifyContent="flex-start"
-              onPress={() => {
-                /* Handle notification settings */
-              }}
+              onPress={() => router.push("/notifications")}
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
                 <XStack alignItems="center">

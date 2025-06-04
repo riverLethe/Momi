@@ -121,11 +121,10 @@ export default function LoginScreen() {
             )}
           </Button>
 
-          <XStack marginTop="$8" justifyContent="center">
+          <XStack marginTop="$8" justifyContent="center" alignItems="center">
             <Text color="$gray10">Don't have an account? </Text>
             <Button
               chromeless
-              padding="$0"
               onPress={() => router.push("/auth/register" as any)}
             >
               <Text color="$blue9" fontWeight="$6">

@@ -189,7 +189,6 @@ export default function BillsScreen() {
       backgroundColor="$background"
       pressStyle={{ backgroundColor: "$gray3" }}
       onPress={() => router.push("/bills/add")}
-      padding="$4"
       marginVertical="$1"
       borderBottomWidth={1}
       borderBottomColor="$gray3"
@@ -283,7 +282,6 @@ export default function BillsScreen() {
           <Button
             position="absolute"
             left="$4"
-            top="$2"
             chromeless
           >
             <Search size={20} color="#6B7280" />

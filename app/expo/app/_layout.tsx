@@ -7,6 +7,7 @@ import { TamaguiProvider } from "tamagui";
 import config from "../tamagui.config";
 import "../global.css";
 import { AuthProvider } from "@/providers/AuthProvider";
+import NotificationProvider from "@/providers/NotificationProvider";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -41,12 +42,14 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <TamaguiProvider config={config}>
         <AuthProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: "slide_from_right",
-            }}
-          />
+          <NotificationProvider>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: "slide_from_right",
+              }}
+            />
+          </NotificationProvider>
         </AuthProvider>
       </TamaguiProvider>
     </SafeAreaProvider>

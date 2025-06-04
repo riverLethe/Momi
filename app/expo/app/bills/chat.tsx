@@ -210,7 +210,6 @@ export default function BillChatScreen() {
       >
         <Button 
           chromeless
-          padding="$0"
           onPress={() => router.back()}
         >
           <ArrowLeft size={24} color="#1F2937" />
@@ -224,7 +223,6 @@ export default function BillChatScreen() {
 
         <Button 
           chromeless
-          padding="$0"
           onPress={() => router.push("/bills/add" as any)}
         >
           <Pencil size={24} color="#1F2937" />
