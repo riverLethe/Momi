@@ -1,73 +1,81 @@
-import React from "react";
 import { Tabs } from "expo-router";
-import { Home, Receipt, BarChart3, User, Plus } from "lucide-react-native";
-import { useLanguage } from "@/hooks/useLanguage";
+import { Home, CreditCard, BarChart2, User, Plus } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { View, Circle } from "tamagui";
 
-export default function TabLayout() {
-  const { t } = useLanguage();
+export default function TabsLayout() {
+  const router = useRouter();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#0ea5e9",
-        tabBarInactiveTintColor: "#6b7280",
         tabBarStyle: {
-          backgroundColor: "#ffffff",
-          borderTopWidth: 1,
-          borderTopColor: "#e5e7eb",
           height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          paddingBottom: 10,
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
-        },
+        tabBarActiveTintColor: "#3B82F6",
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: t("Home"),
+          title: "Home",
           tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="transactions"
+        name="bills"
         options={{
-          title: t("Transactions"),
+          title: "Bills",
           tabBarIcon: ({ color, size }) => (
-            <Receipt size={size} color={color} />
+            <CreditCard size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="add"
         options={{
-          title: t("Add Transaction"),
-          tabBarIcon: ({ color, size }) => <Plus size={size} color={color} />,
+          title: "",
+          tabBarIcon: () => (
+            <View 
+              style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center", 
+                width: 56, 
+                height: 56, 
+                borderRadius: 28, 
+                backgroundColor: "#3B82F6", 
+                marginTop: -20 
+              }}
+            >
+              <Plus size={30} color="#FFFFFF" />
+            </View>
+          ),
         }}
         listeners={{
           tabPress: (e) => {
+            // Prevent default action
             e.preventDefault();
-            // 这里可以导航到聊天页面或添加页面
+            // Navigate to AI chat bill entry
+            router.push("/bills/chat" as any);
           },
         }}
       />
       <Tabs.Screen
         name="reports"
         options={{
-          title: t("Reports"),
+          title: "Reports",
           tabBarIcon: ({ color, size }) => (
-            <BarChart3 size={size} color={color} />
+            <BarChart2 size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: t("Profile"),
+          title: "Profile",
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />

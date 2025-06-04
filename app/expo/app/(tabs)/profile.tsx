@@ -1,155 +1,227 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
 import {
   User,
-  Users,
-  Wallet,
-  Target,
-  Download,
+  Home,
+  CreditCard,
+  FileText,
+  Settings,
   Bell,
-  HelpCircle,
   LogOut,
   ChevronRight,
-  Globe,
 } from "lucide-react-native";
-import { Card, LanguageSelector } from "@/components/ui";
-import { useAppStore } from "@/hooks/useStore";
-import { useLanguage } from "@/hooks/useLanguage";
+import {
+  View,
+  Text,
+  Button,
+  XStack,
+  YStack,
+  Card,
+  H2,
+  Avatar,
+  Circle,
+  Separator
+} from "tamagui";
 
-export default function ProfilePage() {
-  const { user, logout } = useAppStore();
-  const { t } = useLanguage();
+import { useAuth } from "@/providers/AuthProvider";
 
-  const menuItems = [
-    {
-      title: t("My Family Spaces"),
-      icon: Users,
-      onPress: () => router.push("/family"),
-      description: t("Manage family members and shared transactions"),
-    },
-    {
-      title: t("My Budgets"),
-      icon: Target,
-      onPress: () => router.push("/budgets"),
-      description: t("Set and manage personal budgets"),
-    },
-    {
-      title: t("Payment Accounts"),
-      icon: Wallet,
-      onPress: () => router.push("/accounts"),
-      description: t("Manage bank cards and payment methods"),
-    },
-    {
-      title: t("Export Data"),
-      icon: Download,
-      onPress: () => router.push("/export"),
-      description: t("Export transaction data"),
-    },
-    {
-      title: t("Notification Settings"),
-      icon: Bell,
-      onPress: () => router.push("/notifications"),
-      description: t("Manage push notifications"),
-    },
-    {
-      title: t("Help & Feedback"),
-      icon: HelpCircle,
-      onPress: () => router.push("/help"),
-      description: t("Get help and submit feedback"),
-    },
-  ];
+export default function ProfileScreen() {
+  const router = useRouter();
+  const { user, isLoggedIn, logout } = useAuth();
 
-  const handleLogout = () => {
-    logout();
-    router.replace("/auth/login");
+  const handleFamilySpacePress = () => {
+    if (!isLoggedIn) {
+      // Prompt the user to login
+      Alert.alert(
+        "Login Required",
+        "You need to login to manage family spaces.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Login", onPress: () => router.push("/auth/login") },
+        ]
+      );
+      return;
+    }
+
+    router.push("/family");
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    // No need to navigate since we're already on the profile page
+  };
+
+  const handleLogin = () => {
+    router.push("/auth/login");
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView className="flex-1">
-        {/* 用户信息卡片 */}
-        <Card className="mx-4 mt-4">
-          <View className="flex-row items-center">
-            <View className="w-16 h-16 bg-primary-500 rounded-full items-center justify-center mr-4">
-              <User size={32} color="#ffffff" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-xl font-semibold text-gray-900 mb-1">
-                {user?.nickname || t("User")}
-              </Text>
-              <Text className="text-gray-500">
-                {user?.email || "user@example.com"}
-              </Text>
-              <Text className="text-sm text-gray-400 mt-1">
-                ID: {user?.id || "USER001"}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push("/profile/edit")}
-              className="p-2"
-            >
-              <ChevronRight size={20} color="#6b7280" />
-            </TouchableOpacity>
-          </View>
-        </Card>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+      <YStack flex={1}>
+        <YStack padding="$4">
+          <H2>Profile</H2>
+        </YStack>
 
-        {/* 语言设置卡片 */}
-        <Card className="mx-4 mt-4">
-          <View className="flex-row items-center mb-3">
-            <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-              <Globe size={20} color="#6b7280" />
-            </View>
-            <Text className="font-medium text-gray-900 flex-1">
-              Language / 语言
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
+          {/* User Info Card */}
+          <Card padding="$6" marginBottom="$6" alignItems="center" elevate>
+            <Avatar circular size="$8" marginBottom="$4" backgroundColor="$gray3">
+              <User size={40} color="#9CA3AF" />
+            </Avatar>
+            <Text fontSize="$6" fontWeight="$7">
+              {isLoggedIn ? user?.username : "Guest"}
             </Text>
-          </View>
-          <LanguageSelector />
-        </Card>
+            {isLoggedIn ? (
+              <Text color="$gray10">{user?.id}</Text>
+            ) : (
+              <Button
+                marginTop="$3"
+                backgroundColor="$blue9"
+                paddingHorizontal="$6"
+                paddingVertical="$2"
+                borderRadius="$10"
+                onPress={handleLogin}
+              >
+                <Text color="white" fontWeight="$6">Login</Text>
+              </Button>
+            )}
+          </Card>
 
-        {/* 菜单列表 */}
-        <View className="mt-6">
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={item.onPress}
-              className="bg-white border-b border-gray-100 px-4 py-4"
+          {/* Family Space Section */}
+          <Card marginBottom="$6" elevate>
+            <Text padding="$4" paddingBottom="$2" fontWeight="$6" color="$gray10">
+              FAMILY
+            </Text>
+
+            <Button
+              padding="$4"
+              borderBottomWidth={1}
+              borderBottomColor="$gray3"
+              chromeless
+              justifyContent="flex-start"
+              onPress={handleFamilySpacePress}
             >
-              <View className="flex-row items-center">
-                <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                  <item.icon size={20} color="#6b7280" />
-                </View>
-                <View className="flex-1">
-                  <Text className="font-medium text-gray-900 mb-1">
-                    {item.title}
-                  </Text>
-                  <Text className="text-sm text-gray-500">
-                    {item.description}
-                  </Text>
-                </View>
-                <ChevronRight size={20} color="#6b7280" />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+              <XStack alignItems="center" justifyContent="space-between" width="100%">
+                <XStack alignItems="center">
+                  <Circle size="$4" backgroundColor="$blue2" marginRight="$3">
+                    <Home size={20} color="#3B82F6" />
+                  </Circle>
+                  <Text fontWeight="$6">Family Spaces</Text>
+                </XStack>
+                <ChevronRight size={20} color="#9CA3AF" />
+              </XStack>
+            </Button>
+          </Card>
 
-        {/* 退出登录 */}
-        <TouchableOpacity
-          onPress={handleLogout}
-          className="bg-white mx-4 mt-6 mb-6 rounded-lg px-4 py-4"
-        >
-          <View className="flex-row items-center justify-center">
-            <LogOut size={20} color="#ef4444" />
-            <Text className="text-red-500 font-medium ml-2">{t("Logout")}</Text>
-          </View>
-        </TouchableOpacity>
+          {/* Personal Finance Section */}
+          <Card marginBottom="$6" elevate>
+            <Text padding="$4" paddingBottom="$2" fontWeight="$6" color="$gray10">
+              FINANCE
+            </Text>
 
-        {/* 版本信息 */}
-        <View className="items-center pb-6">
-          <Text className="text-gray-400 text-sm">Momi v1.0.0</Text>
-        </View>
-      </ScrollView>
+            <Button
+              padding="$4"
+              borderBottomWidth={1}
+              borderBottomColor="$gray3"
+              chromeless
+              justifyContent="flex-start"
+              onPress={() => router.push("/budget" as any)}
+            >
+              <XStack alignItems="center" justifyContent="space-between" width="100%">
+                <XStack alignItems="center">
+                  <Circle size="$4" backgroundColor="$green2" marginRight="$3">
+                    <CreditCard size={20} color="#10B981" />
+                  </Circle>
+                  <Text fontWeight="$6">My Budgets</Text>
+                </XStack>
+                <ChevronRight size={20} color="#9CA3AF" />
+              </XStack>
+            </Button>
+
+            <Button
+              padding="$4"
+              chromeless
+              justifyContent="flex-start"
+              onPress={() => router.push("/export" as any)}
+            >
+              <XStack alignItems="center" justifyContent="space-between" width="100%">
+                <XStack alignItems="center">
+                  <Circle size="$4" backgroundColor="$purple2" marginRight="$3">
+                    <FileText size={20} color="#8B5CF6" />
+                  </Circle>
+                  <Text fontWeight="$6">Export Data</Text>
+                </XStack>
+                <ChevronRight size={20} color="#9CA3AF" />
+              </XStack>
+            </Button>
+          </Card>
+
+          {/* Settings Section */}
+          <Card marginBottom="$6" elevate>
+            <Text padding="$4" paddingBottom="$2" fontWeight="$6" color="$gray10">
+              SETTINGS
+            </Text>
+
+            <Button
+              padding="$4"
+              borderBottomWidth={1}
+              borderBottomColor="$gray3"
+              chromeless
+              justifyContent="flex-start"
+              onPress={() => router.push("/settings" as any)}
+            >
+              <XStack alignItems="center" justifyContent="space-between" width="100%">
+                <XStack alignItems="center">
+                  <Circle size="$4" backgroundColor="$gray3" marginRight="$3">
+                    <Settings size={20} color="#6B7280" />
+                  </Circle>
+                  <Text fontWeight="$6">App Settings</Text>
+                </XStack>
+                <ChevronRight size={20} color="#9CA3AF" />
+              </XStack>
+            </Button>
+
+            <Button
+              padding="$4"
+              chromeless
+              justifyContent="flex-start"
+              onPress={() => {
+                /* Handle notification settings */
+              }}
+            >
+              <XStack alignItems="center" justifyContent="space-between" width="100%">
+                <XStack alignItems="center">
+                  <Circle size="$4" backgroundColor="$yellow2" marginRight="$3">
+                    <Bell size={20} color="#F59E0B" />
+                  </Circle>
+                  <Text fontWeight="$6">Notifications</Text>
+                </XStack>
+                <ChevronRight size={20} color="#9CA3AF" />
+              </XStack>
+            </Button>
+          </Card>
+
+          {/* Logout Button (only if logged in) */}
+          {isLoggedIn && (
+            <Button
+              backgroundColor="$background"
+              padding="$4"
+              marginBottom="$10"
+              alignItems="center"
+              justifyContent="center"
+              elevate
+              onPress={handleLogout}
+            >
+              <XStack>
+                <LogOut size={20} color="#EF4444" />
+                <Text fontWeight="$6" color="#EF4444" marginLeft="$2">Logout</Text>
+              </XStack>
+            </Button>
+          )}
+        </ScrollView>
+      </YStack>
     </SafeAreaView>
   );
 }

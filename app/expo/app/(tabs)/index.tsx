@@ -1,306 +1,208 @@
-import React, { useState, useMemo } from "react";
-import { ScrollView, TouchableOpacity, FlatList } from "react-native";
+import React from "react";
+import { ScrollView, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { YStack, XStack, Button, Text } from "tamagui";
-import {
-  Bell,
-  Plus,
-  Edit3,
-  TrendingUp,
-  TrendingDown,
-  ArrowRight,
-} from "lucide-react-native";
-import { Card, ViewToggle } from "@/components/ui";
-import { useAppStore, useTransactionStore } from "@/hooks/useStore";
-import { useLanguage } from "@/hooks/useLanguage";
-import { formatCurrency, formatRelativeTime } from "@/utils";
-import { Transaction, ViewType } from "@/types";
+import { useRouter } from "expo-router";
+import { Bell, Plus, ChevronRight } from "lucide-react-native";
+import { 
+  View, 
+  Text, 
+  Card, 
+  Button, 
+  XStack, 
+  YStack, 
+  Avatar, 
+  Circle, 
+  Separator 
+} from "tamagui";
 
-export default function HomePage() {
-  const { currentView, currentFamilySpace, setCurrentView } = useAppStore();
-  const { transactions } = useTransactionStore();
-  const { t } = useLanguage();
+import { useViewStore } from "@/stores/viewStore";
+import { useAuth } from "@/providers/AuthProvider";
 
-  // 根据当前视图筛选交易记录
-  const filteredTransactions = useMemo(() => {
-    if (currentView === "personal") {
-      // 个人视图：显示用户创建的所有账单
-      return transactions.filter((t) => t.creatorId === "current-user-id"); // 实际应用中应该使用真实的用户ID
-    } else {
-      // 家庭视图：显示当前家庭空间的所有账单
-      return transactions.filter(
-        (t) => t.familySpaceId === currentFamilySpace?.id
-      );
+export default function HomeScreen() {
+  const router = useRouter();
+  const { viewMode, currentFamilySpace, setViewMode } = useViewStore();
+  const { isLoggedIn, user } = useAuth();
+
+  // Toggle between personal and family view
+  const toggleViewMode = () => {
+    if (!isLoggedIn && viewMode === "personal") {
+      // If user is not logged in and tries to switch to family view, prompt to login
+      router.push("/auth/login");
+      return;
     }
-  }, [transactions, currentView, currentFamilySpace]);
 
-  // 计算财务概览数据
-  const financialSummary = useMemo(() => {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    const monthlyTransactions = filteredTransactions.filter((t) => {
-      const transactionDate = new Date(t.date);
-      return (
-        transactionDate.getMonth() === currentMonth &&
-        transactionDate.getFullYear() === currentYear
-      );
-    });
-
-    const totalExpense = monthlyTransactions
-      .filter((t) => t.amount < 0)
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-
-    const totalIncome = monthlyTransactions
-      .filter((t) => t.amount > 0)
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return {
-      totalExpense,
-      totalIncome,
-      balance: totalIncome - totalExpense,
-    };
-  }, [filteredTransactions]);
-
-  // 最近账单（最多显示5条）
-  const recentTransactions = useMemo(() => {
-    return filteredTransactions
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
-      .slice(0, 5);
-  }, [filteredTransactions]);
-
-  const handleViewChange = (view: ViewType) => {
-    setCurrentView(view);
+    setViewMode(viewMode === "personal" ? "family" : "personal");
   };
-
-  const handleAddTransaction = () => {
-    router.push("/chat");
-  };
-
-  const handleManualAdd = () => {
-    router.push("/transactions/add");
-  };
-
-  const renderTransactionItem = ({ item }: { item: Transaction }) => (
-    <TouchableOpacity
-      onPress={() => router.push(`/transactions/${item.id}`)}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
-      }}
-    >
-      <XStack flex={1} className="items-center" gap="$3">
-        <XStack
-          width={40}
-          height={40}
-          bg="$blue2"
-          className="items-center rounded-lg justify-center"
-        >
-          <Text color="$blue10" fontWeight="600">
-            {t(item.category).charAt(0)}
-          </Text>
-        </XStack>
-
-        <YStack flex={1}>
-          <Text fontWeight="500" color="$gray12" numberOfLines={1}>
-            {item.description}
-          </Text>
-          <Text fontSize="$2" color="$gray10">
-            {item.merchant} • {formatRelativeTime(new Date(item.createdAt), t)}
-          </Text>
-          {currentView === "family" && item.creator && (
-            <Text fontSize="$1" color="$gray8">
-              {t("Recorded by")}: {item.creator.nickname}
-            </Text>
-          )}
-        </YStack>
-
-        <Text fontWeight="600" color={item.amount >= 0 ? "$green10" : "$red10"}>
-          {formatCurrency(item.amount)}
-        </Text>
-      </XStack>
-    </TouchableOpacity>
-  );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
-      {/* Header */}
-      <XStack className="items-center justify-between" p="$4" bg="white">
-        <XStack className="items-center" gap="$3">
-          <XStack
-            width={32}
-            height={32}
-            bg="$blue10"
-            className="items-center rounded-lg justify-center"
-          >
-            <Text color="white" fontWeight="600">
-              M
-            </Text>
-          </XStack>
-          <Text fontSize="$5" fontWeight="600" color="$gray12">
-            {t("Momi")}
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+      <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$2">
+        <XStack alignItems="center">
+          <Avatar circular size="$4" marginRight="$2">
+            <Avatar.Image accessibilityLabel="User avatar" />
+            <Avatar.Fallback backgroundColor="$gray5" />
+          </Avatar>
+          <Text fontSize="$5" fontWeight="$6">
+            {isLoggedIn ? user?.username : "Guest"}
           </Text>
         </XStack>
 
-        <ViewToggle
-          currentView={currentView}
-          familySpaceName={currentFamilySpace?.name}
-          onViewChange={handleViewChange}
-        />
-
-        <TouchableOpacity style={{ padding: 8 }}>
-          <Bell size={24} color="#6b7280" />
-        </TouchableOpacity>
-      </XStack>
-
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        {/* 财务概览卡片 */}
-        <YStack p="$4">
-          <Card>
-            <YStack className="items-center" gap="$4">
-              <YStack className="items-center" gap="$1">
-                <Text fontSize="$2" color="$gray10">
-                  {t("Monthly Balance")} (
-                  {currentView === "personal"
-                    ? t("Personal")
-                    : currentFamilySpace?.name || t("Family")}
-                  )
-                </Text>
-                <Text fontSize="$8" fontWeight="700" color="$gray12">
-                  {formatCurrency(financialSummary.balance)}
-                </Text>
-              </YStack>
-
-              <XStack className="justify-between" width="100%">
-                <YStack flex={1} className="items-center">
-                  <XStack className="items-center" gap="$1" mb="$1">
-                    <TrendingUp size={16} color="#10b981" />
-                    <Text fontSize="$2" color="$gray10">
-                      {t("Income")}
-                    </Text>
-                  </XStack>
-                  <Text fontWeight="600" color="$green10">
-                    {formatCurrency(financialSummary.totalIncome)}
-                  </Text>
-                </YStack>
-
-                <YStack width={1} bg="$gray5" mx="$4" />
-
-                <YStack flex={1} className="items-center">
-                  <XStack className="items-center" gap="$1" mb="$1">
-                    <TrendingDown size={16} color="#ef4444" />
-                    <Text fontSize="$2" color="$gray10">
-                      {t("Expense")}
-                    </Text>
-                  </XStack>
-                  <Text fontWeight="600" color="$red10">
-                    {formatCurrency(financialSummary.totalExpense)}
-                  </Text>
-                </YStack>
-              </XStack>
-            </YStack>
-          </Card>
-        </YStack>
-
-        {/* 快捷操作 */}
-        <XStack p="$4" gap="$3">
+        <XStack alignItems="center">
           <Button
-            flex={1}
-            bg="$blue10"
-            onPress={handleAddTransaction}
-            height="$5"
+            size="$3"
+            marginRight="$2"
+            backgroundColor="$gray3"
+            borderRadius="$10"
+            onPress={toggleViewMode}
           >
-            <XStack className="items-center" gap="$2">
-              <Plus size={24} color="#ffffff" />
-              <Text color="white" fontWeight="500">
-                {t("AI Assistant")}
-              </Text>
-            </XStack>
+            <Text fontSize="$4" fontWeight="$6">
+              {viewMode === "personal"
+                ? "Personal"
+                : currentFamilySpace?.name || "Family"}
+            </Text>
           </Button>
 
-          <Button flex={1} bg="white" onPress={handleManualAdd} height="$5">
-            <XStack className="items-center" gap="$2">
-              <Edit3 size={24} color="#6b7280" />
-              <Text color="$gray11" fontWeight="500">
-                {t("Manual Entry")}
-              </Text>
-            </XStack>
+          <Button size="$3" circular chromeless onPress={() => {}}>
+            <Bell size={24} color="#1F2937" />
+          </Button>
+        </XStack>
+      </XStack>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
+        {/* Financial Summary Card */}
+        <Card marginTop="$4" padding="$4" bordered elevate>
+          <Text fontSize="$5" fontWeight="$7" marginBottom="$2">
+            {viewMode === "personal" ? "My Summary" : "Family Summary"}
+          </Text>
+          <XStack justifyContent="space-between" marginBottom="$2">
+            <YStack>
+              <Text color="$gray10">This Month</Text>
+              <Text fontSize="$7" fontWeight="$8">¥2,580</Text>
+            </YStack>
+            <YStack>
+              <Text color="$gray10">Balance</Text>
+              <Text fontSize="$7" fontWeight="$8" color="$green10">¥12,350</Text>
+            </YStack>
+          </XStack>
+        </Card>
+
+        {/* Quick Actions */}
+        <XStack justifyContent="space-between" marginTop="$6">
+          <Button
+            flex={1}
+            marginRight="$2"
+            backgroundColor="$blue9"
+            color="white"
+            size="$4"
+            borderRadius="$4"
+            onPress={() => router.push("/bills/chat")}
+          >
+            <Text color="white" fontWeight="$6">
+              AI Record
+            </Text>
+          </Button>
+
+          <Button
+            flex={1}
+            marginLeft="$2"
+            backgroundColor="$purple9"
+            color="white"
+            size="$4"
+            borderRadius="$4"
+            onPress={() => router.push("/bills/add")}
+          >
+            <Text color="white" fontWeight="$6">
+              Manual Record
+            </Text>
           </Button>
         </XStack>
 
-        {/* 最近账单 */}
-        <YStack p="$4">
-          <Card>
-            <YStack gap="$4">
-              <XStack className="items-center justify-between">
-                <Text fontSize="$5" fontWeight="600" color="$gray12">
-                  {t("Recent Transactions")} (
-                  {currentView === "personal"
-                    ? t("Personal")
-                    : currentFamilySpace?.name || t("Family")}
-                  )
-                </Text>
-                <TouchableOpacity onPress={() => router.push("/transactions")}>
-                  <XStack className="items-center" gap="$1">
-                    <Text color="$blue10" fontSize="$2">
-                      {t("View All")}
-                    </Text>
-                    <ArrowRight size={16} color="#0ea5e9" />
-                  </XStack>
-                </TouchableOpacity>
+        {/* Recent Transactions */}
+        <YStack marginTop="$6">
+          <XStack justifyContent="space-between" alignItems="center" marginBottom="$2">
+            <Text fontSize="$5" fontWeight="$7">Recent Bills</Text>
+            <Button
+              chromeless
+              onPress={() => router.push("/bills")}
+              pressStyle={{ opacity: 0.7 }}
+            >
+              <XStack alignItems="center">
+                <Text color="$blue9" marginRight="$1">View All</Text>
+                <ChevronRight size={16} color="#3B82F6" />
               </XStack>
+            </Button>
+          </XStack>
 
-              {recentTransactions.length > 0 ? (
-                <FlatList
-                  data={recentTransactions}
-                  renderItem={renderTransactionItem}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={false}
-                />
-              ) : (
-                <YStack py="$8" className="items-center">
-                  <Text color="$gray10">{t("No transactions yet")}</Text>
-                  <Text fontSize="$2" color="$gray8" mt="$1">
-                    {currentView === "personal"
-                      ? t("Start recording your first transaction")
-                      : t("Family members haven't added any transactions yet")}
-                  </Text>
-                </YStack>
-              )}
-            </YStack>
+          {/* Example transactions */}
+          {[1, 2, 3].map((item) => (
+            <Card
+              key={item}
+              marginBottom="$3"
+              padding="$4"
+              bordered
+              pressStyle={{ scale: 0.98 }}
+              onPress={() => router.push("/bills/add")}
+            >
+              <XStack alignItems="center" justifyContent="space-between">
+                <XStack alignItems="center">
+                  <Circle size="$4" backgroundColor="$gray3" marginRight="$3">
+                    <Text>🛒</Text>
+                  </Circle>
+                  <YStack>
+                    <Text fontWeight="$6">Groceries</Text>
+                    <Text color="$gray10" fontSize="$2">Today, 14:30</Text>
+                  </YStack>
+                </XStack>
+                <Text fontWeight="$6">-¥128.50</Text>
+              </XStack>
+            </Card>
+          ))}
+        </YStack>
+
+        {/* Spending Analysis Preview */}
+        <YStack marginTop="$4" marginBottom="$8">
+          <XStack justifyContent="space-between" alignItems="center" marginBottom="$2">
+            <Text fontSize="$5" fontWeight="$7">Spending Analysis</Text>
+            <Button
+              chromeless
+              onPress={() => router.push("/reports")}
+              pressStyle={{ opacity: 0.7 }}
+            >
+              <XStack alignItems="center">
+                <Text color="$blue9" marginRight="$1">Details</Text>
+                <ChevronRight size={16} color="#3B82F6" />
+              </XStack>
+            </Button>
+          </XStack>
+
+          <Card padding="$4" bordered elevate>
+            <Text textAlign="center" marginBottom="$4">Top Categories</Text>
+            <XStack justifyContent="space-around">
+              <YStack alignItems="center">
+                <Circle size="$6" backgroundColor="$blue3" marginBottom="$2">
+                  <Text fontSize="$5">🍔</Text>
+                </Circle>
+                <Text>Food</Text>
+                <Text fontWeight="$6">¥850</Text>
+              </YStack>
+              <YStack alignItems="center">
+                <Circle size="$6" backgroundColor="$green3" marginBottom="$2">
+                  <Text fontSize="$5">🚗</Text>
+                </Circle>
+                <Text>Transport</Text>
+                <Text fontWeight="$6">¥650</Text>
+              </YStack>
+              <YStack alignItems="center">
+                <Circle size="$6" backgroundColor="$purple3" marginBottom="$2">
+                  <Text fontSize="$5">🛍️</Text>
+                </Circle>
+                <Text>Shopping</Text>
+                <Text fontWeight="$6">¥450</Text>
+              </YStack>
+            </XStack>
           </Card>
         </YStack>
       </ScrollView>
-
-      {/* 悬浮记账按钮 */}
-      <TouchableOpacity
-        onPress={handleAddTransaction}
-        style={{
-          position: "absolute",
-          bottom: 80,
-          right: 16,
-          width: 56,
-          height: 56,
-          backgroundColor: "#0ea5e9",
-          borderRadius: 28,
-          alignItems: "center",
-          justifyContent: "center",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 3.84,
-          elevation: 5,
-        }}
-      >
-        <Plus size={28} color="#ffffff" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }

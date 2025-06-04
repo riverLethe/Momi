@@ -1,118 +1,140 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from "react-native";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button } from "tamagui";
-import { useRouter, Link } from "expo-router";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react-native";
-import { useLanguage } from "@/hooks/useLanguage";
+import { ArrowLeft } from "lucide-react-native";
+import {
+  View,
+  Text,
+  Button,
+  XStack,
+  YStack,
+  H1,
+  Paragraph,
+  Input,
+  Form,
+} from "tamagui";
 
-export default function LoginPage() {
+import { useAuth } from "@/providers/AuthProvider";
+
+export default function LoginScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
-  const [email, setEmail] = useState("");
+  const { login, isLoading } = useAuth();
+
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert(t("Error"), t("Please fill in all fields"));
+    if (!username || !password) {
+      Alert.alert("Error", "Please enter both username and password");
       return;
     }
 
-    // TODO: Implement actual login logic
-    // For now, just navigate to home
-    router.replace("/(tabs)");
+    const success = await login(username, password);
+    if (success) {
+      router.back();
+    } else {
+      Alert.alert(
+        "Login Failed",
+        "Please check your credentials and try again."
+      );
+    }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 px-6">
-        {/* Header */}
-        <View className="mt-12 mb-8">
-          <Text className="text-3xl font-bold text-gray-900 mb-2">
-            {t("Welcome Back")}
-          </Text>
-          <Text className="text-base text-gray-600">
-            {t("Sign in to continue managing your finances")}
-          </Text>
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <YStack padding="$4" flex={1}>
+          <Button
+            chromeless
+            onPress={() => router.back()}
+            marginBottom="$6"
+            alignSelf="flex-start"
+            padding="$0"
+          >
+            <ArrowLeft size={24} color="#1F2937" />
+          </Button>
 
-        {/* Form */}
-        <View className="space-y-4">
-          {/* Email Input */}
-          <View>
-            <Text className="text-sm font-medium text-gray-700 mb-2">
-              {t("Email")}
-            </Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg px-4 py-3">
-              <Mail size={20} color="#6B7280" />
-              <TextInput
-                className="flex-1 ml-3 text-base text-gray-900"
-                placeholder={t("Enter your email")}
-                placeholderTextColor="#9CA3AF"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+          <H1 marginBottom="$2">Welcome back</H1>
+          <Paragraph color="$gray10" marginBottom="$8">
+            Sign in to continue
+          </Paragraph>
+
+          <YStack space="$4">
+            <YStack>
+              <Text color="$gray11" marginBottom="$1">
+                Username
+              </Text>
+              <Input
+                backgroundColor="$background"
+                padding="$4"
+                borderRadius="$4"
+                borderWidth={1}
+                borderColor="$gray4"
+                placeholder="Enter your username"
                 autoCapitalize="none"
+                value={username}
+                onChangeText={setUsername}
               />
-            </View>
-          </View>
+            </YStack>
 
-          {/* Password Input */}
-          <View>
-            <Text className="text-sm font-medium text-gray-700 mb-2">
-              {t("Password")}
-            </Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg px-4 py-3">
-              <Lock size={20} color="#6B7280" />
-              <TextInput
-                className="flex-1 ml-3 text-base text-gray-900"
-                placeholder={t("Enter your password")}
-                placeholderTextColor="#9CA3AF"
+            <YStack>
+              <Text color="$gray11" marginBottom="$1">
+                Password
+              </Text>
+              <Input
+                backgroundColor="$background"
+                padding="$4"
+                borderRadius="$4"
+                borderWidth={1}
+                borderColor="$gray4"
+                placeholder="Enter your password"
+                secureTextEntry
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? (
-                  <EyeOff size={20} color="#6B7280" />
-                ) : (
-                  <Eye size={20} color="#6B7280" />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
+            </YStack>
+          </YStack>
 
-          {/* Forgot Password */}
-          <TouchableOpacity className="self-end">
-            <Text className="text-sm text-blue-500">
-              {t("Forgot Password?")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Login Button */}
-        <View className="mt-8">
           <Button
-            size="$4"
+            marginTop="$8"
+            borderRadius="$4"
+            padding="$4"
+            backgroundColor={isLoading ? "$gray8" : "$blue9"}
             onPress={handleLogin}
-            className="bg-blue-500 w-full"
+            disabled={isLoading}
           >
-            {t("Sign In")}
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text color="white" fontWeight="$6" fontSize="$5">
+                Login
+              </Text>
+            )}
           </Button>
-        </View>
 
-        {/* Register Link */}
-        <View className="flex-row justify-center items-center mt-6">
-          <Text className="text-gray-600">{t("Don't have an account?")}</Text>
-          <Link href="/auth/register" asChild>
-            <TouchableOpacity className="ml-2">
-              <Text className="text-blue-500 font-medium">{t("Sign Up")}</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
-      </View>
+          <XStack marginTop="$8" justifyContent="center">
+            <Text color="$gray10">Don't have an account? </Text>
+            <Button
+              chromeless
+              padding="$0"
+              onPress={() => router.push("/auth/register" as any)}
+            >
+              <Text color="$blue9" fontWeight="$6">
+                Sign up
+              </Text>
+            </Button>
+          </XStack>
+        </YStack>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -1,172 +1,164 @@
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ArrowLeft } from "lucide-react-native";
+import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Button } from "tamagui";
-import { useRouter, Link } from "expo-router";
-import { Mail, Lock, Eye, EyeOff, User } from "lucide-react-native";
-import { useLanguage } from "@/hooks/useLanguage";
+  Button,
+  XStack,
+  YStack,
+  H1,
+  Paragraph,
+  Input,
+} from "tamagui";
 
-export default function RegisterPage() {
+import { useAuth } from "@/providers/AuthProvider";
+
+export default function RegisterScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const { login, isLoading } = useAuth();
+
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert(t("Error"), t("Please fill in all fields"));
+    if (!username || !password) {
+      Alert.alert("Error", "Please fill all fields");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert(t("Error"), t("Passwords do not match"));
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
 
-    // TODO: Implement actual registration logic
-    // For now, just navigate to home
-    router.replace("/(tabs)");
+    // In a real app, you would register the user with your backend
+    // For this demo, we'll just log them in directly
+    const success = await login(username, password);
+    if (success) {
+      router.replace("/(tabs)");
+    } else {
+      Alert.alert(
+        "Registration Failed",
+        "An error occurred. Please try again."
+      );
+    }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View className="mt-12 mb-8">
-          <Text className="text-3xl font-bold text-gray-900 mb-2">
-            {t("Create Account")}
-          </Text>
-          <Text className="text-base text-gray-600">
-            {t("Start managing your finances smartly")}
-          </Text>
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <YStack padding="$4" flex={1}>
+          <Button
+            chromeless
+            onPress={() => router.back()}
+            marginBottom="$6"
+            alignSelf="flex-start"
+            padding="$0"
+          >
+            <ArrowLeft size={24} color="#1F2937" />
+          </Button>
 
-        {/* Form */}
-        <View className="space-y-4">
-          {/* Name Input */}
-          <View>
-            <Text className="text-sm font-medium text-gray-700 mb-2">
-              {t("Name")}
-            </Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg px-4 py-3">
-              <User size={20} color="#6B7280" />
-              <TextInput
-                className="flex-1 ml-3 text-base text-gray-900"
-                placeholder={t("Enter your name")}
-                placeholderTextColor="#9CA3AF"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-              />
-            </View>
-          </View>
+          <H1 marginBottom="$2">Create Account</H1>
+          <Paragraph color="$gray10" marginBottom="$8">
+            Sign up to start tracking your finances
+          </Paragraph>
 
-          {/* Email Input */}
-          <View>
-            <Text className="text-sm font-medium text-gray-700 mb-2">
-              {t("Email")}
-            </Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg px-4 py-3">
-              <Mail size={20} color="#6B7280" />
-              <TextInput
-                className="flex-1 ml-3 text-base text-gray-900"
-                placeholder={t("Enter your email")}
-                placeholderTextColor="#9CA3AF"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+          <YStack space="$4">
+            <YStack>
+              <Text color="$gray11" marginBottom="$1">
+                Username
+              </Text>
+              <Input
+                backgroundColor="$background"
+                padding="$4"
+                borderRadius="$4"
+                borderWidth={1}
+                borderColor="$gray4"
+                placeholder="Enter your username"
                 autoCapitalize="none"
+                value={username}
+                onChangeText={setUsername}
               />
-            </View>
-          </View>
+            </YStack>
 
-          {/* Password Input */}
-          <View>
-            <Text className="text-sm font-medium text-gray-700 mb-2">
-              {t("Password")}
-            </Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg px-4 py-3">
-              <Lock size={20} color="#6B7280" />
-              <TextInput
-                className="flex-1 ml-3 text-base text-gray-900"
-                placeholder={t("Create a password")}
-                placeholderTextColor="#9CA3AF"
+            <YStack>
+              <Text color="$gray11" marginBottom="$1">
+                Password
+              </Text>
+              <Input
+                backgroundColor="$background"
+                padding="$4"
+                borderRadius="$4"
+                borderWidth={1}
+                borderColor="$gray4"
+                placeholder="Create a password"
+                secureTextEntry
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? (
-                  <EyeOff size={20} color="#6B7280" />
-                ) : (
-                  <Eye size={20} color="#6B7280" />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
+            </YStack>
 
-          {/* Confirm Password Input */}
-          <View>
-            <Text className="text-sm font-medium text-gray-700 mb-2">
-              {t("Confirm Password")}
-            </Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg px-4 py-3">
-              <Lock size={20} color="#6B7280" />
-              <TextInput
-                className="flex-1 ml-3 text-base text-gray-900"
-                placeholder={t("Confirm your password")}
-                placeholderTextColor="#9CA3AF"
+            <YStack>
+              <Text color="$gray11" marginBottom="$1">
+                Confirm Password
+              </Text>
+              <Input
+                backgroundColor="$background"
+                padding="$4"
+                borderRadius="$4"
+                borderWidth={1}
+                borderColor="$gray4"
+                placeholder="Confirm your password"
+                secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
               />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} color="#6B7280" />
-                ) : (
-                  <Eye size={20} color="#6B7280" />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+            </YStack>
+          </YStack>
 
-        {/* Register Button */}
-        <View className="mt-8">
           <Button
-            size="$4"
+            marginTop="$8"
+            borderRadius="$4"
+            padding="$4"
+            backgroundColor={isLoading ? "$gray8" : "$blue9"}
             onPress={handleRegister}
-            className="bg-blue-500 w-full"
+            disabled={isLoading}
           >
-            {t("Create Account")}
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text color="white" fontWeight="$6" fontSize="$5">
+                Create Account
+              </Text>
+            )}
           </Button>
-        </View>
 
-        {/* Login Link */}
-        <View className="flex-row justify-center items-center mt-6 mb-8">
-          <Text className="text-gray-600">{t("Already have an account?")}</Text>
-          <Link href="/auth/login" asChild>
-            <TouchableOpacity className="ml-2">
-              <Text className="text-blue-500 font-medium">{t("Sign In")}</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
-      </ScrollView>
+          <XStack marginTop="$8" justifyContent="center">
+            <Text color="$gray10">Already have an account? </Text>
+            <Button
+              chromeless
+              padding="$0"
+              onPress={() => router.push("/auth/login" as any)}
+            >
+              <Text color="$blue9" fontWeight="$6">
+                Sign in
+              </Text>
+            </Button>
+          </XStack>
+        </YStack>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
