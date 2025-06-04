@@ -1,0 +1,197 @@
+# Momi Project - Cursor Rules
+
+## 项目概述
+Momi 是一个记账类移动应用，基于 Turbo Monorepo 架构开发。
+
+## 技术栈上下文
+
+### 整体架构
+- **项目框架**: Turbo Monorepo
+- **包管理器**: pnpm
+- **主要语言**: TypeScript
+- **代码规范**: ESLint + Prettier
+
+### 移动端 (app/expo/ 目录)
+- **框架**: Expo + React Native
+- **路由**: Expo Router (app/ 目录结构)
+- **样式**: NativeWind (Tailwind CSS for React Native)
+- **图标**: Lucide React Native
+- **UI 库**: Tamagui
+- **聊天组件**: react-native-gifted-chat
+- **状态管理**: React Hooks + Context API
+
+## 开发规范
+
+### 文件命名规范
+- 组件文件: PascalCase (例: `UserProfile.tsx`)
+- 工具函数: camelCase (例: `formatCurrency.ts`)
+- 页面文件: kebab-case (例: `account-detail.tsx`)
+- 类型定义: PascalCase + `.types.ts` 后缀
+
+### 组件开发规范
+- 优先使用函数式组件
+- 使用 TypeScript 进行类型定义
+- 组件 Props 接口命名: `ComponentNameProps`
+- 使用 React.memo 优化性能关键组件
+- 自定义 Hooks 以 `use` 开头
+
+### 样式开发规范
+- 使用 NativeWind 类名进行样式开发
+- 遵循 Tailwind CSS 设计原则
+- 响应式设计: 使用 `sm:`, `md:`, `lg:` 前缀
+- 主题色彩: 使用 Tamagui 主题系统
+- 避免内联样式，优先使用类名
+
+### 图标使用规范
+- 统一使用 Lucide React Native 图标
+- 图标大小: 16, 20, 24, 32 像素
+- 图标颜色: 使用主题色彩变量
+
+### 聊天功能开发
+- 使用 react-native-gifted-chat 作为基础组件
+- 自定义消息气泡样式
+- 支持文本、图片、语音消息类型
+- 实现消息状态管理 (发送中、已发送、已读)
+
+## 目录结构约定
+
+### app/expo/ 目录结构
+```
+app/expo/
+├── app/                    # Expo Router 页面
+│   ├── (tabs)/            # 底部导航页面
+│   ├── auth/              # 认证相关页面
+│   ├── chat/              # 聊天相关页面
+│   └── _layout.tsx        # 根布局
+├── components/            # 可复用组件
+│   ├── ui/               # 基础 UI 组件
+│   ├── forms/            # 表单组件
+│   └── charts/           # 图表组件
+├── hooks/                # 自定义 Hooks
+├── utils/                # 工具函数
+├── types/                # TypeScript 类型
+├── constants/            # 常量定义
+└── assets/               # 静态资源
+```
+
+## 代码生成指导
+
+### 创建新组件时
+1. 创建 TypeScript 接口定义 Props
+2. 使用函数式组件 + React.memo
+3. 添加 JSDoc 注释
+4. 使用 NativeWind 进行样式开发
+5. 导出组件和类型定义
+
+### 创建新页面时
+1. 使用 Expo Router 文件约定
+2. 实现页面级状态管理
+3. 添加页面标题和元数据
+4. 实现加载和错误状态
+5. 考虑页面性能优化
+
+### 创建工具函数时
+1. 添加完整的 TypeScript 类型
+2. 编写单元测试
+3. 添加 JSDoc 文档
+4. 考虑函数的纯度和副作用
+
+## 性能优化指导
+
+### React Native 性能
+- 使用 FlatList 渲染长列表
+- 实现图片懒加载
+- 避免在 render 中创建新对象
+- 使用 useMemo 和 useCallback 优化
+
+### 包大小优化
+- 使用 tree-shaking 友好的导入方式
+- 避免导入整个库，按需导入
+- 使用 Expo 的代码分割功能
+
+## 调试和测试
+
+### 调试工具
+- 使用 Expo DevTools
+- React Native Debugger
+- Flipper (可选)
+
+### 测试策略
+- 单元测试: Jest + React Native Testing Library
+- 组件测试: 测试用户交互和渲染
+- E2E 测试: Detox (可选)
+
+## 常用命令提示
+
+### 开发命令
+- `pnpm dev:expo` - 启动 Expo 开发服务器 (app/expo)
+- `pnpm lint` - 代码检查
+- `pnpm type-check` - TypeScript 类型检查
+- `pnpm test` - 运行测试
+
+### Expo 命令
+- `npx expo start` - 启动开发服务器
+- `npx expo build` - 构建应用
+- `npx expo install` - 安装兼容的依赖
+
+## 代码示例模板
+
+### 组件模板
+```typescript
+import React from 'react';
+import { View } from 'react-native';
+import { Button, Text } from 'tamagui';
+
+interface ComponentNameProps {
+  title: string;
+  onPress?: () => void;
+}
+
+export const ComponentName: React.FC<ComponentNameProps> = React.memo(({
+  title,
+  onPress
+}) => {
+  return (
+    <View className="flex-1 p-4">
+      <Text className="text-lg font-semibold mb-4">{title}</Text>
+      <Button onPress={onPress}>
+        Action
+      </Button>
+    </View>
+  );
+});
+
+ComponentName.displayName = 'ComponentName';
+```
+
+### Hook 模板
+```typescript
+import { useState, useEffect } from 'react';
+
+interface UseHookNameOptions {
+  initialValue?: string;
+}
+
+export const useHookName = (options: UseHookNameOptions = {}) => {
+  const [state, setState] = useState(options.initialValue || '');
+  
+  useEffect(() => {
+    // Effect logic
+  }, []);
+  
+  return {
+    state,
+    setState,
+  };
+};
+```
+
+## 注意事项
+
+1. **始终使用 TypeScript**: 所有新文件都应该是 `.tsx` 或 `.ts`
+2. **遵循 Expo 最佳实践**: 使用 Expo SDK 提供的 API
+3. **性能优先**: 考虑移动端性能限制
+4. **可访问性**: 添加适当的 accessibility 属性
+5. **国际化准备**: 使用字符串常量，便于后续国际化
+
+当我询问关于项目技术栈、架构或开发规范时，请参考以上规则进行回答和代码生成。 

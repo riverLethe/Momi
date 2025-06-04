@@ -1,0 +1,61 @@
+const { hairlineWidth } = require("nativewind/theme");
+
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: "class",
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  presets: [require("nativewind/preset")],
+  safelist: [
+    "bg-primary/5",
+    "bg-primary/10",
+    "bg-primary/20",
+    "bg-primary/30",
+    "bg-primary/40",
+    "bg-primary/50",
+    "bg-primary/60",
+    "bg-primary/70",
+    "bg-primary/80",
+    "bg-primary/90",
+    "text-primary/5",
+    "text-primary/10",
+    "text-primary/20",
+    "text-primary/30",
+    "text-primary/40",
+    "text-primary/50",
+    "text-primary/60",
+    "text-primary/70",
+    "text-primary/80",
+    "text-primary/90",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#bae6fd",
+          300: "#7dd3fc",
+          400: "#38bdf8",
+          500: "#0ea5e9",
+          600: "#0284c7",
+          700: "#0369a1",
+          800: "#075985",
+          900: "#0c4a6e",
+        },
+        secondary: {
+          50: "#fafafa",
+          100: "#f4f4f5",
+          200: "#e4e4e7",
+          300: "#d4d4d8",
+          400: "#a1a1aa",
+          500: "#71717a",
+          600: "#52525b",
+          700: "#3f3f46",
+          800: "#27272a",
+          900: "#18181b",
+        },
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+};
