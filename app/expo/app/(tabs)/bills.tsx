@@ -5,7 +5,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Filter, Search, ChevronRight, Plus } from "lucide-react-native";
+import { Filter, Search, Plus, Calendar, CreditCard, ShoppingBag, Film, Zap, PizzaIcon } from "lucide-react-native";
 import { 
   View, 
   Text, 
@@ -15,9 +15,11 @@ import {
   YStack, 
   Input,
   Circle,
-  Separator,
-  ScrollView
+  H3,
+  H4,
+  Avatar,
 } from "tamagui";
+import { LinearGradient } from "tamagui/linear-gradient";
 
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
@@ -113,6 +115,42 @@ const generateMockBills = (): Bill[] => {
   return bills;
 };
 
+// Helper function to get icon based on category
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case "Food":
+      return <PizzaIcon  size={18} color="#3B82F6" />;
+    case "Transport":
+      return <CreditCard size={18} color="#3B82F6" />;
+    case "Shopping":
+      return <ShoppingBag size={18} color="#EC4899" />;
+    case "Entertainment":
+      return <Film size={18} color="#F59E0B" />;
+    case "Utilities":
+      return <Zap size={18} color="#8B5CF6" />;
+    default:
+      return <CreditCard size={18} color="#6B7280" />;
+  }
+};
+
+// Get category color
+const getCategoryColor = (category: string) => {
+  switch (category) {
+    case "Food":
+      return "#10B981";
+    case "Transport":
+      return "#3B82F6";
+    case "Shopping":
+      return "#EC4899";
+    case "Entertainment":
+      return "#F59E0B";
+    case "Utilities":
+      return "#8B5CF6";
+    default:
+      return "#6B7280";
+  }
+};
+
 export default function BillsScreen() {
   const router = useRouter();
   const { viewMode, currentFamilySpace } = useViewStore();
@@ -121,6 +159,7 @@ export default function BillsScreen() {
   const [loading, setLoading] = useState(true);
   const [bills, setBills] = useState<Bill[]>([]);
   const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
+  const [searchText, setSearchText] = useState("");
 
   // Initialize with mock data
   useEffect(() => {
@@ -147,6 +186,18 @@ export default function BillsScreen() {
       setFilteredBills(bills.filter((bill) => !bill.isFamilyBill));
     }
   }, [bills, viewMode, isLoggedIn]);
+
+  // Handle search
+  useEffect(() => {
+    if (searchText.trim() === "") return;
+    
+    setFilteredBills(prevBills => 
+      prevBills.filter(bill => 
+        (bill.merchant?.toLowerCase().includes(searchText.toLowerCase()) || false) ||
+        bill.category.toLowerCase().includes(searchText.toLowerCase())
+      )
+    );
+  }, [searchText]);
 
   // Group bills by date
   const groupBillsByDate = () => {
@@ -185,108 +236,141 @@ export default function BillsScreen() {
   };
 
   const renderBillItem = ({ item }: { item: Bill }) => (
-    <Button
-      backgroundColor="$background"
-      pressStyle={{ backgroundColor: "$gray3" }}
+    <Card 
+      marginVertical="$2" 
+      marginHorizontal="$2"
+      padding="$3.5" 
+      borderRadius="$4" 
+      backgroundColor="white"
+      elevate
+      pressStyle={{ opacity: 0.9, scale: 0.98 }}
+      animation="bouncy"
       onPress={() => router.push("/bills/add")}
-      marginVertical="$1"
-      borderBottomWidth={1}
-      borderBottomColor="$gray3"
     >
       <XStack alignItems="center" justifyContent="space-between" width="100%">
-        <XStack alignItems="center">
-          <Circle size="$4" backgroundColor="$gray3" marginRight="$3">
-            {item.category === "Food" && <Text>🍔</Text>}
-            {item.category === "Transport" && <Text>🚗</Text>}
-            {item.category === "Shopping" && <Text>🛍️</Text>}
-            {item.category === "Entertainment" && <Text>🎬</Text>}
-            {item.category === "Utilities" && <Text>💡</Text>}
-          </Circle>
+        <XStack alignItems="center" space="$3">
+          <Avatar circular size="$4.5" backgroundColor={`${getCategoryColor(item.category)}20`}>
+            <Avatar.Fallback alignItems="center" justifyContent="center">
+              {typeof getCategoryIcon(item.category) === 'string' 
+                ? getCategoryIcon(item.category) 
+                : getCategoryIcon(item.category)}
+            </Avatar.Fallback>
+          </Avatar>
+          
           <YStack>
-            <Text fontWeight="$6">{item.merchant || item.category}</Text>
-            <XStack alignItems="center">
+            <Text fontWeight="$7" fontSize="$4">{item.merchant || item.category}</Text>
+            <XStack alignItems="center" space="$1">
               {item.isFamilyBill && viewMode === "family" && (
-                <Text fontSize="$2" color="$blue9" marginRight="$1">
+                <Text fontSize="$2.5" color="$blue9">
                   {item.creatorName}
                 </Text>
               )}
-              <Text fontSize="$2" color="$gray10">{item.account}</Text>
+              <Text fontSize="$2.5" color="$gray10">{item.account}</Text>
             </XStack>
           </YStack>
         </XStack>
-        <Text fontWeight="$6">-¥{item.amount.toFixed(2)}</Text>
+        
+        <YStack alignItems="flex-end">
+          <Text fontWeight="$7" fontSize="$4.5" color="$red9">-¥{item.amount.toFixed(2)}</Text>
+          <Text fontSize="$2.5" color="$gray10">
+            {new Date(item.date).getHours().toString().padStart(2, '0')}:{new Date(item.date).getMinutes().toString().padStart(2, '0')}
+          </Text>
+        </YStack>
       </XStack>
-    </Button>
+    </Card>
   );
 
   const renderDateGroup = ({ item }: { item: (typeof billGroups)[0] }) => (
     <YStack marginBottom="$4">
-      <XStack justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$2">
-        <Text fontSize="$4" fontWeight="$6">{formatDate(item.date)}</Text>
-        <Text fontSize="$4" color="$gray10">¥{item.totalAmount.toFixed(2)}</Text>
+      <XStack 
+        justifyContent="space-between" 
+        paddingHorizontal="$4" 
+        paddingVertical="$2"
+        marginBottom="$1"
+        alignItems="center"
+      >
+        <XStack alignItems="center" space="$2">
+          <Calendar size={16} color="#6B7280" />
+          <Text fontSize="$3.5" fontWeight="$6" color="$gray11">{formatDate(item.date)}</Text>
+        </XStack>
+        <Text fontSize="$3.5" fontWeight="$7" color="$red9">¥{item.totalAmount.toFixed(2)}</Text>
       </XStack>
+      
       {item.bills.map((bill) => renderBillItem({ item: bill }))}
     </YStack>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       <YStack flex={1}>
         {/* Header */}
-        <XStack 
-          alignItems="center" 
-          justifyContent="space-between" 
-          paddingHorizontal="$4" 
-          paddingVertical="$3"
+        <LinearGradient
+          colors={["$blue9", "$blue8"]}
+          start={[0, 0]}
+          end={[1, 0]}
+          padding="$4"
         >
-          <Text fontSize="$6" fontWeight="$7">
-            {viewMode === "personal" ? "My Bills" : "Family Bills"}
-          </Text>
+          <XStack 
+            alignItems="center" 
+            justifyContent="space-between" 
+            marginBottom="$2"
+          >
+            <H3 color="white">
+              
+            </H3>
 
-          <XStack>
-            <Button
-              size="$3"
-              circular
-              marginRight="$2"
-              backgroundColor="$gray3"
-              onPress={() => router.push("/bills/add")}
-            >
-              <Plus size={20} color="#000" />
-            </Button>
+            <XStack space="$2">
+              <Button
+                size="$3"
+                circular
+                backgroundColor="rgba(255,255,255,0.2)"
+                hoverStyle={{ backgroundColor: "rgba(255,255,255,0.3)" }}
+                pressStyle={{ backgroundColor: "rgba(255,255,255,0.4)" }}
+                onPress={() => router.push("/bills/add")}
+              >
+                <Plus size={20} color="white" />
+              </Button>
 
+              <Button
+                size="$3"
+                circular
+                backgroundColor="rgba(255,255,255,0.2)"
+                hoverStyle={{ backgroundColor: "rgba(255,255,255,0.3)" }}
+                pressStyle={{ backgroundColor: "rgba(255,255,255,0.4)" }}
+                onPress={() => {
+                  /* Show filter modal */
+                }}
+              >
+                <Filter size={20} color="white" />
+              </Button>
+            </XStack>
+          </XStack>
+
+          {/* Search */}
+          <XStack marginTop="$1">
+            <Input
+              flex={1}
+              placeholder="Search bills..."
+              placeholderTextColor="rgba(255,255,255,0.6)"
+              size="$4"
+              borderRadius="$6"
+              paddingLeft="$9"
+              backgroundColor="rgba(255,255,255,0.2)"
+              borderWidth={0}
+              autoCapitalize="none"
+              color="white"
+              value={searchText}
+              onChangeText={setSearchText}
+            />
             <Button
-              size="$3"
-              circular
-              backgroundColor="$gray3"
-              onPress={() => {
-                /* Show filter modal */
-              }}
+              position="absolute"
+              left="$2"
+              chromeless
             >
-              <Filter size={20} color="#000" />
+              <Search size={20} color="rgba(255,255,255,0.7)" />
             </Button>
           </XStack>
-        </XStack>
-
-        {/* Search */}
-        <XStack paddingHorizontal="$4" paddingBottom="$4">
-          <Input
-            flex={1}
-            placeholder="Search bills..."
-            size="$4"
-            borderRadius="$4"
-            paddingLeft="$8"
-            backgroundColor="$gray3"
-            borderWidth={0}
-            autoCapitalize="none"
-          />
-          <Button
-            position="absolute"
-            left="$4"
-            chromeless
-          >
-            <Search size={20} color="#6B7280" />
-          </Button>
-        </XStack>
+        </LinearGradient>
 
         {/* Bills List */}
         {loading ? (
@@ -295,31 +379,48 @@ export default function BillsScreen() {
           </YStack>
         ) : filteredBills.length === 0 ? (
           <YStack flex={1} justifyContent="center" alignItems="center" padding="$4">
-            <Text fontSize="$5" fontWeight="$6" marginBottom="$2">No bills found</Text>
-            <Text textAlign="center" color="$gray10">
-              {viewMode === "family" && !isLoggedIn
-                ? "Please log in to view family bills"
-                : "Add a new bill to get started"}
-            </Text>
-            <Button
-              marginTop="$4"
-              backgroundColor="$blue9"
-              color="white"
-              size="$4"
-              borderRadius="$4"
-              onPress={() => router.push("/bills/add")}
+            <Card
+              borderRadius="$6"
+              padding="$6"
+              maxWidth={300}
+              backgroundColor="white"
+              elevate
+              shadowColor="rgba(0,0,0,0.1)"
+              shadowRadius={20}
             >
-              <Text color="white" fontWeight="$6">
-                Add Bill
-              </Text>
-            </Button>
+              <YStack alignItems="center" space="$3">
+                <Circle size="$10" backgroundColor="$blue2">
+                  <CreditCard size={36} color="#3B82F6" />
+                </Circle>
+                <H4 marginTop="$2">No Bills Found</H4>
+                <Text textAlign="center" color="$gray10" maxWidth={200}>
+                  {viewMode === "family" && !isLoggedIn
+                    ? "Please login to view family bills"
+                    : "Click the button below to add a bill"}
+                </Text>
+                <Button
+                  marginTop="$4"
+                  backgroundColor="$blue9"
+                  paddingHorizontal="$6"
+                  paddingVertical="$2"
+                  borderRadius="$6"
+                  pressStyle={{ opacity: 0.9, scale: 0.98 }}
+                  onPress={() => router.push("/bills/add")}
+                >
+                  <Text color="white" fontWeight="$6">
+                    Add Bill
+                  </Text>
+                </Button>
+              </YStack>
+            </Card>
           </YStack>
         ) : (
           <FlatList
             data={billGroups}
             renderItem={renderDateGroup}
             keyExtractor={(item) => item.date}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={{ padding: 10 }}
+            showsVerticalScrollIndicator={false}
           />
         )}
       </YStack>

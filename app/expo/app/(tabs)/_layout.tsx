@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Home, CreditCard, BarChart2, User, Plus } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import { View, Circle } from "tamagui";
+import { View } from "tamagui";
 
 export default function TabsLayout() {
   const router = useRouter();

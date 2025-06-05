@@ -1,9 +1,8 @@
 import React from "react";
-import { Alert, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  User,
   Home,
   CreditCard,
   FileText,
@@ -11,9 +10,9 @@ import {
   Bell,
   LogOut,
   ChevronRight,
+  UserCircle,
 } from "lucide-react-native";
 import {
-  View,
   Text,
   Button,
   XStack,
@@ -22,8 +21,9 @@ import {
   H2,
   Avatar,
   Circle,
-  Separator
+  Separator,
 } from "tamagui";
+import { LinearGradient } from "tamagui/linear-gradient";
 
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -33,24 +33,14 @@ export default function ProfileScreen() {
 
   const handleFamilySpacePress = () => {
     if (!isLoggedIn) {
-      // Prompt the user to login
-      Alert.alert(
-        "Login Required",
-        "You need to login to manage family spaces.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Login", onPress: () => router.push("/auth/login") },
-        ]
-      );
+      router.push("/auth/login");
       return;
     }
-
     router.push("/family");
   };
 
   const handleLogout = async () => {
     await logout();
-    // No need to navigate since we're already on the profile page
   };
 
   const handleLogin = () => {
@@ -60,54 +50,91 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
       <YStack flex={1}>
-        <YStack padding="$4">
-          <H2>Profile</H2>
-        </YStack>
+        {/* Header */}
+        <LinearGradient
+          colors={["$blue9", "$blue8"]}
+          start={[0, 0]}
+          end={[1, 0]}
+          padding="$5"
+          borderRadius="$0"
+          marginBottom="$6"
+        >
+          <YStack>
+            
+            <XStack alignItems="center" space="$4">
+              <Avatar circular size="$10" overflow="hidden">
+                {isLoggedIn ? (
+                  <Avatar.Image 
+                    accessibilityLabel={user?.username || "User avatar"}
+                    src="https://images.unsplash.com/photo-1548142813-c348350df52b?&w=150&h=150&dpr=2&q=80"
+                  />
+                ) : (
+                  <Avatar.Fallback backgroundColor="rgba(255,255,255,0.2)"alignItems="center" justifyContent="center">
+                    <UserCircle size={52} color="white" />
+                  </Avatar.Fallback>
+                )}
+              </Avatar>
+              
+              <YStack>
+                <Text fontSize="$5" fontWeight="$7" color="white">
+                  {isLoggedIn ? user?.username : "Guest"}
+                </Text>
+                {isLoggedIn ? (
+                  <Text color="rgba(255,255,255,0.8)" fontSize="$3">{user?.id}</Text>
+                ) : (
+                  <Button
+                    size="$2"
+                    marginTop="$3"
+                    backgroundColor="white"
+                    onPress={handleLogin}
+                  >
+                    <Text color="$blue9">Login</Text>
+                  </Button>
+                )}
+              </YStack>
+            </XStack>
+          </YStack>
+        </LinearGradient>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}>
-          {/* User Info Card */}
-          <Card padding="$6" marginBottom="$6" alignItems="center" elevate>
-            <Avatar circular size="$8" marginBottom="$4" backgroundColor="$gray3">
-              <User size={40} color="#9CA3AF" />
-            </Avatar>
-            <Text fontSize="$6" fontWeight="$7">
-              {isLoggedIn ? user?.username : "Guest"}
-            </Text>
-            {isLoggedIn ? (
-              <Text color="$gray10">{user?.id}</Text>
-            ) : (
-              <Button
-                marginTop="$3"
-                backgroundColor="$blue9"
-                paddingHorizontal="$6"
-                paddingVertical="$2"
-                borderRadius="$10"
-                onPress={handleLogin}
-              >
-                <Text color="white" fontWeight="$6">Login</Text>
-              </Button>
-            )}
-          </Card>
-
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Family Space Section */}
-          <Card marginBottom="$6" elevate>
-            <Text padding="$4" paddingBottom="$2" fontWeight="$6" color="$gray10">
+          <Card 
+            marginBottom="$5" 
+            elevate 
+            borderWidth={1}
+            borderColor="$gray6"
+          >
+            <Text 
+              paddingHorizontal="$4" 
+              paddingTop="$4" 
+              paddingBottom="$3" 
+              fontWeight="$7" 
+              color="$gray11" 
+              fontSize="$3"
+            >
               FAMILY
             </Text>
+            <Separator />
 
             <Button
-              borderBottomWidth={1}
-              borderBottomColor="$gray3"
               chromeless
               justifyContent="flex-start"
+              hoverStyle={{ backgroundColor: "$gray2" }}
+              pressStyle={{ backgroundColor: "$gray3" }}
               onPress={handleFamilySpacePress}
+              borderWidth={0}
+              height="$5"
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center">
-                  <Circle size="$4" backgroundColor="$blue2" marginRight="$3">
-                    <Home size={20} color="#3B82F6" />
+                <XStack alignItems="center" space="$3">
+                  <Circle size="$3" backgroundColor="$blue4">
+                    <Home size={22} color="#3B82F6" />
                   </Circle>
-                  <Text fontWeight="$6">Family Spaces</Text>
+                  <Text fontWeight="$6" fontSize="$3">Family Spaces</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
@@ -115,40 +142,61 @@ export default function ProfileScreen() {
           </Card>
 
           {/* Personal Finance Section */}
-          <Card marginBottom="$6" elevate>
-            <Text padding="$4" paddingBottom="$2" fontWeight="$6" color="$gray10">
+          <Card 
+            marginBottom="$5" 
+            elevate 
+            borderWidth={1}
+            borderColor="$gray6"
+          >
+            <Text 
+              paddingHorizontal="$4" 
+              paddingTop="$4" 
+              paddingBottom="$3" 
+              fontWeight="$7" 
+              color="$gray11" 
+              fontSize="$3"
+            >
               FINANCE
             </Text>
+            <Separator />
 
             <Button
-              borderBottomWidth={1}
-              borderBottomColor="$gray3"
               chromeless
               justifyContent="flex-start"
+              hoverStyle={{ backgroundColor: "$gray2" }}
+              pressStyle={{ backgroundColor: "$gray3" }}
               onPress={() => router.push("/budget")}
-            >
+                        height="$5"
+borderWidth={0}
+>
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center">
-                  <Circle size="$4" backgroundColor="$green2" marginRight="$3">
-                    <CreditCard size={20} color="#10B981" />
+                <XStack alignItems="center" space="$3">
+                  <Circle size="$3" backgroundColor="$green4">
+                    <CreditCard size={22} color="#10B981" />
                   </Circle>
-                  <Text fontWeight="$6">My Budgets</Text>
+                  <Text fontWeight="$6" fontSize="$3">My Budgets</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
             </Button>
 
+            <Separator opacity={0.5} />
+
             <Button
               chromeless
               justifyContent="flex-start"
+              hoverStyle={{ backgroundColor: "$gray2" }}
+              pressStyle={{ backgroundColor: "$gray3" }}
               onPress={() => router.push("/export")}
-            >
+                        height="$5"
+borderWidth={0}
+>
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center">
-                  <Circle size="$4" backgroundColor="$purple2" marginRight="$3">
-                    <FileText size={20} color="#8B5CF6" />
+                <XStack alignItems="center" space="$3">
+                  <Circle size="$3" backgroundColor="$purple4">
+                    <FileText size={22} color="#8B5CF6" />
                   </Circle>
-                  <Text fontWeight="$6">Export Data</Text>
+                  <Text fontWeight="$6" fontSize="$3">Export Data</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
@@ -156,40 +204,62 @@ export default function ProfileScreen() {
           </Card>
 
           {/* Settings Section */}
-          <Card marginBottom="$6" elevate>
-            <Text padding="$4" paddingBottom="$2" fontWeight="$6" color="$gray10">
+          <Card 
+            marginBottom="$5" 
+            elevate 
+            borderWidth={1}
+            borderColor="$gray6"
+          >
+            <Text 
+              paddingHorizontal="$4" 
+              paddingTop="$4" 
+              paddingBottom="$3" 
+              fontWeight="$7" 
+              color="$gray11" 
+              fontSize="$3"
+            >
               SETTINGS
             </Text>
+            <Separator  />
 
             <Button
-              borderBottomWidth={1}
-              borderBottomColor="$gray3"
               chromeless
               justifyContent="flex-start"
-              onPress={() => router.push("/settings")}
+              hoverStyle={{ backgroundColor: "$gray2" }}
+              pressStyle={{ backgroundColor: "$gray3" }}
+              onPress={() => router.push("/settings")}             
+             height="$5"
+borderWidth={0}
+
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center">
-                  <Circle size="$4" backgroundColor="$gray3" marginRight="$3">
-                    <Settings size={20} color="#6B7280" />
+                <XStack alignItems="center" space="$3">
+                  <Circle size="$3" backgroundColor="$gray4">
+                    <Settings size={22} color="#6B7280" />
                   </Circle>
-                  <Text fontWeight="$6">App Settings</Text>
+                  <Text fontWeight="$6" fontSize="$3">App Settings</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
             </Button>
 
+            <Separator opacity={0.5} />
+
             <Button
               chromeless
               justifyContent="flex-start"
-              onPress={() => router.push("/notifications")}
+              hoverStyle={{ backgroundColor: "$gray2" }}
+              pressStyle={{ backgroundColor: "$gray3" }}
+              onPress={() => router.push("/notifications")}              
+            height="$5"
+borderWidth={0}
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center">
-                  <Circle size="$4" backgroundColor="$yellow2" marginRight="$3">
-                    <Bell size={20} color="#F59E0B" />
+                <XStack alignItems="center" space="$3">
+                  <Circle size="$3" backgroundColor="$yellow4">
+                    <Bell size={22} color="#F59E0B" />
                   </Circle>
-                  <Text fontWeight="$6">Notifications</Text>
+                  <Text fontWeight="$6" fontSize="$3">Notifications</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
@@ -199,17 +269,22 @@ export default function ProfileScreen() {
           {/* Logout Button (only if logged in) */}
           {isLoggedIn && (
             <Button
-              backgroundColor="$background"
+              backgroundColor="white"
+              borderRadius="$6"
               padding="$4"
               marginBottom="$10"
               alignItems="center"
               justifyContent="center"
               elevate
+              shadowColor="rgba(0,0,0,0.1)"
+              shadowRadius={15}
+              hoverStyle={{ backgroundColor: "$gray1" }}
+              pressStyle={{ backgroundColor: "$gray2" }}
               onPress={handleLogout}
             >
-              <XStack>
+              <XStack alignItems="center" space="$2">
                 <LogOut size={20} color="#EF4444" />
-                <Text fontWeight="$6" color="#EF4444" marginLeft="$2">Logout</Text>
+                <Text fontWeight="$6" color="#EF4444" fontSize="$3">Logout</Text>
               </XStack>
             </Button>
           )}

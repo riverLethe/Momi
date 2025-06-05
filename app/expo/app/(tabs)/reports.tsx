@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Calendar, ChevronDown } from "lucide-react-native";
+import { Calendar, ChevronDown, BarChart2, PieChart, ArrowRight } from "lucide-react-native";
 import { 
   View, 
   Text, 
@@ -18,34 +18,51 @@ import {
   Circle,
   Sheet,
   H2,
+  H3,
+  H4,
+  Avatar,
   Separator
 } from "tamagui";
+import { LinearGradient } from "tamagui/linear-gradient";
 
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
 
-// In a real app, you would use a proper chart library like react-native-chart-kit
-// This is a simple mock visualization for demo purposes
-const SimplePieChart = ({
+// Enhanced donut chart component
+const EnhancedPieChart = ({
   data,
 }: {
   data: { label: string; value: number; color: string }[];
 }) => {
   const totalValue = data.reduce((sum, item) => sum + item.value, 0);
+  const screenWidth = Dimensions.get("window").width;
+  const chartSize = Math.min(screenWidth - 80, 220); // 稍微减小图表尺寸
 
   return (
-    <YStack alignItems="center" justifyContent="center" paddingVertical="$4">
-      <View
+    <YStack alignItems="center" justifyContent="center" paddingVertical="$3">
+      <YStack
         style={{
           position: "relative",
-          width: 192,
-          height: 192,
-          borderRadius: 96,
-          overflow: "hidden",
-          borderWidth: 2,
-          borderColor: "white"
+          width: chartSize,
+          height: chartSize,
+          borderRadius: chartSize / 2,
+          justifyContent: "center",
+          alignItems: "center",
+          marginBottom: 12,
         }}
       >
+        {/* Chart background */}
+        <View
+          style={{
+            position: "absolute",
+            width: "100%",
+            height: "100%",
+            borderRadius: chartSize / 2,
+            backgroundColor: "#f3f4f6",
+          }}
+        />
+        
+        {/* Chart sectors */}
         {data.map((item, index) => {
           const startAngle =
             data
@@ -61,88 +78,145 @@ const SimplePieChart = ({
                 width: "100%",
                 height: "100%",
                 backgroundColor: item.color,
-                transform: [{ rotate: `${startAngle}deg` }, { scale: 1 }],
-                opacity: 1,
-                zIndex: index,
+                borderRadius: chartSize / 2,
+                transform: [{ rotate: `${startAngle}deg` }],
+                overflow: "hidden",
               }}
-            />
+            >
+              <View
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  transform: [{ rotate: `${endAngle - startAngle}deg` }],
+                  backgroundColor: "#f3f4f6",
+                }}
+              />
+            </View>
           );
         })}
-      </View>
+        
+        {/* Center circle */}
+        <View
+          style={{
+            width: chartSize * 0.6,
+            height: chartSize * 0.6,
+            borderRadius: chartSize * 0.3,
+            backgroundColor: "white",
+            justifyContent: "center",
+            alignItems: "center",
+            shadowColor: "rgba(0,0,0,0.1)",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.5,
+            shadowRadius: 8,
+            elevation: 5,
+          }}
+        >
+          <Text fontWeight="$8" fontSize="$6">¥{totalValue.toFixed(0)}</Text>
+          <Text color="$gray10" fontSize="$2">Total Expenses</Text>
+        </View>
+      </YStack>
 
-      <YStack marginTop="$6" width="100%">
+      {/* Legend */}
+      <Card width="100%" padding="$3.5" borderRadius="$4" marginTop="$3" backgroundColor="white" elevate>
         {data.map((item) => (
           <XStack
             key={item.label}
             alignItems="center"
             justifyContent="space-between"
-            marginBottom="$2"
+            marginBottom="$2.5"
           >
-            <XStack alignItems="center">
+            <XStack alignItems="center" space="$2">
               <View
                 style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 4,
+                  width: 12,
+                  height: 12,
+                  borderRadius: 3,
                   backgroundColor: item.color,
-                  marginRight: 8
                 }}
               />
-              <Text>{item.label}</Text>
+              <Text fontWeight="$5" fontSize="$3">{item.label}</Text>
             </XStack>
-            <XStack>
-              <Text fontWeight="$6" marginRight="$2">
-                ¥{item.value.toFixed(2)}
+            <XStack alignItems="baseline" space="$1">
+              <Text fontWeight="$7" fontSize="$3">
+                ¥{item.value.toFixed(0)}
               </Text>
-              <Text color="$gray10">
+              <Text color="$gray10" fontSize="$2">
                 ({((item.value / totalValue) * 100).toFixed(1)}%)
               </Text>
             </XStack>
           </XStack>
         ))}
-      </YStack>
+      </Card>
     </YStack>
   );
 };
 
-const SimpleBarChart = ({
+// Enhanced bar chart component - 简化设计
+const EnhancedBarChart = ({
   data,
 }: {
   data: { label: string; value: number }[];
 }) => {
   const maxValue = Math.max(...data.map((item) => item.value));
-  const screenWidth = Dimensions.get("window").width - 40; // Account for padding
-
+  
   return (
-    <YStack marginTop="$4">
-      {data.map((item) => (
-        <YStack key={item.label} marginBottom="$4">
-          <XStack justifyContent="space-between" marginBottom="$1">
-            <Text fontSize="$2">{item.label}</Text>
-            <Text fontSize="$2" fontWeight="$6">
-              ¥{item.value.toFixed(2)}
-            </Text>
-          </XStack>
-          <View 
-            style={{
-              height: 24, 
-              backgroundColor: "#f3f4f6", 
-              borderRadius: 9999,
-              overflow: "hidden"
-            }}
-          >
-            <View
-              style={{
-                height: "100%", 
-                backgroundColor: "#3B82F6",
-                borderRadius: 9999,
-                width: `${(item.value / maxValue) * 100}%`
-              }}
-            />
-          </View>
-        </YStack>
-      ))}
-    </YStack>
+    <Card 
+      padding="$3.5" 
+      borderRadius="$4" 
+      backgroundColor="white"
+      marginBottom="$2"
+    >
+      <YStack space="$3">
+        {data.map((item, index) => {
+          // 计算百分比变化
+          const percentChange = index > 0 
+            ? ((item.value - data[index-1].value) / data[index-1].value) * 100 
+            : 0;
+          const isIncrease = percentChange > 0;
+          
+          return (
+            <YStack key={item.label} space="$1.5">
+              <XStack justifyContent="space-between" alignItems="center">
+                <Text fontSize="$3" fontWeight="$6" color="$gray11">
+                  {item.label}
+                </Text>
+                <XStack alignItems="center" space="$1.5">
+                  <Text fontSize="$3.5" fontWeight="$7">
+                    ¥{item.value.toFixed(0)}
+                  </Text>
+                  {index > 0 && (
+                    <Text 
+                      fontSize="$2" 
+                      color={isIncrease ? "$green9" : "$red9"}
+                    >
+                      {isIncrease ? "↑" : "↓"}{Math.abs(percentChange).toFixed(1)}%
+                    </Text>
+                  )}
+                </XStack>
+              </XStack>
+              
+              <View 
+                style={{
+                  height: 24, 
+                  backgroundColor: "#EFF6FF", 
+                  borderRadius: 12,
+                  overflow: "hidden",
+                }}
+              >
+                <View
+                  style={{
+                    height: "100%", 
+                    width: `${(item.value / maxValue) * 100}%`,
+                    borderRadius: 12,
+                    backgroundColor: "#60A5FA",
+                  }}
+                />
+              </View>
+            </YStack>
+          );
+        })}
+      </YStack>
+    </Card>
   );
 };
 
@@ -172,6 +246,7 @@ export default function ReportsScreen() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("categories");
   const [periodFilter, setPeriodFilter] = useState("This Month");
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   // Check if family mode is accessible
   useEffect(() => {
@@ -200,142 +275,266 @@ export default function ReportsScreen() {
     }
   };
 
+  const periods = ["This Week", "This Month", "This Quarter", "This Year"];
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       <YStack flex={1}>
-        <YStack padding="$4" borderBottomWidth={1} borderBottomColor="$gray4">
-          <H2 marginBottom="$2">Reports</H2>
+        {/* Gradient Header */}
+        <LinearGradient
+          colors={["$blue9", "$blue8"]}
+          start={[0, 0]}
+          end={[1, 0]}
+          padding="$3.5"
+          borderBottomLeftRadius="$4"
+          borderBottomRightRadius="$4"
+        >
+          <YStack>            
+            <Button
+              flexDirection="row"
+              alignItems="center"
+              justifyContent="space-between"
+              backgroundColor="rgba(255,255,255,0.2)"
+              paddingHorizontal="$3.5"
+              paddingVertical="$2"
+              borderRadius="$4"
+              hoverStyle={{ backgroundColor: "rgba(255,255,255,0.3)" }}
+              pressStyle={{ backgroundColor: "rgba(255,255,255,0.4)" }}
+              onPress={toggleViewMode}
+            >
+              <Text color="white" fontWeight="$6" fontSize="$3.5">
+                {viewMode === "personal"
+                  ? "Personal" 
+                  : currentFamilySpace?.name || "Family"}
+              </Text>
+              <ChevronDown size={14} color="white" />
+            </Button>
+          </YStack>
+        </LinearGradient>
 
-          <Button
-            flexDirection="row"
-            alignItems="center"
-            backgroundColor="$gray3"
-            paddingHorizontal="$4"
-            paddingVertical="$2"
-            borderRadius="$10"
-            onPress={toggleViewMode}
-          >
-            <Text fontWeight="$6" marginRight="$1">
-              {viewMode === "personal"
-                ? "Personal"
-                : currentFamilySpace?.name || "Family"}
-            </Text>
-            <ChevronDown size={16} color="#6B7280" />
-          </Button>
-        </YStack>
-
-        <Card padding="$4" backgroundColor="$background">
+        {/* Date Filter */}
+        <Card 
+          padding="$3.5" 
+          marginHorizontal="$4" 
+          marginTop="-$3.5" 
+          marginBottom="$3.5" 
+          backgroundColor="white" 
+          borderRadius="$4"
+          elevate
+          shadowColor="rgba(0,0,0,0.08)"
+          shadowRadius={6}
+        >
           <Button
             flexDirection="row"
             alignItems="center"
             justifyContent="space-between"
             chromeless
+            onPress={() => setIsSheetOpen(true)}
           >
-            <XStack alignItems="center">
-              <Calendar size={18} color="#6B7280" style={{ marginRight: 8 }} />
-              <Text fontWeight="$6">{periodFilter}</Text>
+            <XStack alignItems="center" space="$2">
+              <Calendar size={16} color="#6B7280" />
+              <Text fontWeight="$6" fontSize="$3.5">{periodFilter}</Text>
             </XStack>
-            <ChevronDown size={16} color="#6B7280" />
+            <ChevronDown size={14} color="#6B7280" />
           </Button>
         </Card>
 
-        <Tabs 
-          defaultValue="categories"
-          orientation="horizontal"
-          flexDirection="column"
-          flex={1}
-          borderBottomWidth={1}
-          borderBottomColor="$gray4"
+        {/* Categories/Trends Toggle */}
+        <XStack 
+          backgroundColor="white" 
+          marginHorizontal="$4" 
+          marginBottom="$3.5" 
+          borderRadius="$4"
+          shadowColor="rgba(0,0,0,0.06)"
+          shadowRadius={4}
+          shadowOffset={{ width: 0, height: 1 }}
+          elevation={1}
+          height={44}
+          overflow="hidden"
         >
-          <Tabs.List>
-            <Tabs.Tab
-              value="categories"
-              flex={1}
-              paddingVertical="$3"
-              borderBottomWidth={activeTab === "categories" ? 2 : 0}
-              borderBottomColor="$blue9"
-              onPress={() => setActiveTab("categories")}
-            >
+          <Button
+            flex={1}
+            backgroundColor={activeTab === "categories" ? "$blue9" : "transparent"}
+            paddingVertical="$2"
+            borderRadius={0}
+            hoverStyle={{ opacity: 0.9 }}
+            pressStyle={{ opacity: 0.8 }}
+            onPress={() => setActiveTab("categories")}
+          >
+            <XStack alignItems="center" justifyContent="center" space="$2">
+              <PieChart size={16} color={activeTab === "categories" ? "white" : "#6B7280"} />
               <Text
                 textAlign="center"
-                color={activeTab === "categories" ? "$blue9" : "$gray10"}
-                fontWeight={activeTab === "categories" ? "$6" : "$4"}
+                color={activeTab === "categories" ? "white" : "$gray10"}
+                fontWeight="$6"
+                fontSize="$3"
               >
                 Categories
               </Text>
-            </Tabs.Tab>
+            </XStack>
+          </Button>
 
-            <Tabs.Tab
-              value="trend"
-              flex={1}
-              paddingVertical="$3"
-              borderBottomWidth={activeTab === "trend" ? 2 : 0}
-              borderBottomColor="$blue9"
-              onPress={() => setActiveTab("trend")}
-            >
+          <Button
+            flex={1}
+            backgroundColor={activeTab === "trend" ? "$blue9" : "transparent"}
+            paddingVertical="$2"
+            borderRadius={0}
+            hoverStyle={{ opacity: 0.9 }}
+            pressStyle={{ opacity: 0.8 }}
+            onPress={() => setActiveTab("trend")}
+          >
+            <XStack alignItems="center" justifyContent="center" space="$2">
+              <BarChart2 size={16} color={activeTab === "trend" ? "white" : "#6B7280"} />
               <Text
                 textAlign="center"
-                color={activeTab === "trend" ? "$blue9" : "$gray10"}
-                fontWeight={activeTab === "trend" ? "$6" : "$4"}
+                color={activeTab === "trend" ? "white" : "$gray10"}
+                fontWeight="$6"
+                fontSize="$3"
               >
-                Trend
+                Trends
               </Text>
-            </Tabs.Tab>
-          </Tabs.List>
+            </XStack>
+          </Button>
+        </XStack>
 
-          {loading ? (
-            <YStack flex={1} justifyContent="center" alignItems="center">
-              <ActivityIndicator size="large" color="#3B82F6" />
-              <Text marginTop="$4" color="$gray10">Loading reports...</Text>
-            </YStack>
-          ) : (
-            <ScrollView style={{ flex: 1 }}>
-              {activeTab === "categories" ? (
-                <YStack padding="$4">
-                  <Text fontSize="$5" fontWeight="$6" marginBottom="$2">
-                    Spending by Category
-                  </Text>
-                  <SimplePieChart data={MOCK_CATEGORY_DATA} />
-                </YStack>
-              ) : (
-                <YStack padding="$4">
-                  <Text fontSize="$5" fontWeight="$6" marginBottom="$2">
-                    Monthly Spending Trend
-                  </Text>
-                  <SimpleBarChart data={MOCK_MONTHLY_DATA} />
-                </YStack>
-              )}
-
-              <Card marginHorizontal="$4" padding="$4" marginTop="$2" marginBottom="$8">
-                <Text fontSize="$5" fontWeight="$6" marginBottom="$4">
-                  Summary
+        {/* Content */}
+        {loading ? (
+          <YStack flex={1} justifyContent="center" alignItems="center">
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text marginTop="$4" color="$gray10">Loading reports...</Text>
+          </YStack>
+        ) : (
+          <ScrollView 
+            style={{ flex: 1, paddingHorizontal: 16 }} 
+            contentContainerStyle={{ paddingBottom: 32 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {activeTab === "categories" ? (
+              <YStack>
+                <Text fontSize="$4" fontWeight="$7" marginBottom="$2.5" color="$gray12">
+                  Spending by Category
                 </Text>
-                <YStack space="$2">
-                  <XStack justifyContent="space-between">
-                    <Text>Total Spending</Text>
-                    <Text fontWeight="$6">¥4,600</Text>
+                <EnhancedPieChart data={MOCK_CATEGORY_DATA} />
+              </YStack>
+            ) : (
+              <YStack>
+                <Text fontSize="$4" fontWeight="$7" marginBottom="$2.5" color="$gray12">
+                  Monthly Spending Trend
+                </Text>
+                <EnhancedBarChart data={MOCK_MONTHLY_DATA} />
+              </YStack>
+            )}
+
+            {/* Summary Card */}
+            <Card 
+              padding="$4" 
+              marginTop="$4" 
+              borderRadius="$4" 
+              backgroundColor="white" 
+              elevate
+              shadowColor="rgba(0,0,0,0.08)"
+              shadowRadius={4}
+            >
+              <Text fontSize="$3.5" fontWeight="$7" marginBottom="$3" color="$gray12">
+                Spending Summary
+              </Text>
+              
+              <YStack space="$3">
+                <XStack justifyContent="space-between" alignItems="center">
+                  <Text fontSize="$3" color="$gray11">Total Expenses</Text>
+                  <Text fontWeight="$7" fontSize="$4.5">¥4,600</Text>
+                </XStack>
+                
+                <XStack justifyContent="space-between" alignItems="center">
+                  <Text fontSize="$3" color="$gray11">Largest Category</Text>
+                  <XStack alignItems="center" space="$1.5">
+                    <Circle size="$2.5" backgroundColor="#EC4899" />
+                    <Text fontWeight="$7" fontSize="$3.5">Shopping (33%)</Text>
                   </XStack>
-                  <XStack justifyContent="space-between">
-                    <Text>Largest Category</Text>
-                    <Text fontWeight="$6">Shopping (33%)</Text>
-                  </XStack>
-                  <XStack justifyContent="space-between">
-                    <Text>Average Daily</Text>
-                    <Text fontWeight="$6">¥153.33</Text>
-                  </XStack>
-                  <Separator marginVertical="$2" />
-                  <XStack justifyContent="space-between">
-                    <Text fontWeight="$6">
+                </XStack>
+                
+                <XStack justifyContent="space-between" alignItems="center">
+                  <Text fontSize="$3" color="$gray11">Daily Average</Text>
+                  <Text fontWeight="$7" fontSize="$3.5">¥153.33</Text>
+                </XStack>
+                
+                <Separator marginVertical="$2" />
+                
+                <Button
+                  backgroundColor="$gray1"
+                  borderRadius="$3"
+                  paddingVertical="$2"
+                  hoverStyle={{ backgroundColor: "$gray2" }}
+                  pressStyle={{ backgroundColor: "$gray3" }}
+                >
+                  <XStack justifyContent="space-between" alignItems="center" width="100%">
+                    <Text fontWeight="$6" fontSize="$3">
                       {viewMode === "personal" ? "My Budget" : "Family Budget"}
                     </Text>
-                    <Text fontWeight="$6" color="$green9">¥2,400 left</Text>
+                    <XStack alignItems="center" space="$1">
+                      <Text fontWeight="$7" fontSize="$3.5" color="$green9">¥2,400 left</Text>
+                      <ArrowRight size={14} color="#10B981" />
+                    </XStack>
                   </XStack>
-                </YStack>
-              </Card>
-            </ScrollView>
-          )}
-        </Tabs>
+                </Button>
+              </YStack>
+            </Card>
+          </ScrollView>
+        )}
       </YStack>
+      
+      {/* Time Filter Sheet */}
+      <Sheet
+        modal
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        snapPoints={[40]}
+        position={40}
+        dismissOnSnapToBottom
+      >
+        <Sheet.Overlay 
+          backgroundColor="rgba(0,0,0,0.4)" 
+          animation="lazy" 
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+        />
+        <Sheet.Frame padding="$4">
+          <Sheet.Handle />
+          <YStack>
+            <Text fontSize="$4" fontWeight="$7" marginBottom="$3" color="$gray12">
+              Select Time Period
+            </Text>
+            <YStack space="$2">
+              {periods.map((period) => (
+                <Button 
+                  key={period}
+                  backgroundColor={periodFilter === period ? "$blue2" : "transparent"}
+                  paddingVertical="$3"
+                  borderRadius="$3"
+                  pressStyle={{ opacity: 0.7 }}
+                  onPress={() => {
+                    setPeriodFilter(period);
+                    setIsSheetOpen(false);
+                  }}
+                >
+                  <XStack justifyContent="space-between" alignItems="center" width="100%">
+                    <Text 
+                      fontSize="$3.5" 
+                      fontWeight={periodFilter === period ? "$7" : "$5"}
+                      color={periodFilter === period ? "$blue9" : "$gray11"}
+                    >
+                      {period}
+                    </Text>
+                    {periodFilter === period && (
+                      <Circle size="$2.5" backgroundColor="$blue9" />
+                    )}
+                  </XStack>
+                </Button>
+              ))}
+            </YStack>
+          </YStack>
+        </Sheet.Frame>
+      </Sheet>
     </SafeAreaView>
   );
 }
