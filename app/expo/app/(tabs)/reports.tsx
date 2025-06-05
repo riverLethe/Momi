@@ -14,13 +14,8 @@ import {
   Button, 
   XStack, 
   YStack, 
-  Tabs,
   Circle,
   Sheet,
-  H2,
-  H3,
-  H4,
-  Avatar,
   Separator
 } from "tamagui";
 import { LinearGradient } from "tamagui/linear-gradient";
@@ -28,7 +23,7 @@ import { LinearGradient } from "tamagui/linear-gradient";
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
 
-// Enhanced donut chart component
+// Enhanced donut chart component - consider replacing with Victory Pie
 const EnhancedPieChart = ({
   data,
 }: {
@@ -36,7 +31,7 @@ const EnhancedPieChart = ({
 }) => {
   const totalValue = data.reduce((sum, item) => sum + item.value, 0);
   const screenWidth = Dimensions.get("window").width;
-  const chartSize = Math.min(screenWidth - 80, 220); // 稍微减小图表尺寸
+  const chartSize = Math.min(screenWidth - 80, 220);
 
   return (
     <YStack alignItems="center" justifyContent="center" paddingVertical="$3">
@@ -112,7 +107,7 @@ const EnhancedPieChart = ({
           }}
         >
           <Text fontWeight="$8" fontSize="$6">¥{totalValue.toFixed(0)}</Text>
-          <Text color="$gray10" fontSize="$2">Total Expenses</Text>
+          <Text color="$gray10" fontSize="$2.5" marginTop="$1">Total Expenses</Text>
         </View>
       </YStack>
 
@@ -151,71 +146,103 @@ const EnhancedPieChart = ({
   );
 };
 
-// Enhanced bar chart component - 简化设计
-const EnhancedBarChart = ({
+// Victory Charts implementation for bar chart
+const VictoryBarChart = ({
   data,
 }: {
   data: { label: string; value: number }[];
 }) => {
-  const maxValue = Math.max(...data.map((item) => item.value));
+  // Calculate average value
+  const avgValue = data.reduce((sum, item) => sum + item.value, 0) / data.length;
   
   return (
     <Card 
-      padding="$3.5" 
+      padding="$4" 
       borderRadius="$4" 
       backgroundColor="white"
-      marginBottom="$2"
+      marginBottom="$4"
+      shadowColor="rgba(0,0,0,0.05)"
+      shadowRadius={2}
+      shadowOffset={{ width: 0, height: 1 }}
+      elevation={1}
     >
-      <YStack space="$3">
-        {data.map((item, index) => {
-          // 计算百分比变化
-          const percentChange = index > 0 
-            ? ((item.value - data[index-1].value) / data[index-1].value) * 100 
-            : 0;
-          const isIncrease = percentChange > 0;
-          
-          return (
-            <YStack key={item.label} space="$1.5">
-              <XStack justifyContent="space-between" alignItems="center">
-                <Text fontSize="$3" fontWeight="$6" color="$gray11">
-                  {item.label}
+      {/* Chart title and legend */}
+      <XStack justifyContent="space-between" alignItems="center" marginBottom="$3">
+        <Text fontSize="$3.5" fontWeight="$7" color="$gray12">Monthly Comparison</Text>
+        <XStack space="$3" alignItems="center">
+          <XStack space="$1" alignItems="center">
+            <View style={{ width: 10, height: 10, backgroundColor: "#4285F4", borderRadius: 2 }} />
+            <Text fontSize="$2.5" color="$gray10">Monthly</Text>
+          </XStack>
+          <XStack space="$1" alignItems="center">
+            <View style={{ width: 10, height: 2, backgroundColor: "#94A3B8", borderRadius: 1 }} />
+            <Text fontSize="$2.5" color="$gray10">Average</Text>
+          </XStack>
+        </XStack>
+      </XStack>
+      
+      <View style={{ height: 300, paddingBottom: 20 }}>
+        {/* 简单的条形图实现 */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', height: 250, alignItems: 'flex-end', paddingHorizontal: 10 }}>
+          {data.map((item, index) => {
+            const barHeight = (item.value / Math.max(...data.map(d => d.value))) * 200;
+            
+            return (
+              <View key={item.label} style={{ alignItems: 'center', width: `${100 / data.length - 5}%` }}>
+                {/* 显示金额 */}
+                <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 5 }}>
+                  ¥{item.value}
                 </Text>
-                <XStack alignItems="center" space="$1.5">
-                  <Text fontSize="$3.5" fontWeight="$7">
-                    ¥{item.value.toFixed(0)}
-                  </Text>
-                  {index > 0 && (
-                    <Text 
-                      fontSize="$2" 
-                      color={isIncrease ? "$green9" : "$red9"}
-                    >
-                      {isIncrease ? "↑" : "↓"}{Math.abs(percentChange).toFixed(1)}%
-                    </Text>
-                  )}
-                </XStack>
-              </XStack>
-              
-              <View 
-                style={{
-                  height: 24, 
-                  backgroundColor: "#EFF6FF", 
-                  borderRadius: 12,
-                  overflow: "hidden",
-                }}
-              >
-                <View
-                  style={{
-                    height: "100%", 
-                    width: `${(item.value / maxValue) * 100}%`,
-                    borderRadius: 12,
-                    backgroundColor: "#60A5FA",
+                
+                {/* 条形 */}
+                <View 
+                  style={{ 
+                    width: 35, 
+                    height: barHeight, 
+                    backgroundColor: '#4285F4',
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4
                   }}
                 />
+                
+                {/* 标签 */}
+                <Text style={{ fontSize: 10, marginTop: 8, color: '#64748B', fontWeight: 'bold' }}>
+                  {item.label}
+                </Text>
               </View>
-            </YStack>
-          );
-        })}
-      </YStack>
+            );
+          })}
+        </View>
+        
+        {/* 平均线 */}
+        <View 
+          style={{ 
+            position: 'absolute', 
+            left: 10, 
+            right: 10, 
+            top: 250 - (avgValue / Math.max(...data.map(d => d.value))) * 200,
+            borderBottomWidth: 1,
+            borderBottomColor: '#94A3B8',
+            borderStyle: 'dashed'
+          }}
+        />
+      </View>
+      
+      {/* Chart footer */}
+      <XStack justifyContent="space-between" paddingTop="$2" alignItems="center">
+        <Text fontSize="$2.5" color="$gray10">Period: Last 6 Months</Text>
+        <Button 
+          chromeless 
+          onPress={() => alert("Full report feature coming soon")}
+          pressStyle={{ opacity: 0.7 }}
+          size="$2"
+        >
+          <XStack alignItems="center" space="$1">
+            <Text fontSize="$2.5" color="$blue9">View Full Report</Text>
+            <ArrowRight size={12} color="#3B82F6" />
+          </XStack>
+        </Button>
+      </XStack>
     </Card>
   );
 };
@@ -245,7 +272,7 @@ export default function ReportsScreen() {
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("categories");
-  const [periodFilter, setPeriodFilter] = useState("This Month");
+  const [periodFilter, setPeriodFilter] = useState("This Week");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   // Check if family mode is accessible
@@ -411,24 +438,17 @@ export default function ReportsScreen() {
           >
             {activeTab === "categories" ? (
               <YStack>
-                <Text fontSize="$4" fontWeight="$7" marginBottom="$2.5" color="$gray12">
-                  Spending by Category
-                </Text>
                 <EnhancedPieChart data={MOCK_CATEGORY_DATA} />
               </YStack>
             ) : (
-              <YStack>
-                <Text fontSize="$4" fontWeight="$7" marginBottom="$2.5" color="$gray12">
-                  Monthly Spending Trend
-                </Text>
-                <EnhancedBarChart data={MOCK_MONTHLY_DATA} />
+              <YStack paddingTop="$1">
+                <VictoryBarChart data={MOCK_MONTHLY_DATA} />
               </YStack>
             )}
 
             {/* Summary Card */}
             <Card 
               padding="$4" 
-              marginTop="$4" 
               borderRadius="$4" 
               backgroundColor="white" 
               elevate
@@ -466,6 +486,7 @@ export default function ReportsScreen() {
                   paddingVertical="$2"
                   hoverStyle={{ backgroundColor: "$gray2" }}
                   pressStyle={{ backgroundColor: "$gray3" }}
+                  onPress={() => alert("Budget management feature coming soon")}
                 >
                   <XStack justifyContent="space-between" alignItems="center" width="100%">
                     <Text fontWeight="$6" fontSize="$3">
