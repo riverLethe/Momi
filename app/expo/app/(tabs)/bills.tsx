@@ -219,7 +219,7 @@ export default function BillsScreen() {
     <SafeAreaView style={styles.container}>
       <YStack flex={1}>
         {/* Header */}
-        <AppHeader />
+        {/* <AppHeader /> */}
         
         {/* Filters & Total Expense in one row */}
         <FilterWithTotalExpense

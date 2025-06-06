@@ -243,7 +243,7 @@ export default function HomeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       <YStack flex={1}>
         {/* 头部 */}
-        <HomeHeader />
+        {/* <HomeHeader /> */}
         
         {/* 内容 */}
         <ScrollView 

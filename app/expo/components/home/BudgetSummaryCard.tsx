@@ -14,8 +14,9 @@ import {
   Sheet,
   Input,
   Label,
-  Spinner,
   Avatar,
+  Heading,
+  Group,
 } from "tamagui";
 import { 
   TrendingDown, 
@@ -23,7 +24,6 @@ import {
   AlertTriangle, 
   EditIcon,
   Check,
-  X
 } from "lucide-react-native";
 
 // 预算状态类型
@@ -206,8 +206,6 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
             </XStack>
             
             <XStack space="$2">
-             
-              
               <Button
                 size="$2"
                 borderWidth={1}
@@ -356,42 +354,49 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
           >
             <Sheet.Frame padding="$4">
               <Sheet.Handle />
-              <YStack space="$4" marginTop="$2">
-                <Text fontSize="$5" fontWeight="$8" textAlign="center">
-                  {currentBudget ? t("Update Budget") : t("Set Your Budget")}
+              <YStack space="$5">
+                {/* 标题 */}
+                <Text fontSize="$6" fontWeight="$8" textAlign="center">
+                  {t("Update Budget")}
                 </Text>
                 
+                {/* 预算金额输入 */}
                 <YStack space="$3">
-                  <Label htmlFor="amount" fontSize="$3" color="$gray11">
+                  <Label htmlFor="budget-amount" fontSize="$4" fontWeight="$6" color="$gray11">
                     {t("Budget Amount")}
                   </Label>
                   <Input
-                    id="amount"
+                    id="budget-amount"
                     size="$4"
                     placeholder={`${currency}5,000`}
                     keyboardType="numeric"
                     value={budgetAmount}
                     onChangeText={setBudgetAmount}
-                    borderWidth={1}
                     borderColor="$gray5"
+                    borderWidth={1}
                     backgroundColor="$gray1"
+                    fontSize="$5"
                   />
                 </YStack>
                 
+                {/* 预算周期选择 - 使用自定义按钮组 */}
                 <YStack space="$3">
-                  <Label fontSize="$3" color="$gray11">
+                  <Label fontSize="$4" fontWeight="$6" color="$gray11">
                     {t("Budget Period")}
                   </Label>
-                  <XStack space="$2">
+                  <XStack borderRadius="$4" overflow="hidden">
                     {(["weekly", "monthly", "yearly"] as BudgetPeriod[]).map((period) => (
                       <Button
                         key={period}
-                        size="$3"
+                        size="$4"
                         flex={1}
                         backgroundColor={selectedPeriod === period ? "$blue9" : "$gray3"}
                         color={selectedPeriod === period ? "white" : "$gray11"}
                         onPress={() => setSelectedPeriod(period)}
-                        pressStyle={{ opacity: 0.8 }}
+                        borderRadius={0}
+                        borderWidth={0}
+                        marginHorizontal={0}
+                        animation="quick"
                       >
                         {getPeriodLabel(period, t)}
                       </Button>
@@ -399,27 +404,28 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                   </XStack>
                 </YStack>
                 
-                <XStack space="$3" marginTop="$2">
+                {/* 操作按钮 */}
+                <XStack space="$3" marginTop="$3">
                   <Button
                     size="$4"
                     flex={1}
-                    backgroundColor="$gray3"
+                    backgroundColor="$gray4"
+                    color="$gray12"
                     onPress={() => setShowDialog(false)}
-                    icon={X}
+                    pressStyle={{ opacity: 0.8 }}
                   >
                     {t("Cancel")}
                   </Button>
                   <Button
                     size="$4"
-                    flex={2}
-                    backgroundColor="$green9"
+                    flex={1}
+                    backgroundColor="$blue9"
                     color="white"
                     onPress={handleSaveBudget}
                     disabled={dialogLoading || !budgetAmount}
                     pressStyle={{ opacity: 0.8 }}
-                    iconAfter={dialogLoading ? () => <Spinner color="white" /> : Check}
                   >
-                    {t("Save Budget")}
+                    {t("Save")}
                   </Button>
                 </XStack>
               </YStack>

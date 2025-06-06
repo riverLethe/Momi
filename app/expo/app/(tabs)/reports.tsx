@@ -90,7 +90,7 @@ export default function ReportsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       <YStack flex={1}>
         {/* Header */}
-        <AppHeader />
+        {/* <AppHeader /> */}
 
         {/* Date & Comparison Filters */}
         <YStack
