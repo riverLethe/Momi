@@ -2,28 +2,20 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   FlatList,
   ActivityIndicator,
-  TouchableOpacity,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Calendar } from "lucide-react-native";
-import { 
-  View, 
-  Text, 
-  Card, 
-  XStack, 
-  YStack, 
-  Circle,
-  Avatar,
-} from "tamagui";
+import { YStack } from "tamagui";
 import { useTranslation } from "react-i18next";
 
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
 import { Bill } from "@/types/bills.types";
 import AppHeader from "@/components/shared/AppHeader";
-import BillsFilter, { DateFilterType, CategoryFilterType } from "@/components/bills/BillsFilter";
-import { EXPENSE_CATEGORIES, getCategoryById, getCategoryIcon, getTranslatedCategoryName } from "@/constants/categories";
+import { FilterWithTotalExpense, CategoryFilterType } from "@/components/bills/FilterWithTotalExpense";
+import { EXPENSE_CATEGORIES } from "@/constants/categories";
+import { BillDateGroup } from "@/components/bills/BillDateGroup";
+import { EmptyState } from "@/components/bills/EmptyState";
 
 // Mock bills data
 const generateMockBills = (): Bill[] => {
@@ -115,7 +107,6 @@ const generateMockBills = (): Bill[] => {
 };
 
 export default function BillsScreen() {
-  const router = useRouter();
   const { viewMode } = useViewStore();
   const { isLoggedIn } = useAuth();
   const { t } = useTranslation();
@@ -125,7 +116,8 @@ export default function BillsScreen() {
   const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
   
   // Filter states
-  const [dateFilter, setDateFilter] = useState<DateFilterType>("all");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilterType>("all");
 
   // Initialize with mock data
@@ -157,42 +149,29 @@ export default function BillsScreen() {
     }
     
     // Date filter
-    if (dateFilter !== "all") {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const thisWeekStart = new Date(today);
-      thisWeekStart.setDate(today.getDate() - today.getDay());
-      
-      const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const thisYearStart = new Date(today.getFullYear(), 0, 1);
-      
-      switch (dateFilter) {
-        case "today":
-          filtered = filtered.filter(bill => {
-            const billDate = new Date(bill.date);
-            return billDate >= today;
-          });
-          break;
-        case "this_week":
-          filtered = filtered.filter(bill => {
-            const billDate = new Date(bill.date);
-            return billDate >= thisWeekStart;
-          });
-          break;
-        case "this_month":
-          filtered = filtered.filter(bill => {
-            const billDate = new Date(bill.date);
-            return billDate >= thisMonthStart;
-          });
-          break;
-        case "this_year":
-          filtered = filtered.filter(bill => {
-            const billDate = new Date(bill.date);
-            return billDate >= thisYearStart;
-          });
-          break;
-      }
+    if (startDate || endDate) {
+      filtered = filtered.filter(bill => {
+        const billDate = new Date(bill.date);
+        billDate.setHours(0, 0, 0, 0);
+        
+        if (startDate && endDate) {
+          const start = new Date(startDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          return billDate >= start && billDate <= end;
+        } else if (startDate) {
+          const start = new Date(startDate);
+          start.setHours(0, 0, 0, 0);
+          return billDate >= start;
+        } else if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          return billDate <= end;
+        }
+        
+        return true;
+      });
     }
     
     // Category filter
@@ -201,7 +180,7 @@ export default function BillsScreen() {
     }
     
     setFilteredBills(filtered);
-  }, [bills, viewMode, isLoggedIn, dateFilter, categoryFilter]);
+  }, [bills, viewMode, isLoggedIn, startDate, endDate, categoryFilter]);
 
   // Calculate total expenses
   const totalExpense = useMemo(() => {
@@ -209,7 +188,7 @@ export default function BillsScreen() {
   }, [filteredBills]);
 
   // Group bills by date
-  const groupBillsByDate = () => {
+  const billGroups = useMemo(() => {
     const groups: { [key: string]: Bill[] } = {};
 
     filteredBills.forEach((bill) => {
@@ -224,132 +203,33 @@ export default function BillsScreen() {
       date,
       bills,
       totalAmount: bills.reduce((sum, bill) => sum + bill.amount, 0),
-    }));
-  };
+    })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [filteredBills]);
 
-  const billGroups = groupBillsByDate();
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return t('Today');
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return t('Yesterday');
-    } else {
-      return date.toLocaleDateString(undefined, {
-        month: "long",
-        day: "numeric"
-      });
-    }
-  };
-
-  const handleBillPress = (bill: Bill) => {
-    router.push({
-      pathname: "/bills/details",
-      params: { id: bill.id }
-    });
-  };
-
-  const renderBillItem = ({ item }: { item: Bill }) => {
-    const category = getCategoryById(item.category);
-    const CategoryIcon = getCategoryIcon(item.category);
-    const categoryName = t(category.name);
-    
-    return (
-      <TouchableOpacity activeOpacity={0.7} onPress={() => handleBillPress(item)}>
-        <Card 
-          marginVertical="$1.5" 
-          marginHorizontal="$2"
-          padding="$3" 
-          borderRadius="$3" 
-          backgroundColor="white"
-          elevate
-          animation="bouncy"
-        >
-          <XStack alignItems="center" justifyContent="space-between" width="100%">
-            <XStack alignItems="center" space="$3">
-              <Avatar circular size="$3.5" backgroundColor={`${category.color}20`}>
-                <CategoryIcon size={16} color={category.color} />
-              </Avatar>
-              
-              <YStack>
-                <Text fontWeight="$6" fontSize="$3">{item.merchant || categoryName}</Text>
-                <Text fontSize="$2.5" color="$gray10">
-                  {new Date(item.date).toLocaleTimeString(undefined, {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  })}
-                </Text>
-              </YStack>
-            </XStack>
-            
-            <YStack alignItems="flex-end">
-              <Text fontWeight="$6" fontSize="$3.5" color="$red9">-¥{item.amount.toFixed(2)}</Text>
-              <Text fontSize="$2.5" color="$gray10">{categoryName}</Text>
-            </YStack>
-          </XStack>
-        </Card>
-      </TouchableOpacity>
-    );
+  const handleDateRangeChange = (start: Date | null, end: Date | null) => {
+    setStartDate(start);
+    setEndDate(end);
   };
 
   const renderDateGroup = ({ item }: { item: (typeof billGroups)[0] }) => (
-    <YStack marginBottom="$3">
-      <XStack 
-        justifyContent="space-between" 
-        paddingHorizontal="$4" 
-        paddingVertical="$2"
-        marginBottom="$1"
-        alignItems="center"
-      >
-        <XStack alignItems="center" space="$2">
-          <Calendar size={16} color="#64748B" />
-          <Text fontSize="$3" fontWeight="$6" color="$gray11">{formatDate(item.date)}</Text>
-        </XStack>
-        <Text fontSize="$3" fontWeight="$6" color="$red9">¥{item.totalAmount.toFixed(2)}</Text>
-      </XStack>
-      
-      {item.bills.map((bill) => (
-        <React.Fragment key={bill.id}>
-          {renderBillItem({ item: bill })}
-        </React.Fragment>
-      ))}
-    </YStack>
+    <BillDateGroup item={item} />
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+    <SafeAreaView style={styles.container}>
       <YStack flex={1}>
         {/* Header */}
         <AppHeader />
         
-        {/* Filters */}
-        <BillsFilter 
-          dateFilter={dateFilter}
+        {/* Filters & Total Expense in one row */}
+        <FilterWithTotalExpense
           categoryFilter={categoryFilter}
-          onDateFilterChange={setDateFilter}
           onCategoryFilterChange={setCategoryFilter}
+          onDateRangeChange={handleDateRangeChange}
+          totalExpense={totalExpense}
+          startDate={startDate}
+          endDate={endDate}
         />
-        
-        {/* Total Expense Display */}
-        <Card 
-          marginHorizontal="$3" 
-          marginTop="$2" 
-          marginBottom="$3" 
-          padding="$3" 
-          backgroundColor="white"
-          borderRadius="$3"
-          elevate
-        >
-          <XStack alignItems="center" justifyContent="space-between">
-            <Text fontSize="$3" fontWeight="$5" color="$gray11">{t('Total Expense')}</Text>
-            <Text fontSize="$5" fontWeight="$7" color="$red9">¥{totalExpense.toFixed(2)}</Text>
-          </XStack>
-        </Card>
         
         {/* Bills List */}
         {loading ? (
@@ -357,35 +237,13 @@ export default function BillsScreen() {
             <ActivityIndicator size="large" color="#3B82F6" />
           </YStack>
         ) : filteredBills.length === 0 ? (
-          <YStack flex={1} justifyContent="center" alignItems="center" padding="$4">
-            <Card
-              borderRadius="$4"
-              padding="$5"
-              maxWidth={300}
-              backgroundColor="white"
-              elevate
-              shadowColor="rgba(0,0,0,0.1)"
-              shadowRadius={10}
-            >
-              <YStack alignItems="center" space="$3">
-                <Circle size="$8" backgroundColor="$gray2">
-                  <Calendar size={28} color="#64748B" />
-                </Circle>
-                <Text fontSize="$4" fontWeight="$6" marginTop="$2">{t('No Bills')}</Text>
-                <Text textAlign="center" color="$gray10" maxWidth={200}>
-                  {viewMode === "family" && !isLoggedIn
-                    ? t('Please login to view family bills')
-                    : t('Try changing filters')}
-                </Text>
-              </YStack>
-            </Card>
-          </YStack>
+          <EmptyState />
         ) : (
           <FlatList
             data={billGroups}
             renderItem={renderDateGroup}
             keyExtractor={(item) => item.date}
-            contentContainerStyle={{ padding: 8, paddingBottom: 24 }}
+            contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
           />
         )}
@@ -393,3 +251,13 @@ export default function BillsScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1, 
+    backgroundColor: "#f8fafc"
+  },
+  listContainer: {
+    paddingVertical: 4
+  }
+});

@@ -96,7 +96,7 @@ export const getCategoryById = (id: string): ExpenseCategory => {
 };
 
 // Get translated category name
-export const getTranslatedCategoryName = (categoryId: string) => {
+export const useTranslatedCategoryName = (categoryId: string) => {
   const { t } = useTranslation();
   const category = getCategoryById(categoryId);
   return t(category.name);

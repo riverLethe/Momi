@@ -2,26 +2,26 @@ import React, { useState } from "react";
 import { 
   Calendar, 
   Filter, 
-  ChevronDown, 
   X,
+  Check,
 } from "lucide-react-native";
 import {
-  View,
-  Text,
   Button,
   XStack,
   YStack,
   Sheet,
   ScrollView,
+  ListItem,
   Separator,
-  Avatar,
-  Select,
+  Text,
+  Paragraph,
 } from "tamagui";
+import { useTranslation } from "react-i18next";
 
-import { EXPENSE_CATEGORIES, getCategoryIcon } from "@/constants/categories";
+import { EXPENSE_CATEGORIES, getCategoryIcon, useTranslatedCategoryName } from "@/constants/categories";
 
-export type DateFilterType = "all" | "today" | "this_week" | "this_month" | "this_year" | "custom";
-export type CategoryFilterType = "all" | string; // 使用类别ID
+export type DateFilterType = "all" | "today" | "this_week" | "this_month" | "this_year";
+export type CategoryFilterType = "all" | string;
 
 interface BillsFilterProps {
   onDateFilterChange: (filter: DateFilterType) => void;
@@ -30,14 +30,12 @@ interface BillsFilterProps {
   categoryFilter: CategoryFilterType;
 }
 
-// 日期筛选选项
-const DATE_FILTER_OPTIONS = [
-  { value: "all", label: "全部" },
-  { value: "today", label: "今天" },
-  { value: "this_week", label: "本周" },
-  { value: "this_month", label: "本月" },
-  { value: "this_year", label: "今年" },
-  // 后续可以加入自定义日期范围
+const DATE_FILTER_OPTIONS: { value: DateFilterType; labelKey: string }[] = [
+  { value: "all", labelKey: "All" },
+  { value: "today", labelKey: "Today" },
+  { value: "this_week", labelKey: "This Week" },
+  { value: "this_month", labelKey: "This Month" },
+  { value: "this_year", labelKey: "This Year" },
 ];
 
 export const BillsFilter: React.FC<BillsFilterProps> = ({
@@ -46,159 +44,129 @@ export const BillsFilter: React.FC<BillsFilterProps> = ({
   dateFilter,
   categoryFilter,
 }) => {
+  const { t } = useTranslation();
+  const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
   const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
-  
-  // 获取当前日期筛选的标签
-  const getCurrentDateLabel = () => {
-    const option = DATE_FILTER_OPTIONS.find(opt => opt.value === dateFilter);
-    return option ? option.label : "全部";
+
+  const selectedDateLabel = DATE_FILTER_OPTIONS.find(opt => opt.value === dateFilter)?.labelKey || "All";
+  const SelectedCategoryName = () => {
+    if (categoryFilter === 'all') return <Text>{t('All Categories')}</Text>;
+    const name = useTranslatedCategoryName(categoryFilter);
+    return <Text>{name}</Text>;
   };
-  
-  // 获取当前类别筛选的标签
-  const getCurrentCategoryLabel = () => {
-    if (categoryFilter === "all") return "全部类别";
-    const category = EXPENSE_CATEGORIES.find(cat => cat.id === categoryFilter);
-    return category ? category.name : "全部类别";
-  };
-  
+
   return (
-    <YStack width="100%">
+    <>
       <XStack 
-        paddingHorizontal="$2.5" 
+        paddingHorizontal="$3" 
         paddingVertical="$2" 
-        justifyContent="space-between"
-        backgroundColor="$background"
+        space="$2.5"
       >
-        {/* 日期筛选下拉 */}
-        <Select
-          value={dateFilter}
-          onValueChange={(value) => onDateFilterChange(value as DateFilterType)}
-          disablePreventBodyScroll
-        >
-          <Select.Trigger width="42%" backgroundColor="$gray1" borderColor="$gray4" borderWidth={1}>
-            <XStack alignItems="center" justifyContent="space-between" paddingLeft="$1.5" flex={1}>
-              <XStack alignItems="center" space="$1.5">
-                <Calendar size={16} color="#64748B" />
-                <Select.Value fontSize="$3" fontWeight="$5">{getCurrentDateLabel()}</Select.Value>
-              </XStack>
-              <ChevronDown size={16} color="#64748B" />
-            </XStack>
-          </Select.Trigger>
-          
-          <Select.Content>
-            <Select.ScrollUpButton />
-            <Select.Viewport>
-              <Select.Group>
-                {DATE_FILTER_OPTIONS.map((option, index) => (
-                  <Select.Item key={option.value} value={option.value} index={index}>
-                    <Select.ItemText>{option.label}</Select.ItemText>
-                  </Select.Item>
-                ))}
-              </Select.Group>
-            </Select.Viewport>
-            <Select.ScrollDownButton />
-          </Select.Content>
-        </Select>
-        
-        {/* 类别筛选按钮 */}
-        <Button
-          width="42%"
-          backgroundColor="$gray1"
-          borderColor="$gray4"
-          borderWidth={1}
-          onPress={() => setIsCategorySheetOpen(true)}
-          pressStyle={{ opacity: 0.8 }}
-        >
-          <XStack alignItems="center" justifyContent="space-between" flex={1}>
-            <XStack alignItems="center" space="$1.5">
-              <Filter size={16} color="#64748B" />
-              <Text fontSize="$3" fontWeight="$5" color="$gray12">
-                {getCurrentCategoryLabel()}
-              </Text>
-            </XStack>
-            <ChevronDown size={16} color="#64748B" />
-          </XStack>
-        </Button>
+        <FilterButton 
+          icon={Calendar} 
+          label={t(selectedDateLabel)} 
+          onPress={() => setIsDateSheetOpen(true)} 
+        />
+        <FilterButton 
+          icon={Filter} 
+          label={<SelectedCategoryName />}
+          onPress={() => setIsCategorySheetOpen(true)} 
+        />
       </XStack>
       
-      {/* 类别筛选弹出层 */}
-      <Sheet
-        modal
-        open={isCategorySheetOpen}
-        onOpenChange={setIsCategorySheetOpen}
-        snapPoints={[50]}
-        position={0}
-        dismissOnSnapToBottom
+      <OptionSheet 
+        isOpen={isDateSheetOpen} 
+        setIsOpen={setIsDateSheetOpen}
+        title={t("Select Date Range")}
       >
-        <Sheet.Overlay />
-        <Sheet.Handle />
-        <Sheet.Frame padding="$4">
-          <XStack justifyContent="space-between" alignItems="center" marginBottom="$3">
-            <Text fontSize="$4" fontWeight="$6">选择类别</Text>
-            <Button
-              size="$2"
-              circular
-              onPress={() => setIsCategorySheetOpen(false)}
-            >
-              <X size={18} />
-            </Button>
-          </XStack>
-          
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <YStack space="$3" paddingBottom="$8">
-              {/* 全部类别选项 */}
-              <Button
-                backgroundColor={categoryFilter === "all" ? "$gray2" : "transparent"}
-                borderColor={categoryFilter === "all" ? "$gray8" : "$gray4"}
-                borderWidth={1}
-                paddingVertical="$3"
-                pressStyle={{ scale: 0.98, opacity: 0.9 }}
-                onPress={() => {
-                  onCategoryFilterChange("all");
-                  setIsCategorySheetOpen(false);
-                }}
-              >
-                <XStack alignItems="center" space="$3">
-                  <Avatar circular size="$3.5" backgroundColor="$gray3">
-                    <Filter size={18} color="#64748B" />
-                  </Avatar>
-                  <Text fontSize="$3.5" fontWeight="$6">全部类别</Text>
-                </XStack>
-              </Button>
-              
-              <Separator />
-              
-              {/* 各个类别选项 */}
-              {EXPENSE_CATEGORIES.map((cat) => {
-                const CategoryIcon = getCategoryIcon(cat.id);
-                return (
-                  <Button
-                    key={cat.id}
-                    backgroundColor={categoryFilter === cat.id ? cat.lightColor : "transparent"}
-                    borderColor={categoryFilter === cat.id ? cat.color : "$gray4"}
-                    borderWidth={1}
-                    paddingVertical="$3"
-                    pressStyle={{ scale: 0.98, opacity: 0.9 }}
-                    onPress={() => {
-                      onCategoryFilterChange(cat.id);
-                      setIsCategorySheetOpen(false);
-                    }}
-                  >
-                    <XStack alignItems="center" space="$3">
-                      <Avatar circular size="$3.5" backgroundColor={`${cat.color}20`}>
-                        <CategoryIcon size={18} color={cat.color} />
-                      </Avatar>
-                      <Text fontSize="$3.5" fontWeight="$6">{cat.name}</Text>
-                    </XStack>
-                  </Button>
-                );
-              })}
-            </YStack>
-          </ScrollView>
-        </Sheet.Frame>
-      </Sheet>
-    </YStack>
+        {DATE_FILTER_OPTIONS.map((option) => (
+          <ListItem
+            key={option.value}
+            title={t(option.labelKey)}
+            iconAfter={dateFilter === option.value ? <Check size={16} /> : undefined}
+            onPress={() => {
+              onDateFilterChange(option.value);
+              setIsDateSheetOpen(false);
+            }}
+            pressTheme
+          />
+        ))}
+      </OptionSheet>
+
+      <OptionSheet 
+        isOpen={isCategorySheetOpen} 
+        setIsOpen={setIsCategorySheetOpen}
+        title={t("Select Category")}
+      >
+        <ScrollView>
+            <ListItem
+              title={t("All Categories")}
+              iconAfter={categoryFilter === "all" ? <Check size={16} /> : undefined}
+              onPress={() => {
+                onCategoryFilterChange("all");
+                setIsCategorySheetOpen(false);
+              }}
+              pressTheme
+            />
+            <Separator />
+            {EXPENSE_CATEGORIES.map((cat) => {
+              const CategoryIcon = getCategoryIcon(cat.id);
+              return (
+                <ListItem
+                  key={cat.id}
+                  title={t(cat.name)}
+                  icon={<CategoryIcon size={18} color={cat.color} />}
+                  iconAfter={categoryFilter === cat.id ? <Check size={16} /> : undefined}
+                  onPress={() => {
+                    onCategoryFilterChange(cat.id);
+                    setIsCategorySheetOpen(false);
+                  }}
+                  pressTheme
+                />
+              );
+            })}
+        </ScrollView>
+      </OptionSheet>
+    </>
   );
 };
+
+const FilterButton = ({ icon: Icon, label, onPress }: { icon: React.FC<any>, label: React.ReactNode, onPress: () => void }) => (
+  <Button
+    flex={1}
+    icon={Icon}
+    onPress={onPress}
+    backgroundColor="white"
+    borderColor="$gray6"
+    borderWidth={1}
+    pressStyle={{
+      backgroundColor: "$gray2",
+    }}
+  >
+    {label}
+  </Button>
+);
+
+const OptionSheet = ({ isOpen, setIsOpen, title, children }: { isOpen: boolean, setIsOpen: (isOpen: boolean) => void, title: string, children: React.ReactNode }) => (
+  <Sheet
+    modal
+    open={isOpen}
+    onOpenChange={setIsOpen}
+    snapPoints={[50]}
+    dismissOnSnapToBottom
+  >
+    <Sheet.Overlay />
+    <Sheet.Handle />
+    <Sheet.Frame padding="$4">
+      <YStack>
+        <XStack justifyContent="space-between" alignItems="center" marginBottom="$3">
+          <Paragraph fontSize={18} fontWeight="700">{title}</Paragraph>
+          <Button size="$3" circular onPress={() => setIsOpen(false)} icon={X} />
+        </XStack>
+        {children}
+      </YStack>
+    </Sheet.Frame>
+  </Sheet>
+);
 
 export default BillsFilter; 
