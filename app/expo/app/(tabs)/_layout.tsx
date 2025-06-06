@@ -60,7 +60,7 @@ export default function TabsLayout() {
         name="chat"
         options={{
           title: "",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color ,focused}) => (
             <View style={{
               width: 60,
               height: 60,
@@ -70,7 +70,7 @@ export default function TabsLayout() {
               justifyContent: "center",
               marginBottom: -25,
               borderWidth: 5,
-              borderColor: "#ddd",
+              borderColor: focused?"#000":"#ddd",
             }}>
               <Plus size={24} color="white" />
             </View>
