@@ -8,6 +8,10 @@ import config from "../tamagui.config";
 import "../global.css";
 import { AuthProvider } from "@/providers/AuthProvider";
 import NotificationProvider from "@/providers/NotificationProvider";
+import I18nProvider from "@/providers/I18nProvider";
+
+// Import i18n instance to initialize it
+import "@/i18n";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -41,16 +45,18 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <TamaguiProvider config={config}>
-        <AuthProvider>
-          <NotificationProvider>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                animation: "slide_from_right",
-              }}
-            />
-          </NotificationProvider>
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: "slide_from_right",
+                }}
+              />
+            </NotificationProvider>
+          </AuthProvider>
+        </I18nProvider>
       </TamaguiProvider>
     </SafeAreaProvider>
   );
