@@ -27,14 +27,29 @@ const CATEGORY_COLORS = {
 // Generate mock category data
 export const generateMockCategoryData = (
   multiplier: number = 1,
+  periodType: DatePeriodEnum = DatePeriodEnum.WEEK,
   categories: string[] = [
     "Food", "Transport", "Shopping", "Entertainment", 
     "Utilities", "Health", "Education", "Gifts"
   ]
 ): CategoryData[] => {
+  // 添加基于时间周期的乘数，确保不同时间周期的数据量级合理
+  let periodMultiplier = 1;
+  switch (periodType) {
+    case DatePeriodEnum.WEEK:
+      periodMultiplier = 1;
+      break;
+    case DatePeriodEnum.MONTH:
+      periodMultiplier = 4; // 月度数据约为周数据的4倍
+      break;
+    case DatePeriodEnum.YEAR:
+      periodMultiplier = 12; // 年度数据约为月度数据的12倍
+      break;
+  }
+  
   return categories.map(category => ({
     label: category,
-    value: Math.round((Math.random() * 1000 + 500) * multiplier),
+    value: Math.round((Math.random() * 1000 + 500) * multiplier * periodMultiplier),
     color: CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS] || "#94A3B8",
     yearOverYearChange: Math.round((Math.random() * 40 - 20)) // 生成-20%到+20%之间的同比变化
   }));
@@ -47,9 +62,23 @@ export const generateMockTrendData = (
 ): TrendData[] => {
   const labels = getTrendLabels(periodType);
   
+  // 添加基于时间周期的乘数，确保不同时间周期的数据量级合理
+  let periodMultiplier = 1;
+  switch (periodType) {
+    case DatePeriodEnum.WEEK:
+      periodMultiplier = 1;
+      break;
+    case DatePeriodEnum.MONTH:
+      periodMultiplier = 4; // 月度数据约为周数据的4倍
+      break;
+    case DatePeriodEnum.YEAR:
+      periodMultiplier = 12; // 年度数据约为月度数据的12倍
+      break;
+  }
+  
   return labels.map(label => ({
     label,
-    value: Math.round((Math.random() * 1000 + 500) * multiplier)
+    value: Math.round((Math.random() * 1000 + 500) * multiplier * periodMultiplier)
   }));
 };
 
@@ -119,7 +148,11 @@ export const generateMockTopSpendingCategories = (
   const sortedCategories = [...categoryData].sort((a, b) => b.value - a.value).slice(0, 3);
   
   return sortedCategories.map(category => {
-    const previousAmount = Math.round(category.value * (Math.random() * 0.4 + 0.8)); // 80% to 120% of current
+    // 生成合理的前期金额，以确保同比变化在-30%到+50%之间
+    // 对于高值类别，前期值更可能低于当前值(增长)
+    // 对于低值类别，前期值可能高于当前值(降低)
+    const growthBias = category.value > 1000 ? 0.8 : 1.1; // 高值类别偏向增长，低值类别偏向下降
+    const previousAmount = Math.round(category.value / (1 + (Math.random() * 0.5 - 0.2) * growthBias));
     const changePercentage = Math.round(((category.value - previousAmount) / previousAmount) * 100);
       
     return {
@@ -143,7 +176,7 @@ export const fetchReportData = async (
   // For now, we'll generate mock data
   
   const familyMultiplier = viewMode === "family" ? 1.8 : 1;
-  const categoryData = generateMockCategoryData(familyMultiplier);
+  const categoryData = generateMockCategoryData(familyMultiplier, periodType);
   
   // Generate trend data based on period type
   const trendData = generateMockTrendData(periodType, familyMultiplier);

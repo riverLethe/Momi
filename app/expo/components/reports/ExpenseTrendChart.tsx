@@ -30,9 +30,9 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
   const dataMax = Math.max(...data.map(item => item.value));
   const dataMin = Math.min(...data.map(item => item.value));
   
-  // Ensure we have at least 20% padding in the y-axis
+  // Ensure we have at least 20% padding in the y-axis and include average in scale calculation
   const maxValue = Math.max(dataMax, averageSpending) * 1.2;
-  const minValue = Math.max(0, dataMin * 0.8);
+  const minValue = Math.max(0, Math.min(dataMin, averageSpending) * 0.8);
   
   return (
     <Card 
@@ -93,7 +93,16 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
               labels: data.map(item => item.label),
               datasets: [
                 {
-                  data: [minValue, ...data.map(item => item.value), maxValue]
+                  data: data.map(item => item.value),
+                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                  strokeWidth: 2
+                },
+                {
+                  data: Array(data.length).fill(averageSpending),
+                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity * 0.7})`,
+                  strokeWidth: 1,
+                  strokeDashArray: [5, 5],
+                  withDots: false
                 }
               ]
             }}
@@ -128,15 +137,14 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
               borderRadius: 8,
             }}
             renderDotContent={({ x, y, index, indexData }: { x: number; y: number; index: number; indexData: number }) => {
-              if (index === 0 || index > data.length) return null;
+              if (index >= data.length) return null;
               
-              const dataIndex = index - 1;
-              const value = data[dataIndex].value;
+              const value = data[index].value;
               const isHigherThanAvg = value > averageSpending;
               
               return (
                 <View
-                  key={`dot-label-${dataIndex}`}
+                  key={`dot-label-${index}`}
                   style={{
                     position: 'absolute',
                     top: y - 24,
@@ -153,59 +161,6 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
                     ¥{value}
                   </Text>
                 </View>
-              );
-            }}
-            decorator={() => {
-              const chartHeight = 220;
-              const valuePadding = (maxValue - minValue) * 0.1;
-              const effectiveMin = minValue - valuePadding;
-              const effectiveMax = maxValue + valuePadding;
-              const valueRange = effectiveMax - effectiveMin;
-              
-              if (valueRange === 0) return null;
-
-              const avgPercent = (effectiveMax - averageSpending) / valueRange;
-              const avgPosition = avgPercent * chartHeight;
-              
-              return (
-                <>
-                  <View
-                    style={{
-                      position: 'absolute',
-                      left: 40,
-                      top: avgPosition,
-                      right: 0,
-                      height: 1,
-                      borderWidth: 0.5,
-                      borderColor: '#3B82F6',
-                      borderStyle: 'dashed',
-                      backgroundColor: 'transparent',
-                      zIndex: 1000,
-                    }}
-                  />
-                  
-                  <View
-                    style={{
-                      position: 'absolute',
-                      left: 5,
-                      top: avgPosition - 10,
-                      backgroundColor: '#EBF2FF',
-                      paddingHorizontal: 3,
-                      paddingVertical: 1,
-                      borderRadius: 2,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: '#3B82F6',
-                        fontSize: 8,
-                        fontWeight: 'bold',
-                      }}
-                    >
-                      ¥{averageSpending.toFixed(0)}
-                    </Text>
-                  </View>
-                </>
               );
             }}
           />
