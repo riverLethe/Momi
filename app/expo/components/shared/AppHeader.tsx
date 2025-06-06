@@ -85,7 +85,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </Button>
           )}
           
-          <Button
+          {/* <Button
             size="$2"
             backgroundColor={viewMode === "personal" ? "$blue5" : "$orange5"}
             paddingHorizontal="$3"
@@ -106,7 +106,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             onPress={() => {}}
           >
             <Bell size={18} color={theme?.color?.get()} />
-          </Button>
+          </Button> */}
         </XStack>
       </XStack>
       
