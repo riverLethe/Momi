@@ -21,42 +21,15 @@ import {
 
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
-
-// Mock AI for bill processing (in a real app, this would call an API)
-const mockBillProcessing = (text: string) => {
-  // Simple parsing logic
-  const amountMatch = text.match(/(\d+(\.\d+)?)/);
-  const amount = amountMatch ? parseFloat(amountMatch[0]) : 0;
-
-  // Try to extract category
-  let category = "Other";
-  if (text.includes("food") || text.includes("餐") || text.includes("eat")) {
-    category = "Food";
-  } else if (
-    text.includes("transport") ||
-    text.includes("bus") ||
-    text.includes("taxi")
-  ) {
-    category = "Transport";
-  } else if (text.includes("shop") || text.includes("buy")) {
-    category = "Shopping";
-  }
-
-  return {
-    amount,
-    category,
-    date: new Date(),
-    merchant: "Auto-detected",
-    notes: text,
-  };
-};
+import { BillInput } from "@/types/bills.types";
+import { extractBillDataFromText, generateBillAnalysisResponse } from "@/utils/bill-analyzer.utils";
 
 export default function BillChatScreen() {
   const router = useRouter();
   const { viewMode, currentFamilySpace } = useViewStore();
-  const { isLoggedIn, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [messages, setMessages] = useState<any[]>([]);
-  const [billData, setBillData] = useState<any>(null);
+  const [billData, setBillData] = useState<BillInput | null>(null);
 
   useEffect(() => {
     // Welcome message when the chat is loaded
@@ -76,7 +49,7 @@ export default function BillChatScreen() {
 
   // Check if family mode is available
   useEffect(() => {
-    if (viewMode === "family" && !isLoggedIn) {
+    if (viewMode === "family" && !isAuthenticated) {
       Alert.alert(
         "Login Required",
         "You need to login to record family bills.",
@@ -86,7 +59,7 @@ export default function BillChatScreen() {
         ]
       );
     }
-  }, [viewMode, isLoggedIn]);
+  }, [viewMode, isAuthenticated]);
 
   const onSend = useCallback((newMessages: any = []) => {
     setMessages((previousMessages) =>
@@ -98,28 +71,37 @@ export default function BillChatScreen() {
 
     // Give the AI some time to "think"
     setTimeout(() => {
-      // Parse the message
-      const processedBill = mockBillProcessing(userMessage);
+      // 使用账单分析工具解析消息
+      const processedBill = extractBillDataFromText(userMessage);
+      
+      // 设置家庭账单属性
+      if (viewMode === "family") {
+        processedBill.isFamilyBill = true;
+        processedBill.familyId = currentFamilySpace?.id;
+      }
+      
       setBillData(processedBill);
 
+      // 生成AI回复
+      const responseText = generateBillAnalysisResponse(processedBill);
+      
       // AI response
       const botMessage = {
         _id: Math.round(Math.random() * 1000000),
-        text: `I detected a ${processedBill.category} expense of ¥${processedBill.amount}. Is this correct?`,
+        text: responseText,
         createdAt: new Date(),
         user: {
           _id: 2,
           name: "AI Assistant",
           avatar: "https://placehold.co/100x100/3B82F6/FFFFFF.png?text=AI",
         },
-        // Custom bill summary component can be added here
       };
 
       setMessages((previousMessages) =>
         GiftedChat.append(previousMessages, [botMessage])
       );
     }, 1000);
-  }, []);
+  }, [viewMode, currentFamilySpace]);
 
   const renderBubble = (props: any) => {
     return (
@@ -178,7 +160,7 @@ export default function BillChatScreen() {
   };
 
   const renderActions = () => {
-    if (billData) {
+    if (billData && billData.amount > 0) {
       return (
         <Button
           size="$3"
@@ -188,8 +170,16 @@ export default function BillChatScreen() {
           onPress={() => {
             router.push({
               pathname: "/bills/add",
-              params: billData,
-            } as any);
+              params: {
+                amount: billData.amount.toString(),
+                category: billData.category,
+                date: billData.date.toISOString(),
+                merchant: billData.merchant,
+                notes: billData.notes,
+                isFamilyBill: billData.isFamilyBill ? "true" : "false",
+                familyId: billData.familyId,
+              } as any,
+            });
           }}
         >
           <Text color="white" fontWeight="$6">Save Bill</Text>
@@ -235,7 +225,7 @@ export default function BillChatScreen() {
           onSend={onSend}
           user={{
             _id: 1,
-            name: isLoggedIn ? user?.username : "Guest",
+            name: isAuthenticated ? user?.name : "Guest",
           }}
           renderBubble={renderBubble}
           renderInputToolbar={renderInputToolbar}

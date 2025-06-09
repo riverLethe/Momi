@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, ActivityIndicator, View } from "react-native";
+import { ScrollView, ActivityIndicator, View, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { YStack, Text } from "tamagui";
@@ -24,6 +24,7 @@ import WelcomeScreen from "@/components/home/WelcomeScreen";
 import { getCategoryById } from "@/constants/categories";
 import { Bill } from "@/types/bills.types";
 import { getUserPreferences, updateUserPreferences } from "@/utils/userPreferences.utils";
+import { syncRemoteData } from "@/utils/sync.utils";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
   const { bills, upcomingBills, transactions, recentTransactions, isLoading: isDataLoading, refreshData } = useData();
   
-  // 用户是否有账单
+  // 用户是否有账单或交易
   const [hasBills, setHasBills] = useState(true);
   
   // 预算周期状态
@@ -40,10 +41,10 @@ export default function HomeScreen() {
   // 预算数据
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatusInfo>({
     status: "good",
-    remaining: 2400,
-    spent: 2600,
-    total: 5000,
-    percentage: 52
+    remaining: 0,
+    spent: 0,
+    total: 0,
+    percentage: 0
   });
   
   // 类别分析数据
@@ -52,8 +53,33 @@ export default function HomeScreen() {
   // 是否显示加载状态
   const [isLoading, setIsLoading] = useState(false);
   
+  // 是否正在同步远程数据
+  const [syncingRemote, setSyncingRemote] = useState(false);
+  
   // 预算金额
-  const [currentBudget, setCurrentBudget] = useState<number | null>(5000);
+  const [currentBudget, setCurrentBudget] = useState<number | null>(null);
+  
+  // 同步远程数据
+  useEffect(() => {
+    const syncData = async () => {
+      if (isAuthenticated && user) {
+        try {
+          setSyncingRemote(true);
+          // 同步账单和交易数据
+          await syncRemoteData('bills', user.id);
+          await syncRemoteData('transactions', user.id);
+          // 刷新本地数据
+          await refreshData();
+        } catch (error) {
+          console.error('Failed to sync remote data:', error);
+        } finally {
+          setSyncingRemote(false);
+        }
+      }
+    };
+
+    syncData();
+  }, [isAuthenticated, user]);
   
   // 加载用户偏好
   useEffect(() => {
@@ -78,7 +104,7 @@ export default function HomeScreen() {
     loadUserPreferences();
   }, []);
   
-  // 检查是否有账单数据
+  // 检查是否有账单或交易数据
   useEffect(() => {
     setHasBills(bills.length > 0 || transactions.length > 0);
   }, [bills, transactions]);
@@ -88,8 +114,10 @@ export default function HomeScreen() {
     // 计算总支出
     let totalSpent = 0;
     
-    // 根据预算周期过滤交易
+    // 根据预算周期过滤交易和账单
     const today = new Date();
+    
+    // 过滤交易数据
     const filteredTransactions = transactions.filter(tx => {
       const txDate = new Date(tx.date);
       
@@ -110,8 +138,35 @@ export default function HomeScreen() {
       }
     });
     
-    // 计算总支出
-    totalSpent = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    // 过滤账单数据
+    const filteredBills = bills.filter(bill => {
+      const billDate = new Date(bill.date);
+      
+      if (budgetPeriod === "weekly") {
+        // 获取本周起始日期
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        return billDate >= startOfWeek;
+      } else if (budgetPeriod === "monthly") {
+        // 获取本月起始日期
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        return billDate >= startOfMonth;
+      } else {
+        // 获取本年起始日期
+        const startOfYear = new Date(today.getFullYear(), 0, 1);
+        return billDate >= startOfYear;
+      }
+    });
+    
+    // 计算交易总支出
+    const transactionsSpent = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    
+    // 计算账单总支出
+    const billsSpent = filteredBills.reduce((sum, bill) => sum + bill.amount, 0);
+    
+    // 计算总支出（交易 + 账单）
+    totalSpent = transactionsSpent + billsSpent;
     
     // 计算剩余预算
     const total = currentBudget || 0;
@@ -135,25 +190,31 @@ export default function HomeScreen() {
       percentage,
     });
     
-    // 计算类别支出
+    // 计算类别支出 (合并交易和账单数据)
     const categoryMap = new Map<string, number>();
     
+    // 添加交易类别支出
     filteredTransactions.forEach(tx => {
       const currentAmount = categoryMap.get(tx.category) || 0;
       categoryMap.set(tx.category, currentAmount + tx.amount);
+    });
+    
+    // 添加账单类别支出
+    filteredBills.forEach(bill => {
+      const currentAmount = categoryMap.get(bill.category) || 0;
+      categoryMap.set(bill.category, currentAmount + bill.amount);
     });
     
     // 转换为类别支出数组
     const categorySpending: CategorySpending[] = Array.from(categoryMap.entries())
       .map(([id, amount]) => {
         const categoryInfo = getCategoryById(id);
-        const categoryBudget = total * 0.25; // 假设每个类别占总预算的25%
-        const percentage = categoryBudget > 0 ? Math.round((amount / categoryBudget) * 100) : 0;
+        const categoryPercentage = total > 0 ? Math.round((amount / total) * 100) : 0;
         
         let status: "normal" | "exceeding" | "save" = "normal";
-        if (percentage >= 100) {
+        if (categoryPercentage >= 25) { // 假设类别预算占总预算的25%
           status = "exceeding";
-        } else if (percentage <= 50) {
+        } else if (categoryPercentage <= 10) {
           status = "save";
         }
         
@@ -161,16 +222,16 @@ export default function HomeScreen() {
           id,
           label: categoryInfo?.name || id,
           status,
-          percentage: percentage > 100 ? percentage - 100 : 0, // 超出预算的百分比
+          percentage: categoryPercentage > 25 ? categoryPercentage - 25 : 0, // 超出预算的百分比
           amount,
           color: categoryInfo?.color || "#999",
         };
       })
       .sort((a, b) => b.amount - a.amount) // 按金额降序排序
-      .slice(0, 3); // 只取前三项
+      .slice(0, 5); // 只取前五项
     
     setCategories(categorySpending);
-  }, [transactions, budgetPeriod, currentBudget, viewMode]);
+  }, [transactions, bills, budgetPeriod, currentBudget, viewMode]);
   
   // 处理设置预算
   const handleSaveBudget = async (amount: number, period: BudgetPeriod) => {
@@ -182,11 +243,19 @@ export default function HomeScreen() {
         budgetPeriod: period,
       });
       
+      // 更新状态
       setCurrentBudget(amount);
       setBudgetPeriod(period);
+    } catch (error) {
+      console.error('Failed to save budget:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // 处理刷新
+  const handleRefresh = async () => {
+    await refreshData();
   };
   
   // 处理开始聊天
@@ -214,14 +283,14 @@ export default function HomeScreen() {
   // 处理查看类别详情
   const handleCategoryPress = (categoryId: string) => {
     // 简化处理，直接跳转到报表页面
-    router.push("/reports");
+    router.push(`/reports?category=${categoryId}`);
   };
   
   // 如果正在加载数据，显示加载状态
-  if (isDataLoading) {
+  if (isDataLoading || syncingRemote) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-        <HomeHeader />
+        {/* <HomeHeader /> */}
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={{ marginTop: 16 }}>Loading your financial data...</Text>
@@ -230,7 +299,7 @@ export default function HomeScreen() {
     );
   }
   
-  // 如果用户没有账单，显示欢迎屏幕
+  // 如果用户没有账单或交易，显示欢迎屏幕
   if (!hasBills) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
@@ -254,6 +323,13 @@ export default function HomeScreen() {
           style={{ flex: 1 }} 
           contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isDataLoading || syncingRemote}
+              onRefresh={handleRefresh}
+              colors={["#3B82F6"]}
+            />
+          }
         >
           {/* 快捷操作栏 */}
           {/* <QuickActionBar 

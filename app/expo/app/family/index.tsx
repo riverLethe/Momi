@@ -33,36 +33,17 @@ import {
 import { useAuth } from "@/providers/AuthProvider";
 import { useViewStore } from "@/stores/viewStore";
 import { FamilySpace } from "@/types/family.types";
-
-// Mock family spaces data
-const MOCK_FAMILY_SPACES: FamilySpace[] = [
-  {
-    id: "1",
-    name: "My Family",
-    createdBy: "user_1",
-    creatorName: "John",
-    members: [
-      {
-        id: "user_1",
-        username: "John",
-        isCreator: true,
-        joinedAt: new Date("2023-01-01"),
-      },
-      {
-        id: "user_2",
-        username: "Jane",
-        isCreator: false,
-        joinedAt: new Date("2023-01-02"),
-      },
-    ],
-    inviteCode: "FAM123",
-    createdAt: new Date("2023-01-01"),
-  },
-];
+import { 
+  getFamilySpaces, 
+  createFamilySpace, 
+  joinFamilySpace, 
+  deleteFamilySpace, 
+  getUserFamilySpaces 
+} from "@/utils/family.utils";
 
 export default function FamilySpacesScreen() {
   const router = useRouter();
-  const { user, isLoggedIn } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { currentFamilySpace, setCurrentFamilySpace } = useViewStore();
 
   const [familySpaces, setFamilySpaces] = useState<FamilySpace[]>([]);
@@ -71,86 +52,158 @@ export default function FamilySpacesScreen() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [newFamilyName, setNewFamilyName] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Redirect if not logged in
+  // 重定向，如果未登录
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isAuthenticated) {
       Alert.alert(
-        "Login Required",
-        "You need to login to manage family spaces.",
+        "需要登录",
+        "你需要登录后才能管理家庭空间。",
         [
-          { text: "Cancel", onPress: () => router.back() },
-          { text: "Login", onPress: () => router.push("/auth/login") },
+          { text: "取消", onPress: () => router.back() },
+          { text: "登录", onPress: () => router.push("/auth/login") },
         ]
       );
     } else {
-      // Simulate loading family spaces
-      setTimeout(() => {
-        setFamilySpaces(MOCK_FAMILY_SPACES);
-        setLoading(false);
-      }, 1000);
+      loadFamilySpaces();
     }
-  }, [isLoggedIn]);
+  }, [isAuthenticated]);
 
-  const handleCreateFamily = () => {
+  // 加载家庭空间
+  const loadFamilySpaces = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const userSpaces = await getUserFamilySpaces(user.id);
+      setFamilySpaces(userSpaces);
+    } catch (error) {
+      console.error("Failed to load family spaces:", error);
+      Alert.alert("错误", "加载家庭空间失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 创建家庭空间
+  const handleCreateFamily = async () => {
+    if (!user) return;
+    
     if (!newFamilyName.trim()) {
-      Alert.alert("Error", "Please enter a family name");
+      Alert.alert("错误", "请输入家庭名称");
       return;
     }
 
-    // Mock creating a family space
-    const newFamilySpace: FamilySpace = {
-      id: `family_${Date.now()}`,
-      name: newFamilyName.trim(),
-      createdBy: user?.id || "",
-      creatorName: user?.username || "",
-      members: [
-        {
-          id: user?.id || "",
-          username: user?.username || "",
-          isCreator: true,
-          joinedAt: new Date(),
-        },
-      ],
-      inviteCode: `FAM${Math.floor(1000 + Math.random() * 9000)}`,
-      createdAt: new Date(),
-    };
+    try {
+      setIsProcessing(true);
+      const newFamilySpace = await createFamilySpace(newFamilyName.trim(), user);
+      
+      setFamilySpaces([...familySpaces, newFamilySpace]);
+      setNewFamilyName("");
+      setShowCreateForm(false);
 
-    setFamilySpaces([...familySpaces, newFamilySpace]);
-    setNewFamilyName("");
-    setShowCreateForm(false);
+      // 设置为当前家庭空间
+      setCurrentFamilySpace(newFamilySpace);
 
-    // Set this as the current family space
-    setCurrentFamilySpace(newFamilySpace);
-
-    Alert.alert("Success", `Family space "${newFamilyName}" created!`);
+      Alert.alert("成功", `家庭空间"${newFamilySpace.name}"已创建！`);
+    } catch (error) {
+      console.error("Failed to create family space:", error);
+      Alert.alert("错误", "创建家庭空间失败");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleJoinFamily = () => {
+  // 加入家庭空间
+  const handleJoinFamily = async () => {
+    if (!user) return;
+    
     if (!inviteCode.trim()) {
-      Alert.alert("Error", "Please enter an invite code");
+      Alert.alert("错误", "请输入邀请码");
       return;
     }
 
-    // Mock joining a family space
-    // In a real app, you would validate the code with your backend
-    Alert.alert("Success", "You have joined the family space!");
-    setInviteCode("");
-    setShowJoinForm(false);
+    try {
+      setIsProcessing(true);
+      const joinedSpace = await joinFamilySpace(inviteCode.trim(), user);
+      
+      if (!joinedSpace) {
+        Alert.alert("错误", "无效的邀请码");
+        return;
+      }
+      
+      // 检查空间是否已经在列表中
+      if (!familySpaces.some(space => space.id === joinedSpace.id)) {
+        setFamilySpaces([...familySpaces, joinedSpace]);
+      }
+      
+      setInviteCode("");
+      setShowJoinForm(false);
+      
+      Alert.alert("成功", `你已加入家庭空间"${joinedSpace.name}"！`);
+    } catch (error) {
+      console.error("Failed to join family space:", error);
+      Alert.alert("错误", "加入家庭空间失败");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
+  // 复制邀请码
   const copyInviteCode = async (code: string) => {
     await Clipboard.setStringAsync(code);
-    Alert.alert("Copied", "Invite code copied to clipboard");
+    Alert.alert("已复制", "邀请码已复制到剪贴板");
   };
 
+  // 选择家庭空间
   const handleSelectFamily = (familySpace: FamilySpace) => {
     setCurrentFamilySpace(familySpace);
     router.back();
   };
 
-  if (!isLoggedIn) {
-    return null; // Prevent rendering if not logged in
+  // 删除家庭空间
+  const handleDeleteFamily = async (familySpace: FamilySpace) => {
+    if (!user) return;
+    
+    Alert.alert(
+      "确认删除",
+      `确定要删除"${familySpace.name}"吗？此操作无法撤销。`,
+      [
+        { text: "取消", style: "cancel" },
+        {
+          text: "删除",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsProcessing(true);
+              const success = await deleteFamilySpace(familySpace.id);
+              
+              if (success) {
+                setFamilySpaces(familySpaces.filter(f => f.id !== familySpace.id));
+                
+                if (familySpace.id === currentFamilySpace?.id) {
+                  setCurrentFamilySpace(null);
+                }
+                
+                Alert.alert("成功", "家庭空间已删除");
+              } else {
+                Alert.alert("错误", "删除家庭空间失败");
+              }
+            } catch (error) {
+              console.error("Failed to delete family space:", error);
+              Alert.alert("错误", "删除家庭空间失败");
+            } finally {
+              setIsProcessing(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  if (!isAuthenticated) {
+    return null; // 如果未登录则不渲染
   }
 
   return (
@@ -168,11 +221,11 @@ export default function FamilySpacesScreen() {
         >
           <ArrowLeft size={24} color="#1F2937" />
         </Button>
-        <H3>Family Spaces</H3>
+        <H3>家庭空间</H3>
       </XStack>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-        {/* Create/Join Buttons */}
+        {/* 创建/加入按钮 */}
         <XStack marginBottom="$6">
           <Button
             flex={1}
@@ -184,9 +237,10 @@ export default function FamilySpacesScreen() {
               setShowCreateForm(true);
               setShowJoinForm(false);
             }}
+            disabled={isProcessing}
           >
             <Plus size={24} color="#FFFFFF" />
-            <Text color="white" fontWeight="$6" marginTop="$1">Create</Text>
+            <Text color="white" fontWeight="$6" marginTop="$1">创建</Text>
           </Button>
 
           <Button
@@ -199,73 +253,86 @@ export default function FamilySpacesScreen() {
               setShowJoinForm(true);
               setShowCreateForm(false);
             }}
+            disabled={isProcessing}
           >
             <Users size={24} color="#FFFFFF" />
-            <Text color="white" fontWeight="$6" marginTop="$1">Join</Text>
+            <Text color="white" fontWeight="$6" marginTop="$1">加入</Text>
           </Button>
         </XStack>
 
-        {/* Create Form */}
+        {/* 创建表单 */}
         {showCreateForm && (
           <Card padding="$4" marginBottom="$6" elevate>
-            <Text fontWeight="$7" marginBottom="$3">Create Family Space</Text>
+            <Text fontWeight="$7" marginBottom="$3">创建家庭空间</Text>
             <Input
               backgroundColor="$gray3"
               padding="$3"
               borderRadius="$4"
               marginBottom="$3"
-              placeholder="Enter family name"
+              placeholder="输入家庭名称"
               value={newFamilyName}
               onChangeText={setNewFamilyName}
+              disabled={isProcessing}
             />
             <Button
               backgroundColor="$blue9"
               borderRadius="$4"
               onPress={handleCreateFamily}
+              disabled={isProcessing}
             >
-              <Text color="white" textAlign="center" fontWeight="$6">
-                Create
-              </Text>
+              {isProcessing ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text color="white" textAlign="center" fontWeight="$6">
+                  创建
+                </Text>
+              )}
             </Button>
           </Card>
         )}
 
-        {/* Join Form */}
+        {/* 加入表单 */}
         {showJoinForm && (
           <Card padding="$4" marginBottom="$6" elevate>
-            <Text fontWeight="$7" marginBottom="$3">Join Family Space</Text>
+            <Text fontWeight="$7" marginBottom="$3">加入家庭空间</Text>
             <Input
               backgroundColor="$gray3"
               padding="$3"
               borderRadius="$4"
               marginBottom="$3"
-              placeholder="Enter invite code"
+              placeholder="输入邀请码"
               value={inviteCode}
               onChangeText={setInviteCode}
               autoCapitalize="characters"
+              disabled={isProcessing}
             />
             <Button
               backgroundColor="$purple9"
               borderRadius="$4"
               onPress={handleJoinFamily}
+              disabled={isProcessing}
             >
-              <Text color="white" textAlign="center" fontWeight="$6">Join</Text>
+              {isProcessing ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text color="white" textAlign="center" fontWeight="$6">加入</Text>
+              )}
             </Button>
           </Card>
         )}
 
-        {/* Family Spaces List */}
-        <Text fontWeight="$7" fontSize="$5" marginBottom="$3">Your Family Spaces</Text>
+        {/* 家庭空间列表 */}
+        <Text fontWeight="$7" fontSize="$5" marginBottom="$3">你的家庭空间</Text>
 
         {loading ? (
           <YStack alignItems="center" paddingVertical="$8">
             <ActivityIndicator size="large" color="#3B82F6" />
-            <Text marginTop="$2" color="$gray10">Loading family spaces...</Text>
+            <Text marginTop="$2" color="$gray10">加载家庭空间中...</Text>
           </YStack>
         ) : familySpaces.length === 0 ? (
           <Card padding="$6" alignItems="center">
             <Text color="$gray10" textAlign="center">
-              You haven't joined any family spaces yet.
+              你还没有加入任何家庭空间。
             </Text>
           </Card>
         ) : (
@@ -282,12 +349,13 @@ export default function FamilySpacesScreen() {
                 chromeless
                 justifyContent="flex-start"
                 onPress={() => handleSelectFamily(family)}
+                disabled={isProcessing}
               >
                 <XStack alignItems="center" justifyContent="space-between" width="100%">
                   <YStack>
                     <Text fontWeight="$7" fontSize="$5">{family.name}</Text>
                     <Text color="$gray10">
-                      {family.members.length} members
+                      {family.members.length} 成员
                     </Text>
                   </YStack>
                   <ChevronRight size={20} color="#9CA3AF" />
@@ -296,7 +364,7 @@ export default function FamilySpacesScreen() {
 
               <YStack padding="$4" backgroundColor="$gray2">
                 <XStack justifyContent="space-between" alignItems="center" marginBottom="$2">
-                  <Text color="$gray10">Invite Code:</Text>
+                  <Text color="$gray10">邀请码:</Text>
                   <XStack alignItems="center">
                     <Text fontWeight="$6" marginRight="$2">
                       {family.inviteCode}
@@ -304,6 +372,7 @@ export default function FamilySpacesScreen() {
                     <Button 
                       chromeless
                       onPress={() => copyInviteCode(family.inviteCode)}
+                      disabled={isProcessing}
                     >
                       <Copy size={16} color="#3B82F6" />
                     </Button>
@@ -311,8 +380,8 @@ export default function FamilySpacesScreen() {
                 </XStack>
 
                 <XStack justifyContent="space-between" alignItems="center">
-                  <Text color="$gray10">Created by:</Text>
-                  <Text>{family.creatorName} (You)</Text>
+                  <Text color="$gray10">创建者:</Text>
+                  <Text>{family.createdBy === user?.id ? `${family.creatorName} (你)` : family.creatorName}</Text>
                 </XStack>
               </YStack>
 
@@ -322,31 +391,12 @@ export default function FamilySpacesScreen() {
                   flexDirection="row"
                   alignItems="center"
                   justifyContent="center"
-                  onPress={() => {
-                    Alert.alert(
-                      "Confirm Deletion",
-                      `Are you sure you want to delete "${family.name}"? This action cannot be undone.`,
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: () => {
-                            setFamilySpaces(
-                              familySpaces.filter((f) => f.id !== family.id)
-                            );
-                            if (family.id === currentFamilySpace?.id) {
-                              setCurrentFamilySpace(null);
-                            }
-                          },
-                        },
-                      ]
-                    );
-                  }}
+                  onPress={() => handleDeleteFamily(family)}
+                  disabled={isProcessing}
                 >
                   <Trash size={16} color="#EF4444" />
                   <Text color="#EF4444" marginLeft="$1">
-                    Dissolve Family Space
+                    解散家庭空间
                   </Text>
                 </Button>
               )}

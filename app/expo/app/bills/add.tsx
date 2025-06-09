@@ -3,37 +3,73 @@ import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Image, SafeA
 import { Stack, useRouter } from 'expo-router';
 import { Button, Text, XStack, YStack, Circle } from 'tamagui';
 import { ArrowLeft, Calendar, Tag, X, Camera, Check } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-// Category options
-const categories = [
-  { id: '1', name: 'Food & Drinks', color: '#4CAF50' },
-  { id: '2', name: 'Shopping', color: '#2196F3' },
-  { id: '3', name: 'Transportation', color: '#FF9800' },
-  { id: '4', name: 'Entertainment', color: '#E91E63' },
-  { id: '5', name: 'Housing', color: '#9C27B0' },
-  { id: '6', name: 'Health', color: '#00BCD4' },
-  { id: '7', name: 'Travel', color: '#795548' },
-  { id: '8', name: 'Education', color: '#607D8B' },
-];
+import { useAuth } from '@/providers/AuthProvider';
+import { useData } from '@/providers/DataProvider';
+import { useViewStore } from '@/stores/viewStore';
+import { saveBill } from '@/utils/bills.utils';
+import { EXPENSE_CATEGORIES } from '@/constants/categories';
 
 export default function AddExpenseScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
+  const { refreshData } = useData();
+  const { isAuthenticated, user } = useAuth();
+  const { viewMode, currentFamilySpace } = useViewStore();
+  
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedCategory, setSelectedCategory] = useState(EXPENSE_CATEGORIES[0]?.id || '');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    const currentDate = selectedDate || new Date();
+    setShowDatePicker(false);
+    setSelectedDate(currentDate);
+  };
 
-  const handleSave = () => {
-    // Logic to save expense
-    console.log({
-      amount,
-      description,
-      category: selectedCategory,
-      date
-    });
+  const handleSave = async () => {
+    if (!amount || parseFloat(amount) <= 0 || !selectedCategory) {
+      // 输入验证
+      alert(t('Please enter a valid amount and select a category'));
+      return;
+    }
     
-    // Navigate back
-    router.back();
+    setIsSaving(true);
+    
+    try {
+      // 构建账单数据
+      const billData = {
+        amount: parseFloat(amount),
+        category: selectedCategory,
+        date: selectedDate,
+        merchant: description, // 使用描述作为商家名称
+        notes: '', // 备注可以为空
+        account: 'Cash', // 默认使用现金账户
+        isFamilyBill: viewMode === 'family',
+        familyId: viewMode === 'family' ? currentFamilySpace?.id : undefined,
+        familyName: viewMode === 'family' ? currentFamilySpace?.name : undefined,
+      };
+      
+      // 保存账单到本地存储
+      const currentUser = user || { id: 'local-user', name: 'Local User' };
+      await saveBill(billData, currentUser);
+      
+      // 刷新数据提供者中的数据
+      await refreshData();
+      
+      // 返回账单列表页面
+      router.back();
+    } catch (error) {
+      console.error('Failed to save bill:', error);
+      alert(t('Failed to save bill. Please try again.'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -53,9 +89,9 @@ export default function AddExpenseScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <ArrowLeft size={24} color="#333" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Expense</Text>
-          <TouchableOpacity onPress={handleSave}>
-            <Check size={24} color="#4CAF50" />
+          <Text style={styles.headerTitle}>{t('Add Expense')}</Text>
+          <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+            <Check size={24} color={isSaving ? "#AAAAAA" : "#4CAF50"} />
           </TouchableOpacity>
         </View>
         
@@ -77,7 +113,7 @@ export default function AddExpenseScreen() {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.descriptionInput}
-              placeholder="Description (e.g., Lunch at Restaurant)"
+              placeholder={t('Description (e.g., Lunch at Restaurant)')}
               value={description}
               onChangeText={setDescription}
               placeholderTextColor="#AAAAAA"
@@ -85,28 +121,42 @@ export default function AddExpenseScreen() {
           </View>
           
           {/* Date picker */}
-          <TouchableOpacity style={styles.dateContainer}>
+          <TouchableOpacity 
+            style={styles.dateContainer} 
+            onPress={() => setShowDatePicker(true)}
+          >
             <Calendar size={20} color="#4CAF50" />
-            <Text style={styles.dateText}>{date}</Text>
+            <Text style={styles.dateText}>
+              {selectedDate.toLocaleDateString()}
+            </Text>
           </TouchableOpacity>
           
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+            />
+          )}
+          
           {/* Category selection */}
-          <Text style={styles.sectionTitle}>Categories</Text>
+          <Text style={styles.sectionTitle}>{t('Categories')}</Text>
           <View style={styles.categoriesContainer}>
-            {categories.map((category) => (
+            {EXPENSE_CATEGORIES.map((category) => (
               <TouchableOpacity
                 key={category.id}
                 style={[
                   styles.categoryItem,
                   selectedCategory === category.id && {
                     borderColor: category.color,
-                    backgroundColor: `${category.color}10`,
+                    backgroundColor: `${category.color}20`,
                   },
                 ]}
                 onPress={() => setSelectedCategory(category.id)}
               >
                 <Circle size={16} backgroundColor={category.color} />
-                <Text style={styles.categoryText}>{category.name}</Text>
+                <Text style={styles.categoryText}>{t(category.name)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -114,7 +164,7 @@ export default function AddExpenseScreen() {
           {/* Add receipt button */}
           <TouchableOpacity style={styles.addReceiptButton}>
             <Camera size={20} color="#4CAF50" />
-            <Text style={styles.addReceiptText}>Add Receipt</Text>
+            <Text style={styles.addReceiptText}>{t('Add Receipt')}</Text>
           </TouchableOpacity>
         </ScrollView>
         
@@ -125,8 +175,11 @@ export default function AddExpenseScreen() {
             backgroundColor="#4CAF50"
             pressStyle={{ opacity: 0.8 }}
             onPress={handleSave}
+            disabled={isSaving}
           >
-            <Text style={styles.saveButtonText}>Save Expense</Text>
+            <Text style={styles.saveButtonText}>
+              {isSaving ? t('Saving...') : t('Save Expense')}
+            </Text>
           </Button>
         </View>
       </KeyboardAvoidingView>

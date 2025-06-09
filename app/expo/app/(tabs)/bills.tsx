@@ -10,125 +10,49 @@ import { useTranslation } from "react-i18next";
 
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
+import { useData } from "@/providers/DataProvider";
 import { Bill } from "@/types/bills.types";
 import AppHeader from "@/components/shared/AppHeader";
 import { FilterWithTotalExpense, CategoryFilterType } from "@/components/bills/FilterWithTotalExpense";
 import { EXPENSE_CATEGORIES } from "@/constants/categories";
 import { BillDateGroup } from "@/components/bills/BillDateGroup";
 import { EmptyState } from "@/components/bills/EmptyState";
-
-// Mock bills data
-const generateMockBills = (): Bill[] => {
-  const bills: Bill[] = [];
-
-  // Use defined categories
-  const categoryIds = EXPENSE_CATEGORIES.map(cat => cat.id);
-  const merchants = [
-    "Starbucks",
-    "Uber",
-    "Amazon",
-    "Cinema",
-    "Utility Company",
-    "Landlord",
-    "Mobile Carrier",
-    "Instagram",
-  ];
-
-  // Generate today's bills
-  for (let i = 0; i < 3; i++) {
-    const categoryIndex = Math.floor(Math.random() * categoryIds.length);
-    bills.push({
-      id: `today_${i}`,
-      amount: Math.floor(Math.random() * 200) + 10,
-      category: categoryIds[categoryIndex],
-      account: "Cash",
-      date: new Date(),
-      merchant: merchants[Math.floor(Math.random() * merchants.length)],
-      notes: "This is a test bill",
-      createdBy: "user_1",
-      creatorName: "John",
-      isFamilyBill: i % 2 === 0,
-      familyId: i % 2 === 0 ? "1" : undefined,
-      familyName: i % 2 === 0 ? "My Family" : undefined,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-  }
-
-  // Generate yesterday's bills
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  for (let i = 0; i < 2; i++) {
-    const categoryIndex = Math.floor(Math.random() * categoryIds.length);
-    bills.push({
-      id: `yesterday_${i}`,
-      amount: Math.floor(Math.random() * 100) + 20,
-      category: categoryIds[categoryIndex],
-      account: "Credit Card",
-      date: yesterday,
-      merchant: merchants[Math.floor(Math.random() * merchants.length)],
-      notes: "This is a test bill",
-      createdBy: i === 0 ? "user_1" : "user_2",
-      creatorName: i === 0 ? "John" : "Jane",
-      isFamilyBill: true,
-      familyId: "1",
-      familyName: "My Family",
-      createdAt: yesterday,
-      updatedAt: yesterday,
-    });
-  }
-
-  // Generate last week's bills
-  const lastWeek = new Date();
-  lastWeek.setDate(lastWeek.getDate() - 7);
-
-  for (let i = 0; i < 4; i++) {
-    const categoryIndex = Math.floor(Math.random() * categoryIds.length);
-    bills.push({
-      id: `lastweek_${i}`,
-      amount: Math.floor(Math.random() * 300) + 50,
-      category: categoryIds[categoryIndex],
-      account: i % 2 === 0 ? "Cash" : "Digital Payment",
-      date: lastWeek,
-      merchant: merchants[Math.floor(Math.random() * merchants.length)],
-      notes: "This is a test bill",
-      createdBy: "user_1",
-      creatorName: "John",
-      isFamilyBill: i % 3 === 0,
-      familyId: i % 3 === 0 ? "1" : undefined,
-      familyName: i % 3 === 0 ? "My Family" : undefined,
-      createdAt: lastWeek,
-      updatedAt: lastWeek,
-    });
-  }
-
-  return bills;
-};
+import { syncRemoteData } from "@/utils/sync.utils";
 
 export default function BillsScreen() {
   const { viewMode } = useViewStore();
-  const { isLoggedIn } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { t } = useTranslation();
+  const { bills, isLoading, refreshData } = useData();
 
-  const [loading, setLoading] = useState(true);
-  const [bills, setBills] = useState<Bill[]>([]);
   const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
+  const [syncingRemote, setSyncingRemote] = useState(false);
   
   // Filter states
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilterType>("all");
 
-  // Initialize with mock data
+  // Sync with remote data if authenticated
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockBills = generateMockBills();
-      setBills(mockBills);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    const syncData = async () => {
+      if (isAuthenticated && user) {
+        try {
+          setSyncingRemote(true);
+          // 在实际应用中，这里会从远程API获取数据并更新本地存储
+          await syncRemoteData('bills', user.id);
+          // 刷新本地数据
+          await refreshData();
+        } catch (error) {
+          console.error('Failed to sync remote data:', error);
+        } finally {
+          setSyncingRemote(false);
+        }
+      }
+    };
+
+    syncData();
+  }, [isAuthenticated, user]);
 
   // Apply view mode filter
   useEffect(() => {
@@ -136,7 +60,7 @@ export default function BillsScreen() {
     
     // View mode filter (personal/family)
     if (viewMode === "family") {
-      if (!isLoggedIn) {
+      if (!isAuthenticated) {
         // If not logged in, can't view family bills
         filtered = [];
       } else {
@@ -180,7 +104,7 @@ export default function BillsScreen() {
     }
     
     setFilteredBills(filtered);
-  }, [bills, viewMode, isLoggedIn, startDate, endDate, categoryFilter]);
+  }, [bills, viewMode, isAuthenticated, startDate, endDate, categoryFilter]);
 
   // Calculate total expenses
   const totalExpense = useMemo(() => {
@@ -215,6 +139,11 @@ export default function BillsScreen() {
     <BillDateGroup item={item} />
   );
 
+  // Handle refresh (pull-to-refresh)
+  const handleRefresh = async () => {
+    await refreshData();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <YStack flex={1}>
@@ -232,7 +161,7 @@ export default function BillsScreen() {
         />
         
         {/* Bills List */}
-        {loading ? (
+        {isLoading || syncingRemote ? (
           <YStack flex={1} justifyContent="center" alignItems="center">
             <ActivityIndicator size="large" color="#3B82F6" />
           </YStack>
@@ -245,6 +174,8 @@ export default function BillsScreen() {
             keyExtractor={(item) => item.date}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
+            onRefresh={handleRefresh}
+            refreshing={isLoading}
           />
         )}
       </YStack>

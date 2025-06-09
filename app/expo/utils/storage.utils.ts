@@ -8,6 +8,7 @@ export const STORAGE_KEYS = {
   REPORTS: 'momi_reports',
   USER_PREFERENCES: 'momi_user_preferences',
   AUTH_TOKEN: 'momi_auth_token',
+  FAMILY_SPACES: 'momi_family_spaces',
 };
 
 // Regular storage for non-sensitive data

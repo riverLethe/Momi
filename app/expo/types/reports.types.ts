@@ -59,4 +59,6 @@ export interface ReportData {
   healthScore: HealthScore;
   periodSelectors: PeriodSelectorData[];
   topSpendingCategories?: TopSpendingCategory[];
+  viewMode?: "personal" | "family";
+  periodType?: DatePeriodEnum;
 } 

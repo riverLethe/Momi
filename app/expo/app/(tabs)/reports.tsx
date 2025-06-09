@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ActivityIndicator, ScrollView } from "react-native";
+import { ActivityIndicator, ScrollView, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { YStack, Text } from "tamagui";
@@ -16,6 +16,7 @@ import EmptyState from "@/components/reports/EmptyState";
 // Hooks, Stores & Providers
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
+import { useData } from "@/providers/DataProvider";
 
 // Types & Utils
 import { 
@@ -24,14 +25,17 @@ import {
   ReportData 
 } from "@/types/reports.types";
 import { fetchReportData } from "@/utils/reports.utils";
+import { syncRemoteData } from "@/utils/sync.utils";
 
 export default function ReportsScreen() {
   const { t } = useTranslation();
   const { viewMode, currentFamilySpace } = useViewStore();
-  const { isLoggedIn } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { isLoading: dataLoading, refreshData, bills, transactions } = useData();
 
   // State
   const [loading, setLoading] = useState(true);
+  const [syncingRemote, setSyncingRemote] = useState(false);
   const [periodType, setPeriodType] = useState<DatePeriodEnum>(DatePeriodEnum.WEEK);
   const [periodSelectors, setPeriodSelectors] = useState<PeriodSelectorData[]>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("");
@@ -40,23 +44,44 @@ export default function ReportsScreen() {
   
   // Check if family mode is accessible
   useEffect(() => {
-    if (viewMode === "family" && !isLoggedIn) {
+    if (viewMode === "family" && !isAuthenticated) {
       // If trying to view family reports but not logged in
       useViewStore.getState().setViewMode("personal");
     }
-  }, [viewMode, isLoggedIn]);
+  }, [viewMode, isAuthenticated]);
 
-  // Load data when parameters change
+  // Sync with remote data if authenticated
+  useEffect(() => {
+    const syncData = async () => {
+      if (isAuthenticated && user) {
+        try {
+          setSyncingRemote(true);
+          // 在实际应用中，这里会从远程API获取数据并更新本地存储
+          await syncRemoteData('reports', user.id);
+          // 刷新本地数据
+          await refreshData();
+        } catch (error) {
+          console.error('Failed to sync remote data:', error);
+        } finally {
+          setSyncingRemote(false);
+        }
+      }
+    };
+
+    syncData();
+  }, [isAuthenticated, user]);
+
+  // Load data when parameters change or when bills/transactions data changes
   useEffect(() => {
     loadReportData();
-  }, [viewMode, periodType, selectedPeriodId]);
+  }, [viewMode, periodType, selectedPeriodId, bills, transactions]);
 
   // Load report data
   const loadReportData = async () => {
     setLoading(true);
     
     try {
-      // In a real app, this would call an API
+      // 始终使用最新的实际数据生成报表
       const data = await fetchReportData(
         periodType,
         viewMode,
@@ -86,6 +111,12 @@ export default function ReportsScreen() {
     setSelectedPeriodId(""); // Reset selected period
   };
 
+  // Handle refresh
+  const handleRefresh = async () => {
+    await refreshData(); // 刷新本地数据
+    await loadReportData(); // 重新生成报表
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       <YStack flex={1}>
@@ -113,7 +144,7 @@ export default function ReportsScreen() {
         </YStack>
 
         {/* Content */}
-        {loading ? (
+        {loading || syncingRemote ? (
           <YStack flex={1} justifyContent="center" alignItems="center">
             <ActivityIndicator size="large" color="#3B82F6" />
             <Text marginTop="$4" color="$gray10">{t("Loading reports")}</Text>
@@ -125,6 +156,13 @@ export default function ReportsScreen() {
             style={{ flex: 1, paddingHorizontal: 16 }} 
             contentContainerStyle={{ paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl 
+                refreshing={loading}
+                onRefresh={handleRefresh}
+                colors={["#3B82F6"]}
+              />
+            }
           >
             {/* Category Distribution (Donut Chart) */}
             <YStack paddingTop="$1">
