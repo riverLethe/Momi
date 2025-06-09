@@ -7,6 +7,8 @@ import { TamaguiProvider } from "tamagui";
 import config from "../tamagui.config";
 import "../global.css";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { DataProvider } from "@/providers/DataProvider";
+import { ChatProvider } from "@/providers/ChatProvider";
 import NotificationProvider from "@/providers/NotificationProvider";
 import I18nProvider from "@/providers/I18nProvider";
 
@@ -47,14 +49,18 @@ export default function RootLayout() {
       <TamaguiProvider config={config}>
         <I18nProvider>
           <AuthProvider>
-            <NotificationProvider>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  animation: "slide_from_right",
-                }}
-              />
-            </NotificationProvider>
+            <DataProvider>
+              <ChatProvider>
+                <NotificationProvider>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      animation: "slide_from_right",
+                    }}
+                  />
+                </NotificationProvider>
+              </ChatProvider>
+            </DataProvider>
           </AuthProvider>
         </I18nProvider>
       </TamaguiProvider>

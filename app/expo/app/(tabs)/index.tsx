@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView } from "react-native";
+import { ScrollView, ActivityIndicator, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { YStack } from "tamagui";
+import { YStack, Text } from "tamagui";
 
 // Providers and Stores
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
+import { useData } from "@/providers/DataProvider";
 
 // Custom Components
 import HomeHeader from "@/components/home/HomeHeader";
 import QuickActionBar from "@/components/home/QuickActionBar";
-import BudgetSummaryCard from "@/components/home/BudgetSummaryCard";
-import { 
+import BudgetSummaryCard, { 
   BudgetStatusInfo,
-  CategorySpending 
+  CategorySpending,
+  BudgetPeriod 
 } from "@/components/home/BudgetSummaryCard";
 import RecentBillsList from "@/components/home/RecentBillsList";
 import WelcomeScreen from "@/components/home/WelcomeScreen";
@@ -22,115 +23,19 @@ import WelcomeScreen from "@/components/home/WelcomeScreen";
 // Constants and Types
 import { getCategoryById } from "@/constants/categories";
 import { Bill } from "@/types/bills.types";
-
-// Mock data
-const MOCK_BILLS: Bill[] = [
-  {
-    id: "1",
-    amount: 128.5,
-    category: "food",
-    date: new Date(),
-    merchant: "Grocery Store",
-    notes: "Weekly groceries",
-    createdBy: "user_1",
-    creatorName: "John",
-    isFamilyBill: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    amount: 45.0,
-    category: "transport",
-    date: new Date(Date.now() - 86400000), // yesterday
-    merchant: "Gas Station",
-    notes: "Fuel",
-    createdBy: "user_1",
-    creatorName: "John",
-    isFamilyBill: false,
-    createdAt: new Date(Date.now() - 86400000),
-    updatedAt: new Date(Date.now() - 86400000),
-  },
-  {
-    id: "3",
-    amount: 200.0,
-    category: "shopping",
-    date: new Date(Date.now() - 2 * 86400000), // 2 days ago
-    merchant: "Department Store",
-    notes: "Clothes",
-    createdBy: "user_1",
-    creatorName: "John",
-    isFamilyBill: false,
-    createdAt: new Date(Date.now() - 2 * 86400000),
-    updatedAt: new Date(Date.now() - 2 * 86400000),
-  }
-];
-
-// Mock budget categories
-const MOCK_CATEGORIES: CategorySpending[] = [
-  { 
-    id: "food", 
-    label: "Food", 
-    status: "normal", 
-    percentage: 0, 
-    amount: 850,
-    color: getCategoryById("food").color
-  },
-  { 
-    id: "shopping", 
-    label: "Shopping", 
-    status: "exceeding", 
-    percentage: 15, 
-    amount: 450,
-    color: getCategoryById("shopping").color
-  },
-  { 
-    id: "entertainment", 
-    label: "Entertainment", 
-    status: "save", 
-    percentage: 30, 
-    amount: 200,
-    color: getCategoryById("entertainment").color
-  },
-];
-
-// Mock family budget categories
-const MOCK_FAMILY_CATEGORIES: CategorySpending[] = [
-  { 
-    id: "food", 
-    label: "Food", 
-    status: "exceeding", 
-    percentage: 12, 
-    amount: 920,
-    color: getCategoryById("food").color
-  },
-  { 
-    id: "shopping", 
-    label: "Shopping", 
-    status: "exceeding", 
-    percentage: 20, 
-    amount: 580,
-    color: getCategoryById("shopping").color
-  },
-  { 
-    id: "entertainment", 
-    label: "Entertainment", 
-    status: "normal", 
-    percentage: 0, 
-    amount: 350,
-    color: getCategoryById("entertainment").color
-  },
-];
+import { getUserPreferences, updateUserPreferences } from "@/utils/userPreferences.utils";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { viewMode } = useViewStore();
+  const { isAuthenticated, user } = useAuth();
+  const { bills, upcomingBills, transactions, recentTransactions, isLoading: isDataLoading, refreshData } = useData();
   
   // 用户是否有账单
   const [hasBills, setHasBills] = useState(true);
   
   // 预算周期状态
-  const [budgetPeriod, setBudgetPeriod] = useState<"weekly" | "monthly" | "yearly">("monthly");
+  const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>("monthly");
   
   // 预算数据
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatusInfo>({
@@ -142,10 +47,7 @@ export default function HomeScreen() {
   });
   
   // 类别分析数据
-  const [categories, setCategories] = useState<CategorySpending[]>(MOCK_CATEGORIES);
-  
-  // 账单数据
-  const [bills, setBills] = useState<Bill[]>(MOCK_BILLS);
+  const [categories, setCategories] = useState<CategorySpending[]>([]);
   
   // 是否显示加载状态
   const [isLoading, setIsLoading] = useState(false);
@@ -153,46 +55,135 @@ export default function HomeScreen() {
   // 预算金额
   const [currentBudget, setCurrentBudget] = useState<number | null>(5000);
   
-  // 根据视图模式和预算周期更新数据
+  // 加载用户偏好
   useEffect(() => {
-    if (viewMode === "family") {
-      setBudgetStatus({
-        status: "warning",
-        remaining: 1800,
-        spent: 3200,
-        total: 5000,
-        percentage: 64
-      });
-      setCategories(MOCK_FAMILY_CATEGORIES);
-    } else {
-      setBudgetStatus({
-        status: "good",
-        remaining: 2400,
-        spent: 2600,
-        total: 5000,
-        percentage: 52
-      });
-      setCategories(MOCK_CATEGORIES);
+    const loadUserPreferences = async () => {
+      try {
+        const preferences = await getUserPreferences();
+        
+        // 如果有设置预算金额，则使用
+        if (preferences && preferences.budgetAmount) {
+          setCurrentBudget(preferences.budgetAmount);
+        }
+        
+        // 如果有设置预算周期，则使用
+        if (preferences && preferences.budgetPeriod) {
+          setBudgetPeriod(preferences.budgetPeriod as BudgetPeriod);
+        }
+      } catch (error) {
+        console.error("Failed to load user preferences:", error);
+      }
+    };
+    
+    loadUserPreferences();
+  }, []);
+  
+  // 检查是否有账单数据
+  useEffect(() => {
+    setHasBills(bills.length > 0 || transactions.length > 0);
+  }, [bills, transactions]);
+  
+  // 计算预算状态
+  useEffect(() => {
+    // 计算总支出
+    let totalSpent = 0;
+    
+    // 根据预算周期过滤交易
+    const today = new Date();
+    const filteredTransactions = transactions.filter(tx => {
+      const txDate = new Date(tx.date);
+      
+      if (budgetPeriod === "weekly") {
+        // 获取本周起始日期
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        return txDate >= startOfWeek && tx.type === 'expense';
+      } else if (budgetPeriod === "monthly") {
+        // 获取本月起始日期
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        return txDate >= startOfMonth && tx.type === 'expense';
+      } else {
+        // 获取本年起始日期
+        const startOfYear = new Date(today.getFullYear(), 0, 1);
+        return txDate >= startOfYear && tx.type === 'expense';
+      }
+    });
+    
+    // 计算总支出
+    totalSpent = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    
+    // 计算剩余预算
+    const total = currentBudget || 0;
+    const remaining = Math.max(0, total - totalSpent);
+    const percentage = total > 0 ? Math.round((totalSpent / total) * 100) : 0;
+    
+    // 确定状态
+    let status: "good" | "warning" | "danger" = "good";
+    if (percentage >= 90) {
+      status = "danger";
+    } else if (percentage >= 70) {
+      status = "warning";
     }
-  }, [viewMode, budgetPeriod]);
+    
+    // 更新预算状态
+    setBudgetStatus({
+      status,
+      remaining,
+      spent: totalSpent,
+      total,
+      percentage,
+    });
+    
+    // 计算类别支出
+    const categoryMap = new Map<string, number>();
+    
+    filteredTransactions.forEach(tx => {
+      const currentAmount = categoryMap.get(tx.category) || 0;
+      categoryMap.set(tx.category, currentAmount + tx.amount);
+    });
+    
+    // 转换为类别支出数组
+    const categorySpending: CategorySpending[] = Array.from(categoryMap.entries())
+      .map(([id, amount]) => {
+        const categoryInfo = getCategoryById(id);
+        const categoryBudget = total * 0.25; // 假设每个类别占总预算的25%
+        const percentage = categoryBudget > 0 ? Math.round((amount / categoryBudget) * 100) : 0;
+        
+        let status: "normal" | "exceeding" | "save" = "normal";
+        if (percentage >= 100) {
+          status = "exceeding";
+        } else if (percentage <= 50) {
+          status = "save";
+        }
+        
+        return {
+          id,
+          label: categoryInfo?.name || id,
+          status,
+          percentage: percentage > 100 ? percentage - 100 : 0, // 超出预算的百分比
+          amount,
+          color: categoryInfo?.color || "#999",
+        };
+      })
+      .sort((a, b) => b.amount - a.amount) // 按金额降序排序
+      .slice(0, 3); // 只取前三项
+    
+    setCategories(categorySpending);
+  }, [transactions, budgetPeriod, currentBudget, viewMode]);
   
   // 处理设置预算
-  const handleSaveBudget = async (amount: number, period: "weekly" | "monthly" | "yearly") => {
+  const handleSaveBudget = async (amount: number, period: BudgetPeriod) => {
     setIsLoading(true);
     try {
-      // 这里应该调用API保存预算
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 保存到用户偏好
+      await updateUserPreferences({
+        budgetAmount: amount,
+        budgetPeriod: period,
+      });
       
       setCurrentBudget(amount);
       setBudgetPeriod(period);
-      
-      // 更新预算状态
-      setBudgetStatus(prev => ({
-        ...prev,
-        total: amount,
-        remaining: amount - prev.spent,
-        percentage: Math.round((prev.spent / amount) * 100)
-      }));
     } finally {
       setIsLoading(false);
     }
@@ -205,7 +196,7 @@ export default function HomeScreen() {
   
   // 处理添加账单
   const handleAddBill = () => {
-    router.push("/bills/add");
+    router.push('/bills/add');
   };
   
   // 处理预算管理
@@ -216,7 +207,7 @@ export default function HomeScreen() {
   
   // 处理查看账单详情
   const handleViewBill = (bill: Bill) => {
-    // 简化处理，直接跳转到账单列表
+    // 简化处理，跳转到账单列表
     router.push("/bills");
   };
   
@@ -226,11 +217,24 @@ export default function HomeScreen() {
     router.push("/reports");
   };
   
+  // 如果正在加载数据，显示加载状态
+  if (isDataLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+        <HomeHeader />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={{ marginTop: 16 }}>Loading your financial data...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
   // 如果用户没有账单，显示欢迎屏幕
   if (!hasBills) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-        <HomeHeader />
+        {/* <HomeHeader /> */}
         <WelcomeScreen 
           onStartChatPress={handleStartChat}
           onSetBudgetPress={() => setHasBills(true)}
@@ -248,35 +252,35 @@ export default function HomeScreen() {
         {/* 内容 */}
         <ScrollView 
           style={{ flex: 1 }} 
-          contentContainerStyle={{ paddingVertical: 12 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* 快速操作栏 */}
+          {/* 快捷操作栏 */}
           {/* <QuickActionBar 
             onAddBillPress={handleAddBill}
-            onAddBudgetPress={() => {}}
+            onAddBudgetPress={handleManageBudget}
             onViewBillsPress={() => router.push("/bills")}
             onStartChatPress={handleStartChat}
             onAnalysisPress={() => router.push("/reports")}
           /> */}
           
-          {/* 预算摘要卡片 - 整合了预算设置和分析 */}
+          {/* 预算摘要卡片 */}
           <BudgetSummaryCard 
+            budgetStatus={budgetStatus}
+            categories={categories}
+            isLoading={isLoading}
             currentPeriod={budgetPeriod}
             currentBudget={currentBudget}
             onSaveBudget={handleSaveBudget}
-            isLoading={isLoading}
-            budgetStatus={budgetStatus}
-            categories={categories}
-            isPersonalView={viewMode === "personal"}
-            onManageBudgetPress={handleManageBudget}
             onCategoryPress={handleCategoryPress}
+            onManageBudgetPress={handleManageBudget}
+            isPersonalView={viewMode === "personal"}
           />
-
-          {/* 最近账单 */}
+          
+          {/* 最近账单列表 */}
           <RecentBillsList 
-            bills={bills}
-            isLoading={isLoading}
+            bills={bills.slice(0, 5)}
+            isLoading={false}
             maxItems={5}
           />
         </ScrollView>

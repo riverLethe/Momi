@@ -226,7 +226,7 @@ export default function ChatScreen() {
   };
 
   const handleAddExpense = () => {
-    router.push('/add-expense');
+    router.push('/bills/add');
   };
 
   const scrollToBottom = () => {

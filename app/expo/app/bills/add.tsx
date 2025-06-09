@@ -1,312 +1,264 @@
-import React, { useState, useEffect } from "react";
-import {
-  TextInput,
-  ScrollView,
-  Alert,
-  Platform,
-} from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, Calendar, Check } from "lucide-react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import {
-  View,
-  Text,
-  Button,
-  XStack,
-  YStack,
-  Input,
-  Label,
-  Card,
-  H4,
-  Circle,
-} from "tamagui";
+import React, { useState } from 'react';
+import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Image, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import { Button, Text, XStack, YStack, Circle } from 'tamagui';
+import { ArrowLeft, Calendar, Tag, X, Camera, Check } from 'lucide-react-native';
 
-import { useViewStore } from "@/stores/viewStore";
-import { useAuth } from "@/providers/AuthProvider";
-
-// Mock categories
-const CATEGORIES = [
-  { id: "1", name: "Food", icon: "🍔" },
-  { id: "2", name: "Transport", icon: "🚗" },
-  { id: "3", name: "Shopping", icon: "🛍️" },
-  { id: "4", name: "Entertainment", icon: "🎬" },
-  { id: "5", name: "Health", icon: "💊" },
-  { id: "6", name: "Housing", icon: "🏠" },
-  { id: "7", name: "Other", icon: "📦" },
+// Category options
+const categories = [
+  { id: '1', name: 'Food & Drinks', color: '#4CAF50' },
+  { id: '2', name: 'Shopping', color: '#2196F3' },
+  { id: '3', name: 'Transportation', color: '#FF9800' },
+  { id: '4', name: 'Entertainment', color: '#E91E63' },
+  { id: '5', name: 'Housing', color: '#9C27B0' },
+  { id: '6', name: 'Health', color: '#00BCD4' },
+  { id: '7', name: 'Travel', color: '#795548' },
+  { id: '8', name: 'Education', color: '#607D8B' },
 ];
 
-// Mock accounts
-const ACCOUNTS = [
-  { id: "1", name: "Cash", icon: "💵" },
-  { id: "2", name: "Credit Card", icon: "💳" },
-  { id: "3", name: "Debit Card", icon: "💲" },
-  { id: "4", name: "WeChat Pay", icon: "📱" },
-  { id: "5", name: "Alipay", icon: "📱" },
-];
-
-export default function AddBillScreen() {
+export default function AddExpenseScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const { viewMode, currentFamilySpace } = useViewStore();
-  const { isLoggedIn, user } = useAuth();
-
-  // Check if family mode is accessible
-  useEffect(() => {
-    if (viewMode === "family" && !isLoggedIn) {
-      Alert.alert(
-        "Login Required",
-        "You need to login to record family bills.",
-        [
-          { text: "Continue as personal", onPress: () => router.back() },
-          { text: "Login", onPress: () => router.push("/auth/login") },
-        ]
-      );
-    }
-  }, [viewMode, isLoggedIn]);
-
-  // Form state
-  const [amount, setAmount] = useState(params.amount?.toString() || "");
-  const [selectedCategory, setSelectedCategory] = useState(
-    params.category?.toString() || ""
-  );
-  const [selectedAccount, setSelectedAccount] = useState("");
-  const [merchant, setMerchant] = useState(params.merchant?.toString() || "");
-  const [notes, setNotes] = useState(params.notes?.toString() || "");
-  const [date, setDate] = useState(
-    params.date ? new Date(params.date.toString()) : new Date()
-  );
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   const handleSave = () => {
-    if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert("Error", "Please enter a valid amount");
-      return;
-    }
-
-    if (!selectedCategory) {
-      Alert.alert("Error", "Please select a category");
-      return;
-    }
-
-    // Here you would typically save the bill to your backend
-    // For now, we'll just show a success message
-    Alert.alert("Success", "Bill saved successfully!", [
-      { text: "OK", onPress: () => router.back() },
-    ]);
-  };
-
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(Platform.OS === "ios");
-    setDate(currentDate);
+    // Logic to save expense
+    console.log({
+      amount,
+      description,
+      category: selectedCategory,
+      date
+    });
+    
+    // Navigate back
+    router.back();
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
-      <XStack 
-        alignItems="center" 
-        justifyContent="space-between" 
-        padding="$4" 
-        borderBottomWidth={1} 
-        borderBottomColor="$gray4"
+    <SafeAreaView style={styles.container}>
+      <Stack.Screen
+        options={{
+          headerShown: false
+        }}
+      />
+      
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
       >
-        <Button 
-          chromeless
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={24} color="#1F2937" />
-        </Button>
-
-        <H4>
-          {viewMode === "family"
-            ? `Add Bill for ${currentFamilySpace?.name || "Family"}`
-            : "Add Personal Bill"}
-        </H4>
-
-        <Button 
-          chromeless
-          onPress={handleSave}
-        >
-          <Check size={24} color="#3B82F6" />
-        </Button>
-      </XStack>
-
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-        {/* Amount Input */}
-        <YStack marginBottom="$6">
-          <Label color="$gray10" marginBottom="$2">Amount</Label>
-          <XStack 
-            alignItems="center" 
-            backgroundColor="$background" 
-            borderRadius="$4" 
-            padding="$4" 
-            borderWidth={1} 
-            borderColor="$gray4"
-          >
-            <Text fontSize="$5" marginRight="$2">¥</Text>
-            <Input
-              flex={1}
-              fontSize="$5"
-              keyboardType="numeric"
+        {/* Custom header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeft size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Add Expense</Text>
+          <TouchableOpacity onPress={handleSave}>
+            <Check size={24} color="#4CAF50" />
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView style={styles.scrollView}>
+          {/* Amount input */}
+          <View style={styles.amountContainer}>
+            <Text style={styles.currencySymbol}>¥</Text>
+            <TextInput
+              style={styles.amountInput}
               placeholder="0.00"
+              keyboardType="decimal-pad"
               value={amount}
               onChangeText={setAmount}
-              borderWidth={0}
-              paddingLeft="$0"
-              backgroundColor="transparent"
+              placeholderTextColor="#AAAAAA"
             />
-          </XStack>
-        </YStack>
-
-        {/* Category Selector */}
-        <YStack marginBottom="$6">
-          <Label color="$gray10" marginBottom="$2">Category</Label>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginBottom: 8 }}
-          >
-            {CATEGORIES.map((category) => (
-              <Button
+          </View>
+          
+          {/* Description input */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.descriptionInput}
+              placeholder="Description (e.g., Lunch at Restaurant)"
+              value={description}
+              onChangeText={setDescription}
+              placeholderTextColor="#AAAAAA"
+            />
+          </View>
+          
+          {/* Date picker */}
+          <TouchableOpacity style={styles.dateContainer}>
+            <Calendar size={20} color="#4CAF50" />
+            <Text style={styles.dateText}>{date}</Text>
+          </TouchableOpacity>
+          
+          {/* Category selection */}
+          <Text style={styles.sectionTitle}>Categories</Text>
+          <View style={styles.categoriesContainer}>
+            {categories.map((category) => (
+              <TouchableOpacity
                 key={category.id}
-                marginRight="$3"
-                alignItems="center"
-                opacity={selectedCategory === category.name ? 1 : 0.5}
-                onPress={() => setSelectedCategory(category.name)}
-                backgroundColor="transparent"
+                style={[
+                  styles.categoryItem,
+                  selectedCategory === category.id && {
+                    borderColor: category.color,
+                    backgroundColor: `${category.color}10`,
+                  },
+                ]}
+                onPress={() => setSelectedCategory(category.id)}
               >
-                <Circle
-                  size="$7"
-                  marginBottom="$1"
-                  backgroundColor={selectedCategory === category.name ? "$blue9" : "$gray3"}
-                >
-                  <Text fontSize="$7">{category.icon}</Text>
-                </Circle>
-                <Text
-                  fontSize="$2"
-                  color={selectedCategory === category.name ? "$blue9" : "$gray10"}
-                  fontWeight={selectedCategory === category.name ? "$6" : "$4"}
-                >
-                  {category.name}
-                </Text>
-              </Button>
+                <Circle size={16} backgroundColor={category.color} />
+                <Text style={styles.categoryText}>{category.name}</Text>
+              </TouchableOpacity>
             ))}
-          </ScrollView>
-        </YStack>
-
-        {/* Account Selector (only for personal bills) */}
-        {viewMode === "personal" && (
-          <YStack marginBottom="$6">
-            <Label color="$gray10" marginBottom="$2">Account</Label>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={{ marginBottom: 8 }}
-            >
-              {ACCOUNTS.map((account) => (
-                <Button
-                  key={account.id}
-                  marginRight="$3"
-                  alignItems="center"
-                  opacity={selectedAccount === account.name ? 1 : 0.5}
-                  onPress={() => setSelectedAccount(account.name)}
-                  backgroundColor="transparent"
-                >
-                  <Circle
-                    size="$6"
-                    marginBottom="$1"
-                    backgroundColor={selectedAccount === account.name ? "$purple9" : "$gray3"}
-                  >
-                    <Text fontSize="$5">{account.icon}</Text>
-                  </Circle>
-                  <Text
-                    fontSize="$1"
-                    color={selectedAccount === account.name ? "$purple9" : "$gray10"}
-                    fontWeight={selectedAccount === account.name ? "$6" : "$4"}
-                  >
-                    {account.name}
-                  </Text>
-                </Button>
-              ))}
-            </ScrollView>
-          </YStack>
-        )}
-
-        {/* Date Picker */}
-        <YStack marginBottom="$6">
-          <Label color="$gray10" marginBottom="$2">Date</Label>
+          </View>
+          
+          {/* Add receipt button */}
+          <TouchableOpacity style={styles.addReceiptButton}>
+            <Camera size={20} color="#4CAF50" />
+            <Text style={styles.addReceiptText}>Add Receipt</Text>
+          </TouchableOpacity>
+        </ScrollView>
+        
+        {/* Bottom button */}
+        <View style={styles.bottomContainer}>
           <Button
-            flexDirection="row"
-            alignItems="center"
-            justifyContent="space-between"
-            backgroundColor="$background"
-            borderRadius="$4"
-            borderWidth={1}
-            borderColor="$gray4"
-            onPress={() => setShowDatePicker(true)}
+            style={styles.saveButton}
+            backgroundColor="#4CAF50"
+            pressStyle={{ opacity: 0.8 }}
+            onPress={handleSave}
           >
-            <Text>{date.toLocaleDateString()}</Text>
-            <Calendar size={20} color="#6B7280" />
+            <Text style={styles.saveButtonText}>Save Expense</Text>
           </Button>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display="default"
-              onChange={onDateChange}
-            />
-          )}
-        </YStack>
-
-        {/* Merchant Input */}
-        <YStack marginBottom="$6">
-          <Label color="$gray10" marginBottom="$2">Merchant (Optional)</Label>
-          <Input
-            backgroundColor="$background"
-            borderRadius="$4"
-            padding="$4"
-            borderWidth={1}
-            borderColor="$gray4"
-            placeholder="Enter merchant name"
-            value={merchant}
-            onChangeText={setMerchant}
-          />
-        </YStack>
-
-        {/* Notes Input */}
-        <YStack marginBottom="$6">
-          <Label color="$gray10" marginBottom="$2">Notes (Optional)</Label>
-          <Input
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            backgroundColor="$background"
-            borderRadius="$4"
-            padding="$4"
-            borderWidth={1}
-            borderColor="$gray4"
-            placeholder="Add additional notes"
-            value={notes}
-            onChangeText={setNotes}
-            height={100}
-          />
-        </YStack>
-
-        {/* Save Button */}
-        <Button
-          backgroundColor="$blue9"
-          borderRadius="$4"
-          marginTop="$4"
-          marginBottom="$10"
-          onPress={handleSave}
-        >
-          <Text color="white" fontWeight="$6" fontSize="$5" textAlign="center">
-            Save Bill
-          </Text>
-        </Button>
-      </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  scrollView: {
+    flex: 1,
+    padding: 16,
+  },
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 24,
+  },
+  currencySymbol: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginRight: 4,
+  },
+  amountInput: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: '#333333',
+    textAlign: 'center',
+    minWidth: 150,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  descriptionInput: {
+    fontSize: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    color: '#333333',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  dateText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#333333',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#333333',
+  },
+  categoriesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 24,
+  },
+  categoryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+  },
+  categoryText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#333333',
+  },
+  addReceiptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#F0FFF0',
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  addReceiptText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  bottomContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
+  },
+  saveButton: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+}); 

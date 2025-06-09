@@ -1,114 +1,174 @@
-import {
-  createContext,
-  useContext,
-  ReactNode,
-  useState,
-  useEffect,
-} from "react";
-import * as SecureStore from "expo-secure-store";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, AuthState } from '@/types/user.types';
+import { 
+  getAuthToken, 
+  removeAuthToken, 
+  storeAuthToken,
+  isAuthenticated as checkAuthentication,
+  getMockUser
+} from '@/utils/userPreferences.utils';
 
-interface User {
-  id: string;
-  username: string;
-}
+// Initial auth state
+const initialAuthState: AuthState = {
+  isAuthenticated: false,
+  isLoading: true,
+  user: null,
+  error: null,
+};
 
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+// Auth context type
+interface AuthContextType extends AuthState {
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  isLoggedIn: boolean;
+  updateUser: (userData: Partial<User>) => void;
 }
 
+// Create auth context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Auth provider props
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+/**
+ * Auth Provider component
+ */
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [authState, setAuthState] = useState<AuthState>(initialAuthState);
 
+  // Check if user is authenticated on mount
   useEffect(() => {
-    // Check if user is already logged in
-    const checkLoginStatus = async () => {
+    const checkAuth = async () => {
       try {
-        const userJson = await SecureStore.getItemAsync("user");
-        if (userJson) {
-          setUser(JSON.parse(userJson));
+        const isUserAuthenticated = await checkAuthentication();
+        
+        if (isUserAuthenticated) {
+          // In a real app, you would fetch the user data from API
+          // For now, we'll use a mock user
+          const mockUser = getMockUser();
+          
+          setAuthState({
+            isAuthenticated: true,
+            isLoading: false,
+            user: mockUser,
+            error: null,
+          });
+        } else {
+          setAuthState({
+            ...initialAuthState,
+            isLoading: false,
+          });
         }
       } catch (error) {
-        console.error("Error retrieving auth state:", error);
-      } finally {
-        setIsLoading(false);
+        setAuthState({
+          ...initialAuthState,
+          isLoading: false,
+          error: 'Failed to check authentication status',
+        });
       }
     };
 
-    checkLoginStatus();
+    checkAuth();
   }, []);
 
-  // In a real app, this would make an API call to authenticate
-  const login = async (
-    username: string,
-    password: string
-  ): Promise<boolean> => {
+  /**
+   * Login function - would connect to authentication API in a real app
+   */
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
+      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Simplified mock authentication for demo
-      // In a real app, this would call your backend API
-      if (username && password) {
-        const mockUser = {
-          id: `user_${Date.now()}`,
-          username,
-        };
-
-        // Store user in secure storage
-        await SecureStore.setItemAsync("user", JSON.stringify(mockUser));
-        setUser(mockUser);
-        return true;
-      }
-      return false;
+      // Mock login for now
+      // In a real app, this would be an API call that returns a token
+      const mockToken = 'mock-token-' + Date.now();
+      await storeAuthToken(mockToken);
+      
+      // Mock user
+      const mockUser = getMockUser();
+      
+      setAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+        user: mockUser,
+        error: null,
+      });
+      
+      return true;
     } catch (error) {
-      console.error("Login failed:", error);
+      setAuthState(prev => ({ 
+        ...prev, 
+        isLoading: false,
+        error: 'Login failed. Please check your credentials.',
+      }));
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const logout = async () => {
+  /**
+   * Logout function
+   */
+  const logout = async (): Promise<void> => {
     try {
-      setIsLoading(true);
-      await SecureStore.deleteItemAsync("user");
-      setUser(null);
+      setAuthState(prev => ({ ...prev, isLoading: true }));
+      
+      // Remove token from storage
+      await removeAuthToken();
+      
+      setAuthState({
+        isAuthenticated: false,
+        isLoading: false,
+        user: null,
+        error: null,
+      });
     } catch (error) {
-      console.error("Logout failed:", error);
-    } finally {
-      setIsLoading(false);
+      setAuthState(prev => ({ 
+        ...prev,
+        isLoading: false,
+        error: 'Logout failed',
+      }));
     }
+  };
+
+  /**
+   * Update user data
+   */
+  const updateUser = (userData: Partial<User>): void => {
+    if (!authState.user) return;
+    
+    setAuthState(prev => ({
+      ...prev,
+      user: {
+        ...prev.user!,
+        ...userData,
+      },
+    }));
+  };
+
+  // Context value
+  const contextValue: AuthContextType = {
+    ...authState,
+    login,
+    logout,
+    updateUser,
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        login,
-        logout,
-        isLoggedIn: !!user,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export const useAuth = () => {
+/**
+ * Custom hook to use auth context
+ */
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
+  
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
+  
   return context;
 };
