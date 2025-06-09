@@ -38,7 +38,7 @@ npx expo install expo-constants expo-linking expo-status-bar
 ```json
 {
   "expo": {
-    "name": "Momi",
+    "name": "Momiq",
     "slug": "momi",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -106,7 +106,7 @@ pnpm dev:expo
 ## 目录结构预览
 
 ```
-Momi/
+Momiq/
 ├── app/                   # 应用目录
 │   └── expo/             # Expo React Native 应用
 │       ├── app/          # Expo Router 页面

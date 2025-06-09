@@ -22,6 +22,7 @@ import { Platform, TouchableOpacity } from "react-native";
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { EXPENSE_CATEGORIES, getCategoryIcon, useTranslatedCategoryName } from "@/constants/categories";
+import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
 
 export type CategoryFilterType = "all" | string;
 
@@ -153,40 +154,13 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
         
       </XStack>
       
-      <OptionSheet 
-        isOpen={isCategorySheetOpen} 
+      <CategorySelectSheet
+        isOpen={isCategorySheetOpen}
         setIsOpen={setIsCategorySheetOpen}
-        title={t("Select Category")}
-      >
-        <ScrollView>
-            <ListItem
-              title={t("All Categories")}
-              iconAfter={categoryFilter === "all" ? <Check size={16} /> : undefined}
-              onPress={() => {
-                onCategoryFilterChange("all");
-                setIsCategorySheetOpen(false);
-              }}
-              pressTheme
-            />
-            <Separator />
-            {EXPENSE_CATEGORIES.map((cat) => {
-              const CategoryIcon = getCategoryIcon(cat.id);
-              return (
-                <ListItem
-                  key={cat.id}
-                  title={t(cat.name)}
-                  icon={<CategoryIcon size={18} color={cat.color} />}
-                  iconAfter={categoryFilter === cat.id ? <Check size={16} /> : undefined}
-                  onPress={() => {
-                    onCategoryFilterChange(cat.id);
-                    setIsCategorySheetOpen(false);
-                  }}
-                  pressTheme
-                />
-              );
-            })}
-        </ScrollView>
-      </OptionSheet>
+        selectedCategory={categoryFilter}
+        onCategoryChange={onCategoryFilterChange}
+        showAllOption={true}
+      />
       
       <Dialog
         modal
@@ -304,32 +278,5 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
     </>
   );
 };
-
-const OptionSheet = ({ isOpen, setIsOpen, title, children }: { 
-  isOpen: boolean, 
-  setIsOpen: (isOpen: boolean) => void, 
-  title: string, 
-  children: React.ReactNode 
-}) => (
-  <Sheet
-    modal
-    open={isOpen}
-    onOpenChange={setIsOpen}
-    snapPoints={[50]}
-    dismissOnSnapToBottom
-  >
-    <Sheet.Overlay />
-    <Sheet.Handle />
-    <Sheet.Frame padding="$4">
-      <YStack>
-        <XStack justifyContent="space-between" alignItems="center" marginBottom="$3">
-          <Paragraph fontSize={18} fontWeight="700">{title}</Paragraph>
-          <Button size="$3" circular onPress={() => setIsOpen(false)} icon={X} />
-        </XStack>
-        {children}
-      </YStack>
-    </Sheet.Frame>
-  </Sheet>
-);
 
 export default FilterWithTotalExpense; 

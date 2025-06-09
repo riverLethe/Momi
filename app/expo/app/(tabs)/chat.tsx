@@ -250,7 +250,7 @@ export default function ChatScreen() {
         source={{ uri: 'https://placehold.co/300x300/3B82F6/FFFFFF.png?text=AI' }}
         style={styles.welcomeImage}
       />
-      <Text style={styles.welcomeTitle}>Welcome to Momi AI Assistant</Text>
+      <Text style={styles.welcomeTitle}>Welcome to Momiq AI Assistant</Text>
       <Text style={styles.welcomeSubtitle}>I can help you track expenses, manage your budget, and provide financial insights.</Text>
       <Text style={styles.welcomePrompt}>Hold the mic button and speak to start</Text>
     </View>
@@ -267,7 +267,7 @@ export default function ChatScreen() {
             style={styles.logoImage}
           />
         </View>
-        <Text style={styles.headerTitle}>Momi</Text>
+        <Text style={styles.headerTitle}>Momiq</Text>
       </View>
       <View style={styles.headerRight}>
         <TouchableOpacity 

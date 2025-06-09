@@ -41,11 +41,11 @@ export class MockChatService implements ChatServiceInterface {
     // Initialize with a welcome message
     const welcomeMessage: ChatMessage = {
       _id: 'welcome_msg',
-      text: 'Hi there! I am your Momi financial assistant. How can I help you today?',
+      text: 'Hi there! I am your Momiq financial assistant. How can I help you today?',
       createdAt: new Date(),
       user: {
         _id: 'ai',
-        name: 'Momi Assistant',
+        name: 'Momiq Assistant',
         avatar: 'https://via.placeholder.com/150',
       },
       isAI: true,
@@ -83,7 +83,7 @@ export class MockChatService implements ChatServiceInterface {
       createdAt: new Date(),
       user: {
         _id: 'ai',
-        name: 'Momi Assistant',
+        name: 'Momiq Assistant',
         avatar: 'https://via.placeholder.com/150',
       },
       sent: true,

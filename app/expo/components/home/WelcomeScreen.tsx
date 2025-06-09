@@ -33,14 +33,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           source={require("@/assets/images/welcome-illustration.png")}
           width={180}
           height={180}
-          alt="Momi Logo"
+          alt="Momiq Logo"
           resizeMode="contain"
           borderRadius={32}
         />
         
         <YStack space="$2" alignItems="center">
           <H4 textAlign="center" marginTop="$4" color="$color">
-          {t("Welcome to Momi")}
+          {t("Welcome to Momiq")}
         </H4>
           
           <Paragraph textAlign="center" color="$gray11" paddingHorizontal="$4">

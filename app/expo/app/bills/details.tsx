@@ -26,6 +26,7 @@ import {
 import { getBills, updateBill, deleteBill } from "@/utils/bills.utils";
 import { useData } from "@/providers/DataProvider";
 import { useLocale } from "@/i18n/useLocale";
+import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
 
 export default function BillDetailsScreen() {
   const router = useRouter();
@@ -139,7 +140,6 @@ export default function BillDetailsScreen() {
       Alert.alert(t("Error"), t("Failed to update bill category"));
     } finally {
       setUpdating(false);
-      setIsCategorySheetOpen(false);
     }
   };
   
@@ -314,56 +314,13 @@ export default function BillDetailsScreen() {
       </YStack>
       
       {/* 类别选择弹出层 */}
-      <Sheet
-        modal
-        open={isCategorySheetOpen}
-        onOpenChange={setIsCategorySheetOpen}
-        snapPoints={[60]}
-        position={0}
-        dismissOnSnapToBottom
-      >
-        <Sheet.Overlay />
-        <Sheet.Handle />
-        <Sheet.Frame padding="$4">
-          <XStack justifyContent="space-between" alignItems="center" marginBottom="$3">
-            <Text fontSize="$4" fontWeight="$6">{t("Select Category")}</Text>
-            <Button
-              size="$2"
-              circular
-              onPress={() => setIsCategorySheetOpen(false)}
-            >
-              <X size={18} />
-            </Button>
-          </XStack>
-          
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <YStack space="$3" paddingBottom="$10">
-              {EXPENSE_CATEGORIES.map((cat) => (
-                <Button
-                  key={cat.id}
-                  backgroundColor={cat.id === bill.category ? cat.lightColor : "transparent"}
-                  borderColor={cat.id === bill.category ? cat.color : "$gray4"}
-                  borderWidth={1}
-                  paddingVertical="$3"
-                  pressStyle={{ scale: 0.98, opacity: 0.9 }}
-                  onPress={() => handleCategoryChange(cat.id)}
-                  disabled={updating}
-                >
-                  <XStack alignItems="center" space="$3">
-                    <Avatar circular size="$3.5" backgroundColor={`${cat.color}20`}>
-                      {React.createElement(getCategoryIcon(cat.id), { 
-                        size: 18, 
-                        color: cat.color 
-                      })}
-                    </Avatar>
-                    <Text fontSize="$3.5" fontWeight="$6">{t(cat.name)}</Text>
-                  </XStack>
-                </Button>
-              ))}
-            </YStack>
-          </ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+      <CategorySelectSheet
+        isOpen={isCategorySheetOpen}
+        setIsOpen={setIsCategorySheetOpen}
+        selectedCategory={bill.category}
+        onCategoryChange={handleCategoryChange}
+        showAllOption={false}
+      />
     </SafeAreaView>
   );
 } 

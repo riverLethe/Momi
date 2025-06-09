@@ -1,6 +1,7 @@
-# Momi
+# Momiq
 
 记账类应用，抹掉米饭"引申为花钱，谐音"Money"，年轻化又俏皮。
+“Momiq” = 一个又可爱又懂你钱包的小饭团，它陪你把每一笔花销都记得清清楚楚，毫无压力。”
 
 ## 🏗️ 技术架构
 
@@ -60,7 +61,7 @@ pnpm type-check
 ## 📁 项目结构
 
 ```
-Momi/
+Momiq/
 ├── app/                   # 应用目录
 │   └── expo/             # Expo React Native 应用
 │       ├── app/          # 应用页面 (Expo Router)
