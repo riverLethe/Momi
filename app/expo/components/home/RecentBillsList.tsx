@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
-import { ChevronRight, ReceiptText } from "lucide-react-native";
+import { ChevronRight, ReceiptText, MessageSquarePlus } from "lucide-react-native";
 import { 
   Card, 
   Text, 
@@ -101,7 +101,7 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
               <Text color="$gray9" fontSize="$3" textAlign="center">{t("No recent bills")}</Text>
               <Button
                 marginTop="$3"
-                onPress={() => router.push("/bills/add")}
+                onPress={() => router.push("/chat")}
                 backgroundColor="$blue2"
                 color="$blue9"
                 paddingHorizontal="$4"
@@ -109,7 +109,11 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
                 borderRadius="$4"
                 borderWidth={1}
                 borderColor="$blue6"
+                flexDirection="row"
+                alignItems="center"
+                space="$2"
               >
+                <MessageSquarePlus size={16} color="#3B82F6" />
                 <Text color="$blue9" fontWeight="$6">{t("Add Your First Bill")}</Text>
               </Button>
             </YStack>

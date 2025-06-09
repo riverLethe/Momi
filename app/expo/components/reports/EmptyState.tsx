@@ -5,7 +5,8 @@ import {
   Text, 
   Button,
   Card,
-  Image
+  Image,
+  XStack
 } from "tamagui";
 import { useRouter } from "expo-router";
 import { Plus } from "lucide-react-native";
@@ -70,12 +71,12 @@ const EmptyState: React.FC<EmptyStateProps> = ({
           pressStyle={{ opacity: 0.8 }}
           onPress={() => router.push("/(tabs)/add" as any)}
         >
-          <YStack alignItems="center" space="$2">
+          <XStack alignItems="center" space="$2">
             <Plus size={16} color="white" />
             <Text color="white" fontWeight="$6">
               {t("Add Expense")}
             </Text>
-          </YStack>
+          </XStack>
         </Button>
       </YStack>
     </Card>

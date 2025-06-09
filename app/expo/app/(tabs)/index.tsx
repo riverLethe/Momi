@@ -32,13 +32,13 @@ export default function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
   const { bills, upcomingBills, transactions, recentTransactions, isLoading: isDataLoading, refreshData } = useData();
   
-  // 用户是否有账单或交易
+  // Whether user has bills or transactions
   const [hasBills, setHasBills] = useState(true);
   
-  // 预算周期状态
+  // Budget period state
   const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>("monthly");
   
-  // 预算数据
+  // Budget data
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatusInfo>({
     status: "good",
     remaining: 0,
@@ -47,28 +47,28 @@ export default function HomeScreen() {
     percentage: 0
   });
   
-  // 类别分析数据
+  // Category analysis data
   const [categories, setCategories] = useState<CategorySpending[]>([]);
   
-  // 是否显示加载状态
+  // Loading state
   const [isLoading, setIsLoading] = useState(false);
   
-  // 是否正在同步远程数据
+  // Remote data synchronization
   const [syncingRemote, setSyncingRemote] = useState(false);
   
-  // 预算金额
+  // Budget amount
   const [currentBudget, setCurrentBudget] = useState<number | null>(null);
   
-  // 同步远程数据
+  // Sync remote data
   useEffect(() => {
     const syncData = async () => {
       if (isAuthenticated && user) {
         try {
           setSyncingRemote(true);
-          // 同步账单和交易数据
+          // Sync bills and transactions data
           await syncRemoteData('bills', user.id);
           await syncRemoteData('transactions', user.id);
-          // 刷新本地数据
+          // Refresh local data
           await refreshData();
         } catch (error) {
           console.error('Failed to sync remote data:', error);
@@ -81,18 +81,18 @@ export default function HomeScreen() {
     syncData();
   }, [isAuthenticated, user]);
   
-  // 加载用户偏好
+  // Load user preferences
   useEffect(() => {
     const loadUserPreferences = async () => {
       try {
         const preferences = await getUserPreferences();
         
-        // 如果有设置预算金额，则使用
+        // Use budget amount if set
         if (preferences && preferences.budgetAmount) {
           setCurrentBudget(preferences.budgetAmount);
         }
         
-        // 如果有设置预算周期，则使用
+        // Use budget period if set
         if (preferences && preferences.budgetPeriod) {
           setBudgetPeriod(preferences.budgetPeriod as BudgetPeriod);
         }
@@ -104,76 +104,76 @@ export default function HomeScreen() {
     loadUserPreferences();
   }, []);
   
-  // 检查是否有账单或交易数据
+  // Check if there are bills or transaction data
   useEffect(() => {
     setHasBills(bills.length > 0 || transactions.length > 0);
   }, [bills, transactions]);
   
-  // 计算预算状态
+  // Calculate budget status
   useEffect(() => {
-    // 计算总支出
+    // Calculate total expenses
     let totalSpent = 0;
     
-    // 根据预算周期过滤交易和账单
+    // Filter transactions and bills by budget period
     const today = new Date();
     
-    // 过滤交易数据
+    // Filter transactions
     const filteredTransactions = transactions.filter(tx => {
       const txDate = new Date(tx.date);
       
       if (budgetPeriod === "weekly") {
-        // 获取本周起始日期
+        // Get start of week
         const startOfWeek = new Date(today);
         startOfWeek.setDate(today.getDate() - today.getDay());
         startOfWeek.setHours(0, 0, 0, 0);
         return txDate >= startOfWeek && tx.type === 'expense';
       } else if (budgetPeriod === "monthly") {
-        // 获取本月起始日期
+        // Get start of month
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         return txDate >= startOfMonth && tx.type === 'expense';
       } else {
-        // 获取本年起始日期
+        // Get start of year
         const startOfYear = new Date(today.getFullYear(), 0, 1);
         return txDate >= startOfYear && tx.type === 'expense';
       }
     });
     
-    // 过滤账单数据
+    // Filter bills
     const filteredBills = bills.filter(bill => {
       const billDate = new Date(bill.date);
       
       if (budgetPeriod === "weekly") {
-        // 获取本周起始日期
+        // Get start of week
         const startOfWeek = new Date(today);
         startOfWeek.setDate(today.getDate() - today.getDay());
         startOfWeek.setHours(0, 0, 0, 0);
         return billDate >= startOfWeek;
       } else if (budgetPeriod === "monthly") {
-        // 获取本月起始日期
+        // Get start of month
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         return billDate >= startOfMonth;
       } else {
-        // 获取本年起始日期
+        // Get start of year
         const startOfYear = new Date(today.getFullYear(), 0, 1);
         return billDate >= startOfYear;
       }
     });
     
-    // 计算交易总支出
+    // Calculate total transaction expenses
     const transactionsSpent = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
     
-    // 计算账单总支出
+    // Calculate total bill expenses
     const billsSpent = filteredBills.reduce((sum, bill) => sum + bill.amount, 0);
     
-    // 计算总支出（交易 + 账单）
+    // Calculate total expenses (transactions + bills)
     totalSpent = transactionsSpent + billsSpent;
     
-    // 计算剩余预算
+    // Calculate remaining budget
     const total = currentBudget || 0;
     const remaining = Math.max(0, total - totalSpent);
     const percentage = total > 0 ? Math.round((totalSpent / total) * 100) : 0;
     
-    // 确定状态
+    // Determine status
     let status: "good" | "warning" | "danger" = "good";
     if (percentage >= 90) {
       status = "danger";
@@ -181,7 +181,7 @@ export default function HomeScreen() {
       status = "warning";
     }
     
-    // 更新预算状态
+    // Update budget status
     setBudgetStatus({
       status,
       remaining,
@@ -190,29 +190,29 @@ export default function HomeScreen() {
       percentage,
     });
     
-    // 计算类别支出 (合并交易和账单数据)
+    // Calculate category expenses (combine transactions and bills)
     const categoryMap = new Map<string, number>();
     
-    // 添加交易类别支出
+    // Add transaction category expenses
     filteredTransactions.forEach(tx => {
       const currentAmount = categoryMap.get(tx.category) || 0;
       categoryMap.set(tx.category, currentAmount + tx.amount);
     });
     
-    // 添加账单类别支出
+    // Add bill category expenses
     filteredBills.forEach(bill => {
       const currentAmount = categoryMap.get(bill.category) || 0;
       categoryMap.set(bill.category, currentAmount + bill.amount);
     });
     
-    // 转换为类别支出数组
+    // Convert to category spending array
     const categorySpending: CategorySpending[] = Array.from(categoryMap.entries())
       .map(([id, amount]) => {
         const categoryInfo = getCategoryById(id);
         const categoryPercentage = total > 0 ? Math.round((amount / total) * 100) : 0;
         
         let status: "normal" | "exceeding" | "save" = "normal";
-        if (categoryPercentage >= 25) { // 假设类别预算占总预算的25%
+        if (categoryPercentage >= 25) { // Assume category budget is 25% of total
           status = "exceeding";
         } else if (categoryPercentage <= 10) {
           status = "save";
@@ -222,28 +222,28 @@ export default function HomeScreen() {
           id,
           label: categoryInfo?.name || id,
           status,
-          percentage: categoryPercentage > 25 ? categoryPercentage - 25 : 0, // 超出预算的百分比
+          percentage: categoryPercentage > 25 ? categoryPercentage - 25 : 0, // Percentage exceeding budget
           amount,
           color: categoryInfo?.color || "#999",
         };
       })
-      .sort((a, b) => b.amount - a.amount) // 按金额降序排序
-      .slice(0, 5); // 只取前五项
+      .sort((a, b) => b.amount - a.amount) // Sort by amount in descending order
+      .slice(0, 5); // Only take top five
     
     setCategories(categorySpending);
   }, [transactions, bills, budgetPeriod, currentBudget, viewMode]);
   
-  // 处理设置预算
+  // Handle setting budget
   const handleSaveBudget = async (amount: number, period: BudgetPeriod) => {
     setIsLoading(true);
     try {
-      // 保存到用户偏好
+      // Save to user preferences
       await updateUserPreferences({
         budgetAmount: amount,
         budgetPeriod: period,
       });
       
-      // 更新状态
+      // Update state
       setCurrentBudget(amount);
       setBudgetPeriod(period);
     } catch (error) {
@@ -253,40 +253,37 @@ export default function HomeScreen() {
     }
   };
   
-  // 处理刷新
+  // Handle refresh
   const handleRefresh = async () => {
     await refreshData();
   };
   
-  // 处理开始聊天
+  // Handle starting chat
   const handleStartChat = () => {
     router.push("/chat");
   };
   
-  // 处理添加账单
+  // Handle adding bill - now redirects to chat
   const handleAddBill = () => {
-    router.push('/bills/add');
+    router.push('/chat');
   };
   
-  // 处理预算管理
+  // Navigate to dedicated budget management page
   const handleManageBudget = () => {
-    // 这里可以打开预算管理模态框或导航到预算页面
     router.push("/reports?tab=budget");
   };
   
-  // 处理查看账单详情
+  // Handle viewing bill details
   const handleViewBill = (bill: Bill) => {
-    // 简化处理，跳转到账单列表
     router.push("/bills");
   };
   
-  // 处理查看类别详情
+  // Handle viewing category details
   const handleCategoryPress = (categoryId: string) => {
-    // 简化处理，直接跳转到报表页面
     router.push(`/reports?category=${categoryId}`);
   };
   
-  // 如果正在加载数据，显示加载状态
+  // If loading data, show loading state
   if (isDataLoading || syncingRemote) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
@@ -299,14 +296,14 @@ export default function HomeScreen() {
     );
   }
   
-  // 如果用户没有账单或交易，显示欢迎屏幕
+  // If user has no bills or transactions, show welcome screen
   if (!hasBills) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
         {/* <HomeHeader /> */}
         <WelcomeScreen 
           onStartChatPress={handleStartChat}
-          onSetBudgetPress={() => setHasBills(true)}
+          onSetBudgetPress={handleManageBudget} // Navigate to budget page instead of setting hasBills
         />
       </SafeAreaView>
     );
@@ -315,10 +312,10 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       <YStack flex={1}>
-        {/* 头部 */}
+        {/* Header */}
         {/* <HomeHeader /> */}
         
-        {/* 内容 */}
+        {/* Content */}
         <ScrollView 
           style={{ flex: 1 }} 
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -331,7 +328,7 @@ export default function HomeScreen() {
             />
           }
         >
-          {/* 快捷操作栏 */}
+          {/* Quick Action Bar */}
           {/* <QuickActionBar 
             onAddBillPress={handleAddBill}
             onAddBudgetPress={handleManageBudget}
@@ -340,7 +337,7 @@ export default function HomeScreen() {
             onAnalysisPress={() => router.push("/reports")}
           /> */}
           
-          {/* 预算摘要卡片 */}
+          {/* Budget Summary Card */}
           <BudgetSummaryCard 
             budgetStatus={budgetStatus}
             categories={categories}
@@ -353,7 +350,7 @@ export default function HomeScreen() {
             isPersonalView={viewMode === "personal"}
           />
           
-          {/* 最近账单列表 */}
+          {/* Recent Bills List */}
           <RecentBillsList 
             bills={bills.slice(0, 5)}
             isLoading={false}

@@ -24,6 +24,7 @@ import {
   AlertTriangle, 
   EditIcon,
   Check,
+  ArrowRight,
 } from "lucide-react-native";
 
 // 预算状态类型
@@ -146,6 +147,9 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   const [selectedPeriod, setSelectedPeriod] = useState<BudgetPeriod>(currentPeriod);
   const [budgetAmount, setBudgetAmount] = useState(currentBudget?.toString() || "");
   const [dialogLoading, setDialogLoading] = useState(false);
+  
+  // Check if we have actual spending data
+  const hasSpendingData = budgetStatus.spent > 0 || categories.length > 0;
   
   // 格式化货币金额
   const formatCurrency = (amount: number) => {
@@ -326,22 +330,36 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
             )}
           </YStack>
           
-          {/* 操作按钮 */}
-          <Button
-            backgroundColor="$blue2"
-            color="$blue9"
-            size="$3"
-            onPress={onManageBudgetPress}
-            pressStyle={{ opacity: 0.8 }}
-            borderColor="$blue6"
-            borderWidth={1}
-          >
-            {t("View More Report")}
-          </Button>
+          {/* Only show "View More Report" button if there's actual spending data */}
+          {hasSpendingData && (
+            <>
+              <Button
+                backgroundColor="$blue2"
+                color="$blue9"
+                size="$3"
+                onPress={onManageBudgetPress}
+                pressStyle={{ opacity: 0.8 }}
+                borderColor="$blue6"
+                borderWidth={1}
+              >
+                           {t("View More Report")}
+
+              </Button>
+              
+              <Text fontSize="$2" color="$gray9" marginTop="$2">
+                {t("View detailed reports to better understand your spending patterns")}
+              </Text>
+            </>
+          )}
           
-          <Text fontSize="$2" color="$gray9">
-            {t("View detailed reports to better understand your spending patterns")}
-          </Text>
+          {/* Show setup budget message if no budget is set */}
+          {!currentBudget && (
+            <YStack alignItems="center" paddingVertical="$2">
+              <Text fontSize="$2" color="$gray9" textAlign="center">
+                {t("Set up your budget to track your spending against your financial goals")}
+              </Text>
+            </YStack>
+          )}
         </YStack>
       </Card>
       
