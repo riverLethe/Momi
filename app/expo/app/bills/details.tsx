@@ -15,6 +15,7 @@ import {
   ScrollView,
   Avatar,
 } from "tamagui";
+import { useTranslation } from "react-i18next";
 
 import { Bill } from "@/types/bills.types";
 import { 
@@ -24,12 +25,15 @@ import {
 } from "@/constants/categories";
 import { getBills, updateBill, deleteBill } from "@/utils/bills.utils";
 import { useData } from "@/providers/DataProvider";
+import { useLocale } from "@/i18n/useLocale";
 
 export default function BillDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { id } = params;
   const { refreshData } = useData();
+  const { t, i18n } = useTranslation();
+  const { locale } = useLocale();
   
   const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
   const [bill, setBill] = useState<Bill | null>(null);
@@ -48,12 +52,12 @@ export default function BillDetailsScreen() {
           setBill(foundBill);
         } else {
           // 如果找不到账单，返回上一页
-          Alert.alert("错误", "找不到账单信息");
+          Alert.alert(t("Error"), t("Bill not found"));
           router.back();
         }
       } catch (error) {
         console.error("Failed to load bill:", error);
-        Alert.alert("错误", "加载账单信息失败");
+        Alert.alert(t("Error"), t("Failed to load bill"));
       } finally {
         setLoading(false);
       }
@@ -62,7 +66,7 @@ export default function BillDetailsScreen() {
     if (id) {
       loadBill();
     }
-  }, [id]);
+  }, [id, t]);
   
   const handleEditPress = () => {
     if (bill) {
@@ -77,15 +81,15 @@ export default function BillDetailsScreen() {
     if (!bill) return;
     
     Alert.alert(
-      "删除账单",
-      "确定要删除此账单记录吗？此操作无法撤销。",
+      t("Delete Bill"),
+      t("Are you sure you want to delete this bill? This action cannot be undone."),
       [
         {
-          text: "取消",
+          text: t("Cancel"),
           style: "cancel"
         },
         {
-          text: "删除",
+          text: t("Delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -98,11 +102,11 @@ export default function BillDetailsScreen() {
                 await refreshData();
                 router.back();
               } else {
-                Alert.alert("错误", "删除账单失败");
+                Alert.alert(t("Error"), t("Failed to delete bill"));
               }
             } catch (error) {
               console.error("Failed to delete bill:", error);
-              Alert.alert("错误", "删除账单失败");
+              Alert.alert(t("Error"), t("Failed to delete bill"));
             } finally {
               setUpdating(false);
             }
@@ -128,11 +132,11 @@ export default function BillDetailsScreen() {
         // 刷新数据提供者中的数据
         await refreshData();
       } else {
-        Alert.alert("错误", "更新账单类别失败");
+        Alert.alert(t("Error"), t("Failed to update bill category"));
       }
     } catch (error) {
       console.error("Failed to update bill category:", error);
-      Alert.alert("错误", "更新账单类别失败");
+      Alert.alert(t("Error"), t("Failed to update bill category"));
     } finally {
       setUpdating(false);
       setIsCategorySheetOpen(false);
@@ -145,7 +149,7 @@ export default function BillDetailsScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <YStack flex={1} justifyContent="center" alignItems="center">
           <ActivityIndicator size="large" color="#3B82F6" />
-          <Text marginTop="$4" color="$gray10">加载账单信息...</Text>
+          <Text marginTop="$4" color="$gray10">{t("Loading bill information...")}</Text>
         </YStack>
       </SafeAreaView>
     );
@@ -156,9 +160,9 @@ export default function BillDetailsScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
         <Stack.Screen options={{ headerShown: false }} />
         <YStack flex={1} justifyContent="center" alignItems="center" padding="$4">
-          <Text fontSize="$5" fontWeight="$6" textAlign="center">账单不存在或已被删除</Text>
+          <Text fontSize="$5" fontWeight="$6" textAlign="center">{t("Bill does not exist or has been deleted")}</Text>
           <Button marginTop="$4" onPress={() => router.back()}>
-            返回账单列表
+            {t("Return to Bills List")}
           </Button>
         </YStack>
       </SafeAreaView>
@@ -196,7 +200,7 @@ export default function BillDetailsScreen() {
             <ArrowLeft size={20} color="#64748B" />
           </Button>
           
-          <Text fontSize="$4" fontWeight="$6">账单详情</Text>
+          <Text fontSize="$4" fontWeight="$6">{t("Bill Details")}</Text>
           
           <XStack space="$2">
             <Button
@@ -230,16 +234,16 @@ export default function BillDetailsScreen() {
             backgroundColor={category.color}
             elevate
           >
-            <Text fontSize="$3" fontWeight="$5" color="white" opacity={0.85}>支出金额</Text>
+            <Text fontSize="$3" fontWeight="$5" color="white" opacity={0.85}>{t("Expense Amount")}</Text>
             <Text fontSize="$10" fontWeight="$8" color="white" marginTop="$2">
               ¥{bill.amount.toFixed(2)}
             </Text>
             <XStack justifyContent="space-between" marginTop="$4">
               <Text fontSize="$3" fontWeight="$5" color="white" opacity={0.85}>
-                {new Date(bill.date).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}
+                {new Date(bill.date).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" })}
               </Text>
               <Text fontSize="$3" fontWeight="$5" color="white" opacity={0.85}>
-                {bill.account || "现金"}
+                {bill.account || t("Cash")}
               </Text>
             </XStack>
           </Card>
@@ -248,7 +252,7 @@ export default function BillDetailsScreen() {
           <Card backgroundColor="white" elevate>
             <YStack padding="$4" space="$4">
               <XStack justifyContent="space-between" alignItems="center">
-                <Text color="$gray10" fontSize="$3">类别</Text>
+                <Text color="$gray10" fontSize="$3">{t("Category")}</Text>
                 <Button 
                   chromeless 
                   padding="$0" 
@@ -260,7 +264,7 @@ export default function BillDetailsScreen() {
                     <Avatar circular size="$3" backgroundColor={`${category.color}20`}>
                       <CategoryIcon size={14} color={category.color} />
                     </Avatar>
-                    <Text fontSize="$3.5" fontWeight="$6">{category.name}</Text>
+                    <Text fontSize="$3.5" fontWeight="$6">{t(category.name)}</Text>
                   </XStack>
                 </Button>
               </XStack>
@@ -268,23 +272,23 @@ export default function BillDetailsScreen() {
               <Separator />
               
               <XStack justifyContent="space-between" alignItems="center">
-                <Text color="$gray10" fontSize="$3">收款方</Text>
-                <Text fontSize="$3.5" fontWeight="$6">{bill.merchant || "未指定"}</Text>
+                <Text color="$gray10" fontSize="$3">{t("Merchant")}</Text>
+                <Text fontSize="$3.5" fontWeight="$6">{bill.merchant || t("Not Specified")}</Text>
               </XStack>
               
               <Separator />
               
               <XStack justifyContent="space-between" alignItems="center">
-                <Text color="$gray10" fontSize="$3">支付方式</Text>
-                <Text fontSize="$3.5" fontWeight="$6">{bill.account || "现金"}</Text>
+                <Text color="$gray10" fontSize="$3">{t("Payment Method")}</Text>
+                <Text fontSize="$3.5" fontWeight="$6">{bill.account || t("Cash")}</Text>
               </XStack>
               
               <Separator />
               
               <XStack justifyContent="space-between" alignItems="center">
-                <Text color="$gray10" fontSize="$3">记录时间</Text>
+                <Text color="$gray10" fontSize="$3">{t("Record Time")}</Text>
                 <Text fontSize="$3.5" fontWeight="$6">
-                  {new Date(bill.createdAt).toLocaleString("zh-CN", {
+                  {new Date(bill.createdAt).toLocaleString(locale, {
                     year: "numeric",
                     month: "2-digit",
                     day: "2-digit",
@@ -297,10 +301,10 @@ export default function BillDetailsScreen() {
               <Separator />
               
               <YStack space="$2">
-                <Text color="$gray10" fontSize="$3">备注</Text>
+                <Text color="$gray10" fontSize="$3">{t("Notes")}</Text>
                 <Card backgroundColor="$gray1" padding="$3" borderRadius="$3">
                   <Text fontSize="$3.5">
-                    {bill.notes || "暂无备注"}
+                    {bill.notes || t("No notes")}
                   </Text>
                 </Card>
               </YStack>
@@ -322,7 +326,7 @@ export default function BillDetailsScreen() {
         <Sheet.Handle />
         <Sheet.Frame padding="$4">
           <XStack justifyContent="space-between" alignItems="center" marginBottom="$3">
-            <Text fontSize="$4" fontWeight="$6">选择类别</Text>
+            <Text fontSize="$4" fontWeight="$6">{t("Select Category")}</Text>
             <Button
               size="$2"
               circular
@@ -352,7 +356,7 @@ export default function BillDetailsScreen() {
                         color: cat.color 
                       })}
                     </Avatar>
-                    <Text fontSize="$3.5" fontWeight="$6">{cat.name}</Text>
+                    <Text fontSize="$3.5" fontWeight="$6">{t(cat.name)}</Text>
                   </XStack>
                 </Button>
               ))}

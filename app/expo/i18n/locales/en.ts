@@ -22,6 +22,19 @@ export default {
     "Today": "Today",
     "Yesterday": "Yesterday",
     
+    // Bill Add/Edit
+    "Add Bill": "Add Bill",
+    "Edit Bill": "Edit Bill",
+    "Update Bill": "Update Bill",
+    "Save Bill": "Save Bill",
+    "Saving...": "Saving...",
+    "Merchant (e.g., Restaurant Name)": "Merchant (e.g., Restaurant Name)",
+    "Notes (optional)": "Notes (optional)",
+    "Payment Method (e.g., Cash, Card)": "Payment Method (e.g., Cash, Card)",
+    "Add Receipt": "Add Receipt",
+    "Please enter a valid amount and select a category": "Please enter a valid amount and select a category",
+    "Failed to save bill. Please try again.": "Failed to save bill. Please try again.",
+    
     // Filters
     "All": "All",
     "This Week": "This Week",
@@ -29,6 +42,28 @@ export default {
     "This Year": "This Year",
     "Category": "Category",
     "Date": "Date",
+    
+    // Bill Details
+    "Bill Details": "Bill Details",
+    "Expense Amount": "Expense Amount",
+    "Merchant": "Merchant",
+    "Payment Method": "Payment Method",
+    "Record Time": "Record Time",
+    "Notes": "Notes",
+    "No notes": "No notes",
+    "Select Category": "Select Category",
+    "Delete Bill": "Delete Bill",
+    "Are you sure you want to delete this bill? This action cannot be undone.": "Are you sure you want to delete this bill? This action cannot be undone.",
+    "Error": "Error",
+    "Bill not found": "Bill not found",
+    "Failed to load bill": "Failed to load bill",
+    "Failed to delete bill": "Failed to delete bill",
+    "Failed to update bill category": "Failed to update bill category",
+    "Loading bill information...": "Loading bill information...",
+    "Bill does not exist or has been deleted": "Bill does not exist or has been deleted",
+    "Return to Bills List": "Return to Bills List",
+    "Not Specified": "Not Specified",
+    "Cash": "Cash",
     
     // Reports Screen
     "Reports": "Reports",

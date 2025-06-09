@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Image, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Button, Text, XStack, YStack, Circle } from 'tamagui';
 import { ArrowLeft, Calendar, Tag, X, Camera, Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -9,22 +9,53 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '@/providers/AuthProvider';
 import { useData } from '@/providers/DataProvider';
 import { useViewStore } from '@/stores/viewStore';
-import { saveBill } from '@/utils/bills.utils';
+import { saveBill, getBills, updateBill } from '@/utils/bills.utils';
 import { EXPENSE_CATEGORIES } from '@/constants/categories';
 
-export default function AddExpenseScreen() {
+export default function AddBillScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const billId = typeof params.id === 'string' ? params.id : '';
   const { refreshData } = useData();
   const { isAuthenticated, user } = useAuth();
   const { viewMode, currentFamilySpace } = useViewStore();
   
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [notes, setNotes] = useState('');
+  const [account, setAccount] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(EXPENSE_CATEGORIES[0]?.id || '');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // Load bill data if editing
+  useEffect(() => {
+    const loadBillData = async () => {
+      if (!billId) return;
+      
+      try {
+        const bills = await getBills();
+        const bill = bills.find(b => b.id === billId);
+        
+        if (bill) {
+          setIsEditing(true);
+          setAmount(bill.amount.toString());
+          setDescription(bill.merchant || '');
+          setNotes(bill.notes || '');
+          setAccount(bill.account || 'Cash');
+          setSelectedCategory(bill.category);
+          setSelectedDate(new Date(bill.date));
+        }
+      } catch (error) {
+        console.error('Failed to load bill for editing:', error);
+      }
+    };
+    
+    loadBillData();
+  }, [billId]);
   
   const handleDateChange = (event: any, selectedDate?: Date) => {
     const currentDate = selectedDate || new Date();
@@ -48,16 +79,21 @@ export default function AddExpenseScreen() {
         category: selectedCategory,
         date: selectedDate,
         merchant: description, // 使用描述作为商家名称
-        notes: '', // 备注可以为空
-        account: 'Cash', // 默认使用现金账户
+        notes: notes, // 备注
+        account: account || 'Cash', // 账户
         isFamilyBill: viewMode === 'family',
         familyId: viewMode === 'family' ? currentFamilySpace?.id : undefined,
         familyName: viewMode === 'family' ? currentFamilySpace?.name : undefined,
       };
       
-      // 保存账单到本地存储
-      const currentUser = user || { id: 'local-user', name: 'Local User' };
-      await saveBill(billData, currentUser);
+      if (isEditing && billId) {
+        // 更新已有账单
+        await updateBill(billId, billData);
+      } else {
+        // 保存新账单到本地存储
+        const currentUser = user || { id: 'local-user', name: 'Local User' };
+        await saveBill(billData, currentUser);
+      }
       
       // 刷新数据提供者中的数据
       await refreshData();
@@ -89,7 +125,7 @@ export default function AddExpenseScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <ArrowLeft size={24} color="#333" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('Add Expense')}</Text>
+          <Text style={styles.headerTitle}>{isEditing ? t('Edit Bill') : t('Add Bill')}</Text>
           <TouchableOpacity onPress={handleSave} disabled={isSaving}>
             <Check size={24} color={isSaving ? "#AAAAAA" : "#4CAF50"} />
           </TouchableOpacity>
@@ -113,7 +149,7 @@ export default function AddExpenseScreen() {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.descriptionInput}
-              placeholder={t('Description (e.g., Lunch at Restaurant)')}
+              placeholder={t('Merchant (e.g., Restaurant Name)')}
               value={description}
               onChangeText={setDescription}
               placeholderTextColor="#AAAAAA"
@@ -139,6 +175,29 @@ export default function AddExpenseScreen() {
               onChange={handleDateChange}
             />
           )}
+          
+          {/* Notes input */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.descriptionInput}
+              placeholder={t('Notes (optional)')}
+              value={notes}
+              onChangeText={setNotes}
+              placeholderTextColor="#AAAAAA"
+              multiline
+            />
+          </View>
+          
+          {/* Account input */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.descriptionInput}
+              placeholder={t('Payment Method (e.g., Cash, Card)')}
+              value={account}
+              onChangeText={setAccount}
+              placeholderTextColor="#AAAAAA"
+            />
+          </View>
           
           {/* Category selection */}
           <Text style={styles.sectionTitle}>{t('Categories')}</Text>
@@ -178,7 +237,7 @@ export default function AddExpenseScreen() {
             disabled={isSaving}
           >
             <Text style={styles.saveButtonText}>
-              {isSaving ? t('Saving...') : t('Save Expense')}
+              {isSaving ? t('Saving...') : isEditing ? t('Update Bill') : t('Save Bill')}
             </Text>
           </Button>
         </View>

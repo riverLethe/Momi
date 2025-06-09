@@ -16,10 +16,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.momi.app"
+      "bundleIdentifier": "com.momiq.app"
     },
     "android": {
-      "package": "com.momi.app"
+      "package": "com.momiq.app"
     },
     "web": {
       "favicon": "./assets/images/favicon.png",

@@ -52,14 +52,14 @@ npx expo install expo-constants expo-linking expo-status-bar
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.momi.app"
+      "bundleIdentifier": "com.momiq.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.momi.app"
+      "package": "com.momiq.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",

@@ -22,6 +22,19 @@ export default {
     "Today": "今天",
     "Yesterday": "昨天",
     
+    // Bill Add/Edit
+    "Add Bill": "添加账单",
+    "Edit Bill": "编辑账单",
+    "Update Bill": "更新账单",
+    "Save Bill": "保存账单",
+    "Saving...": "保存中...",
+    "Merchant (e.g., Restaurant Name)": "商家名称（如：餐厅名称）",
+    "Notes (optional)": "备注（可选）",
+    "Payment Method (e.g., Cash, Card)": "支付方式（如：现金、卡）",
+    "Add Receipt": "添加收据",
+    "Please enter a valid amount and select a category": "请输入有效金额并选择类别",
+    "Failed to save bill. Please try again.": "保存账单失败，请重试。",
+    
     // Filters
     "All": "全部",
     "This Week": "本周",
@@ -29,6 +42,28 @@ export default {
     "This Year": "今年",
     "Category": "类别",
     "Date": "日期",
+    
+    // Bill Details
+    "Bill Details": "账单详情",
+    "Expense Amount": "支出金额",
+    "Merchant": "收款方",
+    "Payment Method": "支付方式",
+    "Record Time": "记录时间",
+    "Notes": "备注",
+    "No notes": "暂无备注",
+    "Select Category": "选择类别",
+    "Delete Bill": "删除账单",
+    "Are you sure you want to delete this bill? This action cannot be undone.": "确定要删除此账单记录吗？此操作无法撤销。",
+    "Error": "错误",
+    "Bill not found": "找不到账单信息",
+    "Failed to load bill": "加载账单信息失败",
+    "Failed to delete bill": "删除账单失败",
+    "Failed to update bill category": "更新账单类别失败",
+    "Loading bill information...": "加载账单信息...",
+    "Bill does not exist or has been deleted": "账单不存在或已被删除",
+    "Return to Bills List": "返回账单列表",
+    "Not Specified": "未指定",
+    "Cash": "现金",
     
     // Reports Screen
     "Reports": "报表",
@@ -142,7 +177,6 @@ export default {
     "Settings": "设置",
     "Profile": "个人",
     "Analysis": "分析",
-    "Add Bill": "添加账单",
     "Loading bills...": "加载账单中...",
     "Budget Setup": "预算设置",
     "Set Budget": "设置预算",
