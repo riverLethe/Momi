@@ -69,7 +69,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
           borderRadius="$4"
           color="white"
           pressStyle={{ opacity: 0.8 }}
-          onPress={() => router.push("/(tabs)/add" as any)}
+          onPress={() => router.push("/(tabs)/chat" as any)}
         >
           <XStack alignItems="center" space="$2">
             <Plus size={16} color="white" />
