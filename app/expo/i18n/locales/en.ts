@@ -123,6 +123,7 @@ export default {
     "Use our AI chat to easily log your expenses": "Use our AI chat to easily log your expenses",
     "Set up your budget": "Set up your budget",
     "Define budgets to track your spending habits": "Define budgets to track your spending habits",
+    "Available after recording your first expense": "Available after recording your first expense",
     "Explore features": "Explore features",
     "Discover all the features Momi has to offer": "Discover all the features Momi has to offer",
     "Budget Period": "Budget Period",
@@ -154,6 +155,13 @@ export default {
     "Total Budget": "Total Budget",
     "No Bills Yet": "No Bills Yet",
     "Add your first bill to start tracking your expenses": "Add your first bill to start tracking your expenses",
+    "No Budget Set": "No Budget Set",
+    "Let's get started": "Let's get started",
+    "Tips": "Tips",
+    "You can talk to our AI assistant just like chatting with a friend": "You can talk to our AI assistant just like chatting with a friend",
+    "Try saying: 'I spent $25 on lunch today'": "Try saying: 'I spent $25 on lunch today'",
+    "After adding expenses, you can set up your budget to track your spending": "After adding expenses, you can set up your budget to track your spending",
+    "Get Started": "Get Started",
     "Health": "Health",
     "Travel": "Travel"
   }

@@ -124,7 +124,7 @@ export default function ReportsScreen() {
         {/* <AppHeader /> */}
 
         {/* Date & Comparison Filters */}
-        <YStack
+        {hasData&&(<YStack
           marginHorizontal="$4" 
           marginTop="$3.5" 
           marginBottom="$3.5" 
@@ -141,7 +141,8 @@ export default function ReportsScreen() {
             selectedPeriodId={selectedPeriodId}
             onPeriodSelectorChange={setSelectedPeriodId}
           />
-        </YStack>
+        </YStack>)}
+        
 
         {/* Content */}
         {loading || syncingRemote ? (

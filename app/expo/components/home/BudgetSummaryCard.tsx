@@ -17,6 +17,7 @@ import {
   Avatar,
   Heading,
   Group,
+  Spinner
 } from "tamagui";
 import { 
   TrendingDown, 
@@ -25,7 +26,11 @@ import {
   EditIcon,
   Check,
   ArrowRight,
+  CheckCircle,
+  PlusCircle,
+  DollarSign
 } from "lucide-react-native";
+import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
 
 // 预算状态类型
 export type BudgetStatusType = "good" | "warning" | "danger";
@@ -64,12 +69,12 @@ interface BudgetSummaryCardProps {
   currentBudget: number | null;
   onSaveBudget: (amount: number, period: BudgetPeriod) => Promise<void>;
   onCategoryPress?: (categoryId: string) => void;
-  onManageBudgetPress: () => void;
+  onManageBudgetPress?: () => void;
   isLoading?: boolean;
   currency?: string;
 }
 
-// 获取预算状态图标和颜色
+// Get status info
 const getBudgetStatusInfo = (status: BudgetStatusType) => {
   switch (status) {
     case "good":
@@ -143,46 +148,27 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const statusInfo = getBudgetStatusInfo(budgetStatus.status);
-  const [showDialog, setShowDialog] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<BudgetPeriod>(currentPeriod);
-  const [budgetAmount, setBudgetAmount] = useState(currentBudget?.toString() || "");
-  const [dialogLoading, setDialogLoading] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
   
   // Check if we have actual spending data
   const hasSpendingData = budgetStatus.spent > 0 || categories.length > 0;
   
-  // 格式化货币金额
+  // Format currency amount
   const formatCurrency = (amount: number) => {
     return `${currency}${amount.toLocaleString()}`;
   };
 
-  // 格式化预算显示
+  // Format budget display
   const formatBudget = (amount: number | null) => {
     if (amount === null) return t("Not Set");
     return formatCurrency(amount);
   };
   
-  // 计算进度条颜色
+  // Calculate progress bar color
   const getProgressColor = (status: BudgetStatusType, percentage: number) => {
     if (status === "danger") return "#EF4444";
     if (status === "warning" || percentage > 70) return "#F59E0B";
     return "#10B981";
-  };
-
-  // 保存预算
-  const handleSaveBudget = async () => {
-    if (!budgetAmount) return;
-    
-    const amount = parseFloat(budgetAmount);
-    if (isNaN(amount) || amount <= 0) return;
-    
-    setDialogLoading(true);
-    try {
-      await onSaveBudget(amount, selectedPeriod);
-      setShowDialog(false);
-    } finally {
-      setDialogLoading(false);
-    }
   };
 
   return (
@@ -198,7 +184,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
         shadowRadius={8}
       >
         <YStack space="$4">
-          {/* 标题和状态 */}
+          {/* Header with status */}
           <XStack justifyContent="space-between" alignItems="center">
             <XStack space="$2" alignItems="center">
               <Avatar backgroundColor={statusInfo.backgroundColor} borderWidth={2} borderColor={statusInfo.color} size="$2.5" borderRadius="$15">
@@ -215,123 +201,168 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 borderWidth={1}
                 paddingHorizontal="$2"
                 pressStyle={{ opacity: 0.8 }}
-                onPress={() => setShowDialog(true)}
+                onPress={() => setShowBudgetModal(true)}
               >
                 <EditIcon size={16} />
               </Button>
             </XStack>
           </XStack>
           
-                  
-          {/* 预算分析 */}
-          <YStack space="$3">
-            <Text fontSize="$3" fontWeight="$6" color="$gray10">
-              {t("Spending Analysis")}
-            </Text>
-            
-            {/* 进度条 */}
-            <YStack space="$2">
-              <Progress 
-                value={budgetStatus.percentage} 
-                backgroundColor="$gray4"
-              >
-                <Progress.Indicator 
-                  animation="bouncy" 
-                  backgroundColor={getProgressColor(budgetStatus.status, budgetStatus.percentage)} 
-                />
-              </Progress>
-              
-              <XStack justifyContent="space-between">
-                <Text fontSize="$3" color="$gray10">
-                  {t("Spent")}: {formatCurrency(budgetStatus.spent)} ({budgetStatus.percentage}%)
-                </Text>
-               <XStack alignItems="flex-end">
-                 <Text 
-                  fontSize="$3" 
-                  fontWeight="$7" 
-                  color={budgetStatus.remaining > 0 ? "$green9" : "$red9"}
-                >
-                  {t("Total")}: {formatBudget(currentBudget)} 
-                </Text>
-                <Text color="$gray10" fontSize="$3" marginHorizontal="$1">/</Text>
-                <Text 
-                  fontSize="$2.5" 
-                  fontWeight="$6" 
-                  color="$gray10"
-                >
-                  {getPeriodLabel(currentPeriod, t)}
-                </Text>
-               </XStack>
-              </XStack>
-            </YStack>
-          </YStack>
-          
-          <Separator />
-          
-          {/* 类别分析 */}
-          <YStack space="$3">
-            <Text fontSize="$3" fontWeight="$6" color="$gray11">
-              {t("Category Analysis")}
-            </Text>
-            
-            {categories.length === 0 ? (
-              <Text fontSize="$2" color="$gray9" textAlign="center" paddingVertical="$3">
-                {t("No spending data available")}
+          {isLoading ? (
+            <YStack alignItems="center" justifyContent="center" height={120}>
+              <Spinner size="large" color="#3B82F6" />
+              <Text marginTop="$2" color="$gray9">
+                {t("Loading...")}
               </Text>
-            ) : (
-              <YStack space="$1">
-                {categories.map((category) => {
-                  const catStatus = getCategoryStatusInfo(category.status, category.percentage);
-                  return (
-                    <Pressable 
-                      key={category.id}
-                      onPress={() => onCategoryPress?.(category.id)}
-                    >
-                      <XStack 
-                        justifyContent="space-between" 
-                        alignItems="center"
-                        paddingVertical="$2"
-                        pressStyle={{ opacity: onCategoryPress ? 0.7 : 1 }}
-                      >
-                        <XStack space="$2" alignItems="center">
-                          <View 
-                            style={{ 
-                              width: 12, 
-                              height: 12, 
-                              borderRadius: 6, 
-                              backgroundColor: category.color || catStatus.color
-                            }} 
-                          />
-                          <Text fontSize="$3" color="$gray11">
-                            {t(category.label)}
-                          </Text>
-                        </XStack>
-                        
-                        <XStack alignItems="center" space="$2">
-                          <Text 
-                            fontSize="$2" 
-                            color={catStatus.color}
-                            backgroundColor={`${catStatus.color}10`}
-                            paddingHorizontal="$2"
-                            paddingVertical="$1"
-                            borderRadius="$2"
-                          >
-                            {t(catStatus.label)}
-                          </Text>
-                          <Text fontSize="$3" fontWeight="$5">
-                            {formatCurrency(category.amount)}
-                          </Text>
-                        </XStack>
-                      </XStack>
-                    </Pressable>
-                  );
-                })}
+            </YStack>
+          ) : currentBudget ? (
+            <YStack space="$3">
+              <Text fontSize="$3" fontWeight="$6" color="$gray10">
+                {t("Spending Analysis")}
+              </Text>
+              
+              {/* 进度条 */}
+              <YStack space="$2">
+                <Progress 
+                  value={budgetStatus.percentage} 
+                  backgroundColor="$gray4"
+                >
+                  <Progress.Indicator 
+                    animation="bouncy" 
+                    backgroundColor={getProgressColor(budgetStatus.status, budgetStatus.percentage)} 
+                  />
+                </Progress>
+                
+                <XStack justifyContent="space-between">
+                  <Text fontSize="$3" color="$gray10">
+                    {t("Spent")}: {formatCurrency(budgetStatus.spent)} ({budgetStatus.percentage.toFixed(2)}%)
+                  </Text>
+                 <XStack alignItems="flex-end">
+                   <Text 
+                    fontSize="$3" 
+                    fontWeight="$7" 
+                    color={budgetStatus.remaining > 0 ? "$green9" : "$red9"}
+                  >
+                    {t("Total")}: {formatBudget(currentBudget)} 
+                  </Text>
+                  <Text color="$gray10" fontSize="$3" marginHorizontal="$1">/</Text>
+                  <Text 
+                    fontSize="$2.5" 
+                    fontWeight="$6" 
+                    color="$gray10"
+                  >
+                    {getPeriodLabel(currentPeriod, t)}
+                  </Text>
+                 </XStack>
+                </XStack>
               </YStack>
-            )}
-          </YStack>
+            </YStack>
+          ) : (
+            <YStack space="$4" alignItems="center" paddingVertical="$4">
+              <View style={{ 
+                width: 70, 
+                height: 70, 
+                borderRadius: 35, 
+                backgroundColor: "#EBF5FF", 
+                alignItems: "center", 
+                justifyContent: "center" 
+              }}>
+                <DollarSign size={32} color="#3B82F6" />
+              </View>
+              
+              <YStack alignItems="center" space="$2">
+                <Text fontWeight="$7" fontSize="$4" color="$gray12">
+                  {t("No Budget Set")}
+                </Text>
+                <Text fontSize="$3" color="$gray10" textAlign="center" paddingHorizontal="$6">
+                  {t("Set up your budget to track your spending against your financial goals")}
+                </Text>
+              </YStack>
+              
+              <Button
+                size="$3"
+                backgroundColor="$green9"
+                color="white"
+                paddingHorizontal="$4"
+                marginTop="$2"
+                pressStyle={{ opacity: 0.8 }}
+                onPress={() => setShowBudgetModal(true)}
+              >
+                {t("Set Budget")}
+              </Button>
+            </YStack>
+          )}
+          
+          {currentBudget && (
+            <>
+              <Separator marginBottom="$3" />
+              
+              {/* 类别分析 */}
+              <YStack space="$3">
+                <Text fontSize="$3" fontWeight="$6" color="$gray11">
+                  {t("Category Analysis")}
+                </Text>
+                
+                {categories.length === 0 ? (
+                  <Text fontSize="$2" color="$gray9" textAlign="center" paddingVertical="$3">
+                    {t("No spending data available")}
+                  </Text>
+                ) : (
+                  <YStack space="$1">
+                    {categories.map((category) => {
+                      const catStatus = getCategoryStatusInfo(category.status, category.percentage);
+                      return (
+                        <Pressable 
+                          key={category.id}
+                          onPress={() => onCategoryPress?.(category.id)}
+                        >
+                          <XStack 
+                            justifyContent="space-between" 
+                            alignItems="center"
+                            paddingVertical="$2"
+                            pressStyle={{ opacity: onCategoryPress ? 0.7 : 1 }}
+                          >
+                            <XStack space="$2" alignItems="center">
+                              <View 
+                                style={{ 
+                                  width: 12, 
+                                  height: 12, 
+                                  borderRadius: 6, 
+                                  backgroundColor: category.color || catStatus.color
+                                }} 
+                              />
+                              <Text fontSize="$3" color="$gray11">
+                                {t(category.label)}
+                              </Text>
+                            </XStack>
+                            
+                            <XStack alignItems="center" space="$2">
+                              <Text 
+                                fontSize="$2" 
+                                color={catStatus.color}
+                                backgroundColor={`${catStatus.color}10`}
+                                paddingHorizontal="$2"
+                                paddingVertical="$1"
+                                borderRadius="$2"
+                              >
+                                {t(catStatus.label)}
+                              </Text>
+                              <Text fontSize="$3" fontWeight="$5">
+                                {formatCurrency(category.amount)}
+                              </Text>
+                            </XStack>
+                          </XStack>
+                        </Pressable>
+                      );
+                    })}
+                  </YStack>
+                )}
+              </YStack>
+            </>
+          )}
           
           {/* Only show "View More Report" button if there's actual spending data */}
-          {hasSpendingData && (
+          {hasSpendingData && currentBudget && (
             <>
               <Button
                 backgroundColor="$blue2"
@@ -342,8 +373,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 borderColor="$blue6"
                 borderWidth={1}
               >
-                           {t("View More Report")}
-
+                {t("View More Report")}
               </Button>
               
               <Text fontSize="$2" color="$gray9" marginTop="$2">
@@ -351,107 +381,18 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
               </Text>
             </>
           )}
-          
-          {/* Show setup budget message if no budget is set */}
-          {!currentBudget && (
-            <YStack alignItems="center" paddingVertical="$2">
-              <Text fontSize="$2" color="$gray9" textAlign="center">
-                {t("Set up your budget to track your spending against your financial goals")}
-              </Text>
-            </YStack>
-          )}
         </YStack>
       </Card>
       
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <Adapt platform="touch">
-          <Sheet
-            modal
-            dismissOnSnapToBottom
-            animation="medium"
-          >
-            <Sheet.Frame padding="$4">
-              <Sheet.Handle />
-              <YStack space="$5">
-                {/* 标题 */}
-                <Text fontSize="$6" fontWeight="$8" textAlign="center">
-                  {t("Update Budget")}
-                </Text>
-                
-                {/* 预算金额输入 */}
-                <YStack space="$3">
-                  <Label htmlFor="budget-amount" fontSize="$4" fontWeight="$6" color="$gray11">
-                    {t("Budget Amount")}
-                  </Label>
-                  <Input
-                    id="budget-amount"
-                    size="$4"
-                    placeholder={`${currency}5,000`}
-                    keyboardType="numeric"
-                    value={budgetAmount}
-                    onChangeText={setBudgetAmount}
-                    borderColor="$gray5"
-                    borderWidth={1}
-                    backgroundColor="$gray1"
-                    fontSize="$5"
-                  />
-                </YStack>
-                
-                {/* 预算周期选择 - 使用自定义按钮组 */}
-                <YStack space="$3">
-                  <Label fontSize="$4" fontWeight="$6" color="$gray11">
-                    {t("Budget Period")}
-                  </Label>
-                  <XStack borderRadius="$4" overflow="hidden">
-                    {(["weekly", "monthly", "yearly"] as BudgetPeriod[]).map((period) => (
-                      <Button
-                        key={period}
-                        size="$4"
-                        flex={1}
-                        backgroundColor={selectedPeriod === period ? "$blue9" : "$gray3"}
-                        color={selectedPeriod === period ? "white" : "$gray11"}
-                        onPress={() => setSelectedPeriod(period)}
-                        borderRadius={0}
-                        borderWidth={0}
-                        marginHorizontal={0}
-                        animation="quick"
-                      >
-                        {getPeriodLabel(period, t)}
-                      </Button>
-                    ))}
-                  </XStack>
-                </YStack>
-                
-                {/* 操作按钮 */}
-                <XStack space="$3" marginTop="$3">
-                  <Button
-                    size="$4"
-                    flex={1}
-                    backgroundColor="$gray4"
-                    color="$gray12"
-                    onPress={() => setShowDialog(false)}
-                    pressStyle={{ opacity: 0.8 }}
-                  >
-                    {t("Cancel")}
-                  </Button>
-                  <Button
-                    size="$4"
-                    flex={1}
-                    backgroundColor="$blue9"
-                    color="white"
-                    onPress={handleSaveBudget}
-                    disabled={dialogLoading || !budgetAmount}
-                    pressStyle={{ opacity: 0.8 }}
-                  >
-                    {t("Save")}
-                  </Button>
-                </XStack>
-              </YStack>
-            </Sheet.Frame>
-            <Sheet.Overlay />
-          </Sheet>
-        </Adapt>
-      </Dialog>
+      {/* Budget Update Modal */}
+      <BudgetUpdateModal
+        isOpen={showBudgetModal}
+        onOpenChange={setShowBudgetModal}
+        currentPeriod={currentPeriod}
+        currentBudget={currentBudget}
+        currency={currency}
+        onSaveBudget={onSaveBudget}
+      />
     </>
   );
 };

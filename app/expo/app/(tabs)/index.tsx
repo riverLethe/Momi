@@ -10,8 +10,6 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
 
 // Custom Components
-import HomeHeader from "@/components/home/HomeHeader";
-import QuickActionBar from "@/components/home/QuickActionBar";
 import BudgetSummaryCard, { 
   BudgetStatusInfo,
   CategorySpending,
@@ -287,7 +285,6 @@ export default function HomeScreen() {
   if (isDataLoading || syncingRemote) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-        {/* <HomeHeader /> */}
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={{ marginTop: 16 }}>Loading your financial data...</Text>
@@ -300,10 +297,8 @@ export default function HomeScreen() {
   if (!hasBills) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-        {/* <HomeHeader /> */}
         <WelcomeScreen 
           onStartChatPress={handleStartChat}
-          onSetBudgetPress={handleManageBudget} // Navigate to budget page instead of setting hasBills
         />
       </SafeAreaView>
     );
@@ -312,8 +307,6 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       <YStack flex={1}>
-        {/* Header */}
-        {/* <HomeHeader /> */}
         
         {/* Content */}
         <ScrollView 
@@ -328,14 +321,6 @@ export default function HomeScreen() {
             />
           }
         >
-          {/* Quick Action Bar */}
-          {/* <QuickActionBar 
-            onAddBillPress={handleAddBill}
-            onAddBudgetPress={handleManageBudget}
-            onViewBillsPress={() => router.push("/bills")}
-            onStartChatPress={handleStartChat}
-            onAnalysisPress={() => router.push("/reports")}
-          /> */}
           
           {/* Budget Summary Card */}
           <BudgetSummaryCard 

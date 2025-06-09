@@ -125,6 +125,7 @@ export default {
     "Use our AI chat to easily log your expenses": "使用我们的AI聊天轻松记录您的支出",
     "Set up your budget": "设置您的预算",
     "Define budgets to track your spending habits": "定义预算以追踪您的消费习惯",
+    "Available after recording your first expense": "记录第一笔支出后可用",
     "Explore features": "探索功能",
     "Discover all the features Momi has to offer": "探索Momi提供的所有功能",
     "Budget Period": "预算周期",
@@ -159,6 +160,14 @@ export default {
     "Remaining": "剩余",
     "Total Budget": "总预算",
     "No Bills Yet": "暂无账单",
-    "Add your first bill to start tracking your expenses": "添加您的第一笔账单，开始跟踪支出"
+    "Add your first bill to start tracking your expenses": "添加您的第一笔账单，开始跟踪支出",
+    "No Budget Set": "未设置预算",
+    "Let's get started": "让我们开始",
+    "Tips": "小贴士",
+    "You can talk to our AI assistant just like chatting with a friend": "您可以像与朋友聊天一样与我们的AI助手交流",
+    "Try saying: 'I spent $25 on lunch today'": "试着说：'我今天午餐花了25元'",
+    "After adding expenses, you can set up your budget to track your spending": "添加支出后，您可以设置预算来追踪您的消费",
+    "Get Started": "开始使用",
+    "View More Report": "查看更多报告"
   }
 };

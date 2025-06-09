@@ -22,7 +22,8 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   const router = useRouter();
 
   return (
-    <Card
+       <YStack flex={1} justifyContent="center" alignItems="center" padding="$4">
+ <Card
       backgroundColor="white"
       borderRadius="$4"
       elevate
@@ -80,6 +81,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         </Button>
       </YStack>
     </Card>
+    </YStack>
   );
 };
 
