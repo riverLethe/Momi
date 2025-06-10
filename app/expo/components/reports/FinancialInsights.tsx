@@ -1,22 +1,18 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { 
-  Card, 
-  XStack, 
-  YStack, 
-  Text, 
-  Circle 
-} from "tamagui";
-import { 
-  TrendingUp, 
-  CheckCircle, 
-  AlertTriangle, 
-  ArrowRight 
+import { Card, XStack, YStack, Text, Circle } from "tamagui";
+import {
+  TrendingUp,
+  CheckCircle,
+  AlertTriangle,
+  ArrowRight,
+  TrendingDown,
+  DollarSign,
 } from "lucide-react-native";
-import { FinancialInsight } from "@/types/reports.types";
+import { Insight } from "@/types/reports.types";
 
 interface FinancialInsightsProps {
-  insights: FinancialInsight[];
+  insights: Insight[];
 }
 
 const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
@@ -24,22 +20,20 @@ const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
 
   const getIcon = (iconName: string) => {
     switch (iconName) {
-      case "trending-up":
-        return <TrendingUp size={16} color="#3B82F6" />;
-      case "check-circle":
-        return <CheckCircle size={16} color="#10B981" />;
-      case "alert-triangle":
-        return <AlertTriangle size={16} color="#F59E0B" />;
+      case "positive":
+        return <TrendingUp size={16} color="#10B981" />;
+      case "negative":
+        return <TrendingDown size={16} color="#EF4444" />;
       default:
-        return <ArrowRight size={16} color="#3B82F6" />;
+        return <DollarSign size={16} color="#3B82F6" />;
     }
   };
 
   return (
-    <Card 
-      padding="$4" 
-      borderRadius="$4" 
-      backgroundColor="white" 
+    <Card
+      padding="$4"
+      borderRadius="$4"
+      backgroundColor="white"
       marginBottom="$4"
       shadowColor="rgba(0,0,0,0.05)"
       shadowRadius={2}
@@ -49,15 +43,21 @@ const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
       <Text fontSize="$3.5" fontWeight="$7" marginBottom="$3" color="$gray12">
         {t("Financial Insights")}
       </Text>
-      
+
       <YStack space="$3.5">
         {insights.map((insight, index) => (
           <XStack key={index} space="$3" alignItems="center">
-            <Circle 
-              size="$3.5" 
-              backgroundColor={insight.backgroundColor}
+            <Circle
+              size="$3.5"
+              backgroundColor={
+                insight.type === "positive"
+                  ? "#ECFDF5"
+                  : insight.type === "negative"
+                    ? "#FEF2F2"
+                    : "#EBF5FF"
+              }
             >
-              {getIcon(insight.icon)}
+              {getIcon(insight.type)}
             </Circle>
             <YStack flex={1}>
               <Text fontSize="$3" fontWeight="$6" color="$gray12">
@@ -74,4 +74,4 @@ const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
   );
 };
 
-export default FinancialInsights; 
+export default FinancialInsights;
