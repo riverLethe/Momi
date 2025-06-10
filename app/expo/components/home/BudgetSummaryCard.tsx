@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View, Pressable } from "react-native";
-import { 
-  Card, 
-  YStack, 
-  XStack, 
-  Text, 
-  Button, 
-  Separator, 
+import {
+  Card,
+  YStack,
+  XStack,
+  Text,
+  Button,
+  Separator,
   Progress,
   Dialog,
   Adapt,
@@ -17,23 +17,23 @@ import {
   Avatar,
   Heading,
   Group,
-  Spinner
+  Spinner,
 } from "tamagui";
-import { 
-  TrendingDown, 
-  TrendingUp, 
-  AlertTriangle, 
+import {
+  TrendingDown,
+  TrendingUp,
+  AlertTriangle,
   EditIcon,
   Check,
   ArrowRight,
   CheckCircle,
   PlusCircle,
-  DollarSign
+  DollarSign,
 } from "lucide-react-native";
 import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
 
 // 预算状态类型
-export type BudgetStatusType = "good" | "warning" | "danger";
+export type BudgetStatusType = "good" | "warning" | "danger" | "none";
 
 // 预算周期类型
 export type BudgetPeriod = "weekly" | "monthly" | "yearly";
@@ -82,42 +82,52 @@ const getBudgetStatusInfo = (status: BudgetStatusType) => {
         icon: <TrendingUp size={18} color="#10B981" />,
         color: "#10B981",
         backgroundColor: "#ECFDF5",
-        label: "On Track"
+        label: "On Track",
       };
     case "warning":
       return {
         icon: <AlertTriangle size={18} color="#F59E0B" />,
         color: "#F59E0B",
         backgroundColor: "#FFFBEB",
-        label: "Watch Spending"
+        label: "Watch Spending",
       };
     case "danger":
       return {
         icon: <TrendingDown size={18} color="#EF4444" />,
         color: "#EF4444",
         backgroundColor: "#FEF2F2",
-        label: "Over Budget"
+        label: "Over Budget",
+      };
+    case "none":
+      return {
+        icon: <DollarSign size={18} color="#3B82F6" />,
+        color: "#3B82F6",
+        backgroundColor: "#EBF5FF",
+        label: "No Budget",
       };
   }
 };
 
 // 获取类别状态信息
-const getCategoryStatusInfo = (status: CategoryStatusType, percentage: number) => {
+const getCategoryStatusInfo = (
+  status: CategoryStatusType,
+  percentage: number
+) => {
   switch (status) {
     case "normal":
       return {
         color: "#aaaaaa",
-        label: "Normal"
+        label: "Normal",
       };
     case "exceeding":
       return {
         color: "#EF4444",
-        label: `Exceeding by ${percentage}%`
+        label: `Exceeding by ${percentage}%`,
       };
     case "save":
       return {
         color: "#10B981",
-        label: `Save ${percentage}%`
+        label: `Save ${percentage}%`,
       };
   }
 };
@@ -144,15 +154,15 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   onCategoryPress,
   onManageBudgetPress,
   isLoading = false,
-  currency = "¥"
+  currency = "¥",
 }) => {
   const { t } = useTranslation();
   const statusInfo = getBudgetStatusInfo(budgetStatus.status);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
-  
+
   // Check if we have actual spending data
   const hasSpendingData = budgetStatus.spent > 0 || categories.length > 0;
-  
+
   // Format currency amount
   const formatCurrency = (amount: number) => {
     return `${currency}${amount.toLocaleString()}`;
@@ -163,7 +173,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
     if (amount === null) return t("Not Set");
     return formatCurrency(amount);
   };
-  
+
   // Calculate progress bar color
   const getProgressColor = (status: BudgetStatusType, percentage: number) => {
     if (status === "danger") return "#EF4444";
@@ -187,27 +197,35 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
           {/* Header with status */}
           <XStack justifyContent="space-between" alignItems="center">
             <XStack space="$2" alignItems="center">
-              <Avatar backgroundColor={statusInfo.backgroundColor} borderWidth={2} borderColor={statusInfo.color} size="$2.5" borderRadius="$15">
+              <Avatar
+                backgroundColor={statusInfo.backgroundColor}
+                borderWidth={2}
+                borderColor={statusInfo.color}
+                size="$2.5"
+                borderRadius="$15"
+              >
                 {statusInfo.icon}
               </Avatar>
               <Text fontSize="$4" fontWeight="$8" color="$gray12">
                 {t("Budget")}
               </Text>
             </XStack>
-            
+
             <XStack space="$2">
-              <Button
-                size="$2"
-                borderWidth={1}
-                paddingHorizontal="$2"
-                pressStyle={{ opacity: 0.8 }}
-                onPress={() => setShowBudgetModal(true)}
-              >
-                <EditIcon size={16} />
-              </Button>
+              {currentBudget && (
+                <Button
+                  size="$2"
+                  borderWidth={1}
+                  paddingHorizontal="$2"
+                  pressStyle={{ opacity: 0.8 }}
+                  onPress={() => setShowBudgetModal(true)}
+                >
+                  <EditIcon size={16} />
+                </Button>
+              )}
             </XStack>
           </XStack>
-          
+
           {isLoading ? (
             <YStack alignItems="center" justifyContent="center" height={120}>
               <Spinner size="large" color="#3B82F6" />
@@ -220,68 +238,66 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
               <Text fontSize="$3" fontWeight="$6" color="$gray10">
                 {t("Spending Analysis")}
               </Text>
-              
+
               {/* 进度条 */}
               <YStack space="$2">
-                <Progress 
-                  value={budgetStatus.percentage} 
+                <Progress
+                  value={budgetStatus.percentage}
                   backgroundColor="$gray4"
                 >
-                  <Progress.Indicator 
-                    animation="bouncy" 
-                    backgroundColor={getProgressColor(budgetStatus.status, budgetStatus.percentage)} 
+                  <Progress.Indicator
+                    animation="bouncy"
+                    backgroundColor={getProgressColor(
+                      budgetStatus.status,
+                      budgetStatus.percentage
+                    )}
                   />
                 </Progress>
-                
+
                 <XStack justifyContent="space-between">
                   <Text fontSize="$3" color="$gray10">
-                    {t("Spent")}: {formatCurrency(budgetStatus.spent)} ({budgetStatus.percentage.toFixed(2)}%)
+                    {t("Spent")}: {formatCurrency(budgetStatus.spent)} (
+                    {budgetStatus.percentage.toFixed(2)}%)
                   </Text>
-                 <XStack alignItems="flex-end">
-                   <Text 
-                    fontSize="$3" 
-                    fontWeight="$7" 
-                    color={budgetStatus.remaining > 0 ? "$green9" : "$red9"}
-                  >
-                    {t("Total")}: {formatBudget(currentBudget)} 
-                  </Text>
-                  <Text color="$gray10" fontSize="$3" marginHorizontal="$1">/</Text>
-                  <Text 
-                    fontSize="$2.5" 
-                    fontWeight="$6" 
-                    color="$gray10"
-                  >
-                    {getPeriodLabel(currentPeriod, t)}
-                  </Text>
-                 </XStack>
+                  <XStack alignItems="flex-end">
+                    <Text
+                      fontSize="$3"
+                      fontWeight="$7"
+                      color={budgetStatus.remaining > 0 ? "$green9" : "$red9"}
+                    >
+                      {t("Total")}: {formatBudget(currentBudget)}
+                    </Text>
+                    <Text color="$gray10" fontSize="$3" marginHorizontal="$1">
+                      /
+                    </Text>
+                    <Text fontSize="$2.5" fontWeight="$6" color="$gray10">
+                      {getPeriodLabel(currentPeriod, t)}
+                    </Text>
+                  </XStack>
                 </XStack>
               </YStack>
             </YStack>
           ) : (
             <YStack space="$4" alignItems="center" paddingVertical="$4">
-              <View style={{ 
-                width: 70, 
-                height: 70, 
-                borderRadius: 35, 
-                backgroundColor: "#EBF5FF", 
-                alignItems: "center", 
-                justifyContent: "center" 
-              }}>
-                <DollarSign size={32} color="#3B82F6" />
-              </View>
-              
               <YStack alignItems="center" space="$2">
                 <Text fontWeight="$7" fontSize="$4" color="$gray12">
                   {t("No Budget Set")}
                 </Text>
-                <Text fontSize="$3" color="$gray10" textAlign="center" paddingHorizontal="$6">
-                  {t("Set up your budget to track your spending against your financial goals")}
+                <Text
+                  fontSize="$3"
+                  color="$gray10"
+                  textAlign="center"
+                  paddingHorizontal="$6"
+                >
+                  {t(
+                    "Set up your budget to track your spending against your financial goals"
+                  )}
                 </Text>
               </YStack>
-              
+
               <Button
                 size="$3"
-                backgroundColor="$green9"
+                backgroundColor="$blue9"
                 color="white"
                 paddingHorizontal="$4"
                 marginTop="$2"
@@ -292,53 +308,62 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
               </Button>
             </YStack>
           )}
-          
+
           {currentBudget && (
             <>
               <Separator marginBottom="$3" />
-              
+
               {/* 类别分析 */}
               <YStack space="$3">
                 <Text fontSize="$3" fontWeight="$6" color="$gray11">
                   {t("Category Analysis")}
                 </Text>
-                
+
                 {categories.length === 0 ? (
-                  <Text fontSize="$2" color="$gray9" textAlign="center" paddingVertical="$3">
+                  <Text
+                    fontSize="$2"
+                    color="$gray9"
+                    textAlign="center"
+                    paddingVertical="$3"
+                  >
                     {t("No spending data available")}
                   </Text>
                 ) : (
                   <YStack space="$1">
                     {categories.map((category) => {
-                      const catStatus = getCategoryStatusInfo(category.status, category.percentage);
+                      const catStatus = getCategoryStatusInfo(
+                        category.status,
+                        category.percentage
+                      );
                       return (
-                        <Pressable 
+                        <Pressable
                           key={category.id}
                           onPress={() => onCategoryPress?.(category.id)}
                         >
-                          <XStack 
-                            justifyContent="space-between" 
+                          <XStack
+                            justifyContent="space-between"
                             alignItems="center"
                             paddingVertical="$2"
                             pressStyle={{ opacity: onCategoryPress ? 0.7 : 1 }}
                           >
                             <XStack space="$2" alignItems="center">
-                              <View 
-                                style={{ 
-                                  width: 12, 
-                                  height: 12, 
-                                  borderRadius: 6, 
-                                  backgroundColor: category.color || catStatus.color
-                                }} 
+                              <View
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: 6,
+                                  backgroundColor:
+                                    category.color || catStatus.color,
+                                }}
                               />
                               <Text fontSize="$3" color="$gray11">
                                 {t(category.label)}
                               </Text>
                             </XStack>
-                            
+
                             <XStack alignItems="center" space="$2">
-                              <Text 
-                                fontSize="$2" 
+                              <Text
+                                fontSize="$2"
                                 color={catStatus.color}
                                 backgroundColor={`${catStatus.color}10`}
                                 paddingHorizontal="$2"
@@ -360,7 +385,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
               </YStack>
             </>
           )}
-          
+
           {/* Only show "View More Report" button if there's actual spending data */}
           {hasSpendingData && currentBudget && (
             <>
@@ -375,15 +400,17 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
               >
                 {t("View More Report")}
               </Button>
-              
+
               <Text fontSize="$2" color="$gray9" marginTop="$2">
-                {t("View detailed reports to better understand your spending patterns")}
+                {t(
+                  "View detailed reports to better understand your spending patterns"
+                )}
               </Text>
             </>
           )}
         </YStack>
       </Card>
-      
+
       {/* Budget Update Modal */}
       <BudgetUpdateModal
         isOpen={showBudgetModal}
@@ -397,4 +424,4 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   );
 };
 
-export default BudgetSummaryCard; 
+export default BudgetSummaryCard;
