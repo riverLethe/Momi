@@ -12,9 +12,7 @@ import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
 import { Bill } from "@/types/bills.types";
-import AppHeader from "@/components/shared/AppHeader";
 import { FilterWithTotalExpense, CategoryFilterType } from "@/components/bills/FilterWithTotalExpense";
-import { EXPENSE_CATEGORIES } from "@/constants/categories";
 import { BillDateGroup } from "@/components/bills/BillDateGroup";
 import { EmptyState } from "@/components/bills/EmptyState";
 import { syncRemoteData } from "@/utils/sync.utils";
@@ -147,10 +145,9 @@ export default function BillsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <YStack flex={1}>
-        {/* Header */}
-        {/* <AppHeader /> */}
-        
-        {/* Filters & Total Expense in one row */}
+        {
+          bills.length === 0?<EmptyState />:(<>
+          {/* Filters & Total Expense in one row */}
         <FilterWithTotalExpense
           categoryFilter={categoryFilter}
           onCategoryFilterChange={setCategoryFilter}
@@ -165,8 +162,6 @@ export default function BillsScreen() {
           <YStack flex={1} justifyContent="center" alignItems="center">
             <ActivityIndicator size="large" color="#3B82F6" />
           </YStack>
-        ) : filteredBills.length === 0 ? (
-          <EmptyState />
         ) : (
           <FlatList
             data={billGroups}
@@ -177,7 +172,10 @@ export default function BillsScreen() {
             onRefresh={handleRefresh}
             refreshing={isLoading}
           />
-        )}
+        )}</>)
+        }
+        
+        
       </YStack>
     </SafeAreaView>
   );

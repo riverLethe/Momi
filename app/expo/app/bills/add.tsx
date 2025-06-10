@@ -1,173 +1,385 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Image, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { Button, Text, XStack, YStack, Circle } from 'tamagui';
-import { ArrowLeft, Calendar, Tag, X, Camera, Check } from 'lucide-react-native';
-import { useTranslation } from 'react-i18next';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState, useEffect } from "react";
+import { Modal, Platform, SafeAreaView, Alert } from "react-native";
+import { Stack, useRouter, useLocalSearchParams } from "expo-router";
+import { YStack, XStack, Button, Text, Input, ScrollView } from "tamagui";
+import {
+  Calendar as CalendarIcon,
+  Delete as DeleteIcon,
+  ChevronLeft as ChevronLeftIcon,
+  Camera as CameraIcon,
+  Plus as PlusIcon,
+  Minus as MinusIcon,
+  Equal as EqualIcon,
+} from "lucide-react-native";
+import { useTranslation } from "react-i18next";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import * as ImagePicker from "expo-image-picker";
 
-import { useAuth } from '@/providers/AuthProvider';
-import { useData } from '@/providers/DataProvider';
-import { useViewStore } from '@/stores/viewStore';
-import { saveBill, getBills, updateBill } from '@/utils/bills.utils';
-import { EXPENSE_CATEGORIES } from '@/constants/categories';
+import { useAuth } from "@/providers/AuthProvider";
+import { useData } from "@/providers/DataProvider";
+import { useViewStore } from "@/stores/viewStore";
+import { saveBill, getBills, updateBill } from "@/utils/bills.utils";
+import { EXPENSE_CATEGORIES, getCategoryIcon } from "@/constants/categories";
 
 export default function AddBillScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const billId = typeof params.id === 'string' ? params.id : '';
+  const billId = typeof params.id === "string" ? params.id : "";
   const { refreshData } = useData();
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const { viewMode, currentFamilySpace } = useViewStore();
-  
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [notes, setNotes] = useState('');
-  const [account, setAccount] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(EXPENSE_CATEGORIES[0]?.id || '');
+
+  const [amount, setAmount] = useState("0");
+  const [notes, setNotes] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(
+    EXPENSE_CATEGORIES[0]?.id || ""
+  );
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  
-  // Load bill data if editing
+
+  const [firstOperand, setFirstOperand] = useState<number | null>(null);
+  const [operator, setOperator] = useState<string | null>(null);
+  const [shouldResetDisplay, setShouldResetDisplay] = useState(false);
+
   useEffect(() => {
+    if (!billId) return;
+    setIsEditing(true);
     const loadBillData = async () => {
-      if (!billId) return;
-      
       try {
         const bills = await getBills();
-        const bill = bills.find(b => b.id === billId);
-        
+        const bill = bills.find((b) => b.id === billId);
         if (bill) {
-          setIsEditing(true);
           setAmount(bill.amount.toString());
-          setDescription(bill.merchant || '');
-          setNotes(bill.notes || '');
-          setAccount(bill.account || 'Cash');
           setSelectedCategory(bill.category);
+          setNotes(bill.notes || "");
           setSelectedDate(new Date(bill.date));
         }
       } catch (error) {
-        console.error('Failed to load bill for editing:', error);
+        console.error("Failed to load bill for editing:", error);
       }
     };
-    
     loadBillData();
   }, [billId]);
-  
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    const currentDate = selectedDate || new Date();
-    setShowDatePicker(false);
-    setSelectedDate(currentDate);
+
+  const handleDateChange = (event: any, date?: Date) => {
+    if (Platform.OS === "android") setShowDatePicker(false);
+    if (date) setSelectedDate(date);
+  };
+
+  const calculate = (first: number, second: number, op: string): number => {
+    switch (op) {
+      case "+":
+        return first + second;
+      case "-":
+        return first - second;
+      default:
+        return second;
+    }
+  };
+
+  const handleKeypadPress = (key: string) => {
+    if (amount.length >= 8 && !shouldResetDisplay) return;
+
+    if (shouldResetDisplay) {
+      setAmount(key === "." ? "0." : key);
+      setShouldResetDisplay(false);
+      return;
+    }
+
+    if (key === ".") {
+      if (!amount.includes(".")) setAmount(amount + ".");
+      return;
+    }
+
+    if (amount.includes(".") && amount.split(".")[1].length >= 2) return;
+    if (amount === "0") setAmount(key);
+    else setAmount(amount + key);
+  };
+
+  const handleDeletePress = () => {
+    if (shouldResetDisplay && operator) {
+      setOperator(null);
+      setShouldResetDisplay(false);
+      return;
+    }
+
+    if (operator && !shouldResetDisplay) {
+      if (amount.length > 1) {
+        setAmount(amount.slice(0, -1));
+      } else {
+        setShouldResetDisplay(true);
+        if (firstOperand !== null) {
+          setAmount(String(firstOperand));
+        }
+      }
+      return;
+    }
+
+    setAmount(amount.length > 1 ? amount.slice(0, -1) : "0");
+    if (shouldResetDisplay) {
+      setShouldResetDisplay(false);
+    }
+  };
+
+  const handleOperatorPress = (op: string) => {
+    if (firstOperand !== null && operator && !shouldResetDisplay) {
+      const currentResult = calculate(
+        firstOperand,
+        parseFloat(amount),
+        operator
+      );
+      setFirstOperand(currentResult);
+      setAmount(String(currentResult));
+    } else {
+      setFirstOperand(parseFloat(amount));
+    }
+    setOperator(op);
+    setShouldResetDisplay(true);
+  };
+
+  const handleCalculate = () => {
+    if (firstOperand === null || operator === null || shouldResetDisplay)
+      return;
+    const result = calculate(firstOperand, parseFloat(amount), operator);
+    setAmount(String(result.toFixed(2)));
+    setFirstOperand(null);
+    setOperator(null);
+    setShouldResetDisplay(true);
+  };
+
+  const handleScanReceipt = async () => {
+    // This functionality is commented out as per user's last action
   };
 
   const handleSave = async () => {
-    if (!amount || parseFloat(amount) <= 0 || !selectedCategory) {
-      // 输入验证
-      alert(t('Please enter a valid amount and select a category'));
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      alert(t("Please enter a valid amount."));
       return;
     }
-    
+
     setIsSaving(true);
-    
     try {
-      // 构建账单数据
       const billData = {
-        amount: parseFloat(amount),
+        amount: numericAmount,
         category: selectedCategory,
         date: selectedDate,
-        merchant: description, // 使用描述作为商家名称
-        notes: notes, // 备注
-        account: account || 'Cash', // 账户
-        isFamilyBill: viewMode === 'family',
-        familyId: viewMode === 'family' ? currentFamilySpace?.id : undefined,
-        familyName: viewMode === 'family' ? currentFamilySpace?.name : undefined,
+        merchant: "",
+        notes: notes,
+        account: "Default",
+        isFamilyBill: viewMode === "family",
+        familyId: viewMode === "family" ? currentFamilySpace?.id : undefined,
+        familyName:
+          viewMode === "family" ? currentFamilySpace?.name : undefined,
       };
-      
-      if (isEditing && billId) {
-        // 更新已有账单
-        await updateBill(billId, billData);
-      } else {
-        // 保存新账单到本地存储
-        const currentUser = user || { id: 'local-user', name: 'Local User' };
-        await saveBill(billData, currentUser);
-      }
-      
-      // 刷新数据提供者中的数据
+
+      if (isEditing) await updateBill(billId, billData);
+      else
+        await saveBill(
+          billData,
+          user || { id: "local-user", name: "Local User" }
+        );
+
       await refreshData();
-      
-      // 返回账单列表页面
       router.back();
     } catch (error) {
-      console.error('Failed to save bill:', error);
-      alert(t('Failed to save bill. Please try again.'));
+      console.error("Failed to save bill:", error);
+      alert(t("Failed to save bill. Please try again."));
     } finally {
       setIsSaving(false);
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: false
-        }}
-      />
-      
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-      >
-        {/* Custom header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <ArrowLeft size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isEditing ? t('Edit Bill') : t('Add Bill')}</Text>
-          <TouchableOpacity onPress={handleSave} disabled={isSaving}>
-            <Check size={24} color={isSaving ? "#AAAAAA" : "#4CAF50"} />
-          </TouchableOpacity>
-        </View>
-        
-        <ScrollView style={styles.scrollView}>
-          {/* Amount input */}
-          <View style={styles.amountContainer}>
-            <Text style={styles.currencySymbol}>¥</Text>
-            <TextInput
-              style={styles.amountInput}
-              placeholder="0.00"
-              keyboardType="decimal-pad"
-              value={amount}
-              onChangeText={setAmount}
-              placeholderTextColor="#AAAAAA"
-            />
-          </View>
-          
-          {/* Description input */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.descriptionInput}
-              placeholder={t('Merchant (e.g., Restaurant Name)')}
-              value={description}
-              onChangeText={setDescription}
-              placeholderTextColor="#AAAAAA"
-            />
-          </View>
-          
-          {/* Date picker */}
-          <TouchableOpacity 
-            style={styles.dateContainer} 
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Calendar size={20} color="#4CAF50" />
-            <Text style={styles.dateText}>
-              {selectedDate.toLocaleDateString()}
+  const CategoryIcon = ({ categoryId }: { categoryId: string }) => {
+    const IconComponent = getCategoryIcon(categoryId);
+    return <IconComponent size={24} color="#333" />;
+  };
+
+  const getDisplayString = () => {
+    if (operator && firstOperand !== null) {
+      if (shouldResetDisplay) return `${firstOperand} ${operator}`;
+      return `${firstOperand} ${operator} ${amount}`;
+    }
+    return amount;
+  };
+
+  const displayString = getDisplayString();
+  const showEquals = operator && !shouldResetDisplay;
+
+  const getFontSize = (text: string) => {
+    if (text.length > 15) return "$5";
+    if (text.length > 10) return "$6";
+    return "$7";
+  };
+
+  const renderKeypad = () => (
+    <XStack p="$2" space="$2">
+      <YStack f={3} space="$2">
+        <XStack space="$2">
+          {["1", "2", "3"].map((key) => (
+            <Button
+              f={1}
+              key={key}
+              onPress={() => handleKeypadPress(key)}
+              size="$5"
+            >
+              <Text fontSize="$6">{key}</Text>
+            </Button>
+          ))}
+        </XStack>
+        <XStack space="$2">
+          {["4", "5", "6"].map((key) => (
+            <Button
+              f={1}
+              key={key}
+              onPress={() => handleKeypadPress(key)}
+              size="$5"
+            >
+              <Text fontSize="$6">{key}</Text>
+            </Button>
+          ))}
+        </XStack>
+        <XStack space="$2">
+          {["7", "8", "9"].map((key) => (
+            <Button
+              f={1}
+              key={key}
+              onPress={() => handleKeypadPress(key)}
+              size="$5"
+            >
+              <Text fontSize="$6">{key}</Text>
+            </Button>
+          ))}
+        </XStack>
+        <XStack space="$2">
+          <Button f={1} onPress={() => handleKeypadPress(".")} size="$5">
+            <Text fontSize="$6">.</Text>
+          </Button>
+          <Button f={1} onPress={() => handleKeypadPress("0")} size="$5">
+            <Text fontSize="$6">0</Text>
+          </Button>
+          <Button
+            f={1}
+            icon={<DeleteIcon size={24} color="#333" />}
+            onPress={handleDeletePress}
+            size="$5"
+          />
+        </XStack>
+      </YStack>
+      <YStack f={1} space="$2">
+        <Button
+          f={1}
+          icon={<CalendarIcon size={24} color="#333" />}
+          onPress={() => setShowDatePicker(true)}
+          size="$5"
+        />
+        <Button
+          f={1}
+          icon={<PlusIcon size={24} color="#333" />}
+          onPress={() => handleOperatorPress("+")}
+          size="$5"
+        />
+        <Button
+          f={1}
+          icon={<MinusIcon size={24} color="#333" />}
+          onPress={() => handleOperatorPress("-")}
+          size="$5"
+        />
+        <Button
+          f={1}
+          theme="active"
+          onPress={showEquals ? handleCalculate : handleSave}
+          disabled={isSaving}
+          size="$5"
+          bg="$blue10"
+        >
+          {showEquals ? (
+            <EqualIcon size={24} color="white" />
+          ) : (
+            <Text color="white" fontWeight="bold">
+              {t("Done")}
             </Text>
-          </TouchableOpacity>
-          
-          {showDatePicker && (
+          )}
+        </Button>
+      </YStack>
+    </XStack>
+  );
+
+  return (
+    <YStack f={1} bg="$background">
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={{ flex: 1 }}>
+        <YStack f={1}>
+          <XStack p="$3">
+            <Button
+              chromeless
+              icon={<ChevronLeftIcon size={24} color="#333" />}
+              onPress={() => router.back()}
+            />
+          </XStack>
+          <ScrollView>
+            <YStack space="$3" p="$3">
+              <XStack flexWrap="wrap" jc="flex-start" ai="center">
+                {EXPENSE_CATEGORIES.map((category) => (
+                  <YStack
+                    key={category.id}
+                    ai="center"
+                    space="$2"
+                    p="$2"
+                    w="25%"
+                    onPress={() => setSelectedCategory(category.id)}
+                  >
+                    <YStack
+                      ai="center"
+                      jc="center"
+                      w={56}
+                      h={56}
+                      borderRadius="$10"
+                      bg={
+                        selectedCategory === category.id
+                          ? category.lightColor
+                          : "$gray5"
+                      }
+                      borderWidth={1}
+                      borderColor={
+                        selectedCategory === category.id
+                          ? category.color
+                          : "transparent"
+                      }
+                    >
+                      <CategoryIcon categoryId={category.id} />
+                    </YStack>
+                    <Text fontSize="$2" ta="center">
+                      {t(category.name)}
+                    </Text>
+                  </YStack>
+                ))}
+              </XStack>
+            </YStack>
+          </ScrollView>
+          {Platform.OS === "ios" && (
+            <Modal transparent visible={showDatePicker} animationType="slide">
+              <YStack f={1} jc="flex-end">
+                <YStack bg="$background" btrr="$6" btlr="$6" p="$4" space>
+                  <XStack jc="flex-end">
+                    <Button onPress={() => setShowDatePicker(false)}>
+                      {t("Done")}
+                    </Button>
+                  </XStack>
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                  />
+                </YStack>
+              </YStack>
+            </Modal>
+          )}
+          {Platform.OS === "android" && showDatePicker && (
             <DateTimePicker
               value={selectedDate}
               mode="date"
@@ -175,202 +387,34 @@ export default function AddBillScreen() {
               onChange={handleDateChange}
             />
           )}
-          
-          {/* Notes input */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.descriptionInput}
-              placeholder={t('Notes (optional)')}
-              value={notes}
-              onChangeText={setNotes}
-              placeholderTextColor="#AAAAAA"
-              multiline
-            />
-          </View>
-          
-          {/* Account input */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.descriptionInput}
-              placeholder={t('Payment Method (e.g., Cash, Card)')}
-              value={account}
-              onChangeText={setAccount}
-              placeholderTextColor="#AAAAAA"
-            />
-          </View>
-          
-          {/* Category selection */}
-          <Text style={styles.sectionTitle}>{t('Categories')}</Text>
-          <View style={styles.categoriesContainer}>
-            {EXPENSE_CATEGORIES.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryItem,
-                  selectedCategory === category.id && {
-                    borderColor: category.color,
-                    backgroundColor: `${category.color}20`,
-                  },
-                ]}
-                onPress={() => setSelectedCategory(category.id)}
+          <YStack p="$2" bg="white">
+            <YStack p="$2" space="$3">
+              <Text
+                fontSize={getFontSize(displayString)}
+                fontWeight="bold"
+                textAlign="right"
               >
-                <Circle size={16} backgroundColor={category.color} />
-                <Text style={styles.categoryText}>{t(category.name)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          
-          {/* Add receipt button */}
-          <TouchableOpacity style={styles.addReceiptButton}>
-            <Camera size={20} color="#4CAF50" />
-            <Text style={styles.addReceiptText}>{t('Add Receipt')}</Text>
-          </TouchableOpacity>
-        </ScrollView>
-        
-        {/* Bottom button */}
-        <View style={styles.bottomContainer}>
-          <Button
-            style={styles.saveButton}
-            backgroundColor="#4CAF50"
-            pressStyle={{ opacity: 0.8 }}
-            onPress={handleSave}
-            disabled={isSaving}
-          >
-            <Text style={styles.saveButtonText}>
-              {isSaving ? t('Saving...') : isEditing ? t('Update Bill') : t('Save Bill')}
-            </Text>
-          </Button>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                {displayString}
+              </Text>
+              <XStack space="$2" ai="center">
+                <Input
+                  f={1}
+                  placeholder={t("Notes")}
+                  value={notes}
+                  onChangeText={setNotes}
+                  size="$4"
+                  bg="$gray5"
+                />
+                <Button
+                  icon={<CameraIcon size={24} color="#333" />}
+                  onPress={handleScanReceipt}
+                />
+              </XStack>
+            </YStack>
+            {renderKeypad()}
+          </YStack>
+        </YStack>
+      </SafeAreaView>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-  },
-  scrollView: {
-    flex: 1,
-    padding: 16,
-  },
-  amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 24,
-  },
-  currencySymbol: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginRight: 4,
-  },
-  amountInput: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#333333',
-    textAlign: 'center',
-    minWidth: 150,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  descriptionInput: {
-    fontSize: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    color: '#333333',
-  },
-  dateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    marginBottom: 24,
-  },
-  dateText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: '#333333',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333333',
-  },
-  categoriesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 24,
-  },
-  categoryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-  },
-  categoryText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#333333',
-  },
-  addReceiptButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: '#F0FFF0',
-    borderRadius: 12,
-    marginBottom: 24,
-  },
-  addReceiptText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#4CAF50',
-    fontWeight: '500',
-  },
-  bottomContainer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
-  },
-  saveButton: {
-    width: '100%',
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-}); 
