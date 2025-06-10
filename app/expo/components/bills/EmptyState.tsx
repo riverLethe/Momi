@@ -2,12 +2,15 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useViewStore } from "@/stores/viewStore";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Card, Text, YStack, Image } from "tamagui";
+import { useRouter } from "expo-router";
+import { Plus } from "lucide-react-native";
+import EmptyStateView from "../common/EmptyStateView";
 
 export const EmptyState = () => {
   const { viewMode } = useViewStore();
   const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
+  const router = useRouter();
 
   const getEmptyStateMessage = () => {
     if (viewMode === "family" && !isAuthenticated) {
@@ -17,30 +20,14 @@ export const EmptyState = () => {
   };
 
   return (
-    <YStack flex={1} justifyContent="center" alignItems="center" padding="$4">
-      <Card
-        borderRadius="$4"
-        padding="$5"
-        width="90%"
-        backgroundColor="white"
-        elevation={2}
-      >
-        <YStack alignItems="center" space="$3">
-          <Image
-          source={require("@/assets/images/welcome-bill.png")}
-          alt="No data"
-          width={200}
-          height={160}
-          resizeMode="contain"
-        />
-          <Text fontSize="$5" fontWeight="$6" marginTop="$2">
-            {t("No Expenses Found")}
-          </Text>
-          <Text textAlign="center" color="$gray10">
-            {getEmptyStateMessage()}
-          </Text>
-        </YStack>
-      </Card>
-    </YStack>
+    <EmptyStateView
+      title={t("No Expenses Found")}
+      description={getEmptyStateMessage()}
+      imageSrc={require("@/assets/images/welcome-bill.png")}
+      actionText={t("Add Expense")}
+      actionIcon={<Plus size={28} color="#3B82F6" />}
+      onActionPress={() => router.push("/(tabs)/chat" as any)}
+      hideAction={viewMode === "family" && !isAuthenticated}
+    />
   );
 }; 
