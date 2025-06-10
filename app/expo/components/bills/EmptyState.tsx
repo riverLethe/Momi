@@ -1,17 +1,16 @@
 import { useAuth } from "@/providers/AuthProvider";
 import { useViewStore } from "@/stores/viewStore";
-import { Calendar } from "lucide-react-native";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Card, Circle, Text, YStack } from "tamagui";
+import { Card, Text, YStack, Image } from "tamagui";
 
 export const EmptyState = () => {
   const { viewMode } = useViewStore();
-  const { isLoggedIn } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
 
   const getEmptyStateMessage = () => {
-    if (viewMode === "family" && !isLoggedIn) {
+    if (viewMode === "family" && !isAuthenticated) {
       return t("Please sign in to view family expenses");
     }
     return t("Try adjusting filters or add your first expense");
@@ -27,9 +26,13 @@ export const EmptyState = () => {
         elevation={2}
       >
         <YStack alignItems="center" space="$3">
-          <Circle size={60} backgroundColor="$gray2">
-            <Calendar size={28} color="#64748B" />
-          </Circle>
+          <Image
+          source={require("@/assets/images/welcome-bill.png")}
+          alt="No data"
+          width={200}
+          height={160}
+          resizeMode="contain"
+        />
           <Text fontSize="$5" fontWeight="$6" marginTop="$2">
             {t("No Expenses Found")}
           </Text>

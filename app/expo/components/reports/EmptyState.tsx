@@ -38,7 +38,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         paddingVertical="$6"
       >
         <Image
-          source={require("@/assets/images/no-data.png")}
+          source={require("@/assets/images/welcome-report.png")}
           alt="No data"
           width={200}
           height={160}

@@ -30,7 +30,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       {/* Logo and Title Section */}
       <YStack alignItems="center" space="$2">
         <Image
-          source={require("@/assets/images/welcome-illustration.png")}
+          source={require("@/assets/images/welcome-home.png")}
           width={180}
           height={180}
           alt="Momiq Logo"
