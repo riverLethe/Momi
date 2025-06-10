@@ -1,7 +1,7 @@
 export enum DatePeriodEnum {
   WEEK = "week",
   MONTH = "month",
-  YEAR = "year"
+  YEAR = "year",
 }
 
 export interface CategoryData {
@@ -39,8 +39,8 @@ export interface HealthScore {
 export interface PeriodSelectorData {
   id: string;
   label: string;
-  startDate: string;
-  endDate: string;
+  startDate: Date;
+  endDate: Date;
 }
 
 export interface TopSpendingCategory {
@@ -61,4 +61,4 @@ export interface ReportData {
   topSpendingCategories?: TopSpendingCategory[];
   viewMode?: "personal" | "family";
   periodType?: DatePeriodEnum;
-} 
+}
