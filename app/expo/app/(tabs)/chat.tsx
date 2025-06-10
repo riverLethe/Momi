@@ -247,7 +247,7 @@ export default function ChatScreen() {
   const renderWelcomeScreen = () => (
     <View style={styles.welcomeContainer}>
       <Image 
-        source={{ uri: 'https://placehold.co/300x300/3B82F6/FFFFFF.png?text=AI' }}
+        source={require("@/assets/images/welcome-chat.png")}
         style={styles.welcomeImage}
       />
       <Text style={styles.welcomeTitle}>Welcome to Momiq AI Assistant</Text>
