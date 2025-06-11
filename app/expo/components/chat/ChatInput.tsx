@@ -156,6 +156,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 borderWidth={0}
                 backgroundColor="transparent"
                 padding="$0"
+                onKeyPress={(e: React.KeyboardEvent<any>) => {
+                  if (e.nativeEvent.key === 'Enter') {
+                    e.preventDefault && e.preventDefault();
+                    onSend();
+                  }
+                }}
               />
             </View>
 
@@ -193,7 +199,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   justifyContent="center"
                   alignItems="center"
                 >
-                  <Send size={18} color="white" />
+                  <Send size={18}  />
                 </View>
               </Pressable>
             )}

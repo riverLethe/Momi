@@ -4,6 +4,7 @@ import { XStack, YStack, Text, View } from 'tamagui';
 import { Message } from '@/utils/api';
 import { formatTime } from '@/utils/format';
 import { ExpenseList } from './ExpenseList';
+import Markdown from 'react-native-markdown-display';
 
 interface MessageBubbleProps {
   message: Message;
@@ -141,6 +142,12 @@ const renderMessageContent = (message: Message) => {
             ))}
           </View>
         </YStack>
+      );
+    }
+
+    if (message.data.type === 'markdown' && message.data.content) {
+      return (
+        <Markdown>{message.data.content}</Markdown>
       );
     }
   }

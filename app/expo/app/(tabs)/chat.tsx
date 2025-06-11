@@ -69,8 +69,6 @@ export default function ChatScreen() {
   const handleAIResponse = (response: AIResponseType) => {
     if (response.type === 'thinking') {
       setIsThinking(response.content);
-      
-      // If thinking ended and we have collected streamed message, add it as a complete message
       if (!response.content && currentStreamedMessage) {
         const aiMessage = chatAPI.createMessage(currentStreamedMessage, false);
         setMessages(prev => [...prev, aiMessage]);
@@ -78,59 +76,60 @@ export default function ChatScreen() {
         setTimeout(() => scrollToBottom(), 50);
       }
     } 
-    else if (response.type === 'chunk') {
-      // Add chunk to current streamed message
-      setCurrentStreamedMessage(prev => prev + response.content);
-      setTimeout(() => scrollToBottom(), 50);
-    }
-    else if (response.type === 'command') {
-      // Handle different command types
-      if (response.command === 'CREATE_EXPENSE' && response.data) {
-        // Create a new expense message with the data
+    // else if (response.type === 'chunk') {
+    //   setCurrentStreamedMessage(prev => prev + response.content);
+    //   setTimeout(() => scrollToBottom(), 50);
+    // }
+    else if (response.type === 'structured') {
+      // 结构化AI响应
+      const { type, expense, query, budget, content } = response.data;
+      if (type === 'create_expense' && expense) {
         const expenseMessage = chatAPI.createMessage(
-          response.result, 
+          'Expense created', 
           false, 
           'text',
-          { type: 'expense', expense: response.data }
+          { type: 'expense', expense }
         );
         setMessages(prev => [...prev, expenseMessage]);
-      }
-      else if (response.command === 'LIST_EXPENSES' && response.data) {
-        // Set expense data for display and create a message
+      } else if (type === 'list_expenses' && query) {
         const listMessage = chatAPI.createMessage(
-          response.result, 
-          false, 
+          'Expense query',
+          false,
           'text',
-          { type: 'expense_list', expenses: response.data }
+          { type: 'expense_list', expenses: [] }
         );
         setMessages(prev => [...prev, listMessage]);
-      }
-      else if (response.command === 'EXPENSE_DETAILS' && response.data) {
-        // Create a message with expense details
-        const detailMessage = chatAPI.createMessage(
-          response.result, 
-          false, 
+      } else if (type === 'set_budget' && budget) {
+        const budgetMessage = chatAPI.createMessage(
+          `Budget set: ${budget.amount} (${budget.category || 'All'}, ${budget.period})`,
+          false,
           'text',
-          { type: 'expense_detail', expense: response.data }
+          { type: 'budget', budget }
         );
-        setMessages(prev => [...prev, detailMessage]);
-      }
-      else if (response.command === 'ANALYZE_EXPENSES' && response.data) {
-        // Create a message with expense analysis
-        const analysisMessage = chatAPI.createMessage(
-          response.result, 
-          false, 
+        setMessages(prev => [...prev, budgetMessage]);
+      } else if (type === 'markdown' && content) {
+        const markdownMessage = chatAPI.createMessage(
+          '',
+          false,
           'text',
-          { type: 'expense_analysis', analysis: response.data }
+          { type: 'markdown', content }
         );
-        setMessages(prev => [...prev, analysisMessage]);
+        setMessages(prev => [...prev, markdownMessage]);
+      } else {
+        // fallback
+        const fallbackMessage = chatAPI.createMessage(JSON.stringify(response.data), false);
+        setMessages(prev => [...prev, fallbackMessage]);
       }
-      else {
-        // For other commands or if no data
-        const commandMessage = chatAPI.createMessage(response.result, false);
-        setMessages(prev => [...prev, commandMessage]);
-      }
-      
+      setTimeout(() => scrollToBottom(), 50);
+    }
+    else if (response.type === 'markdown') {
+      const markdownMessage = chatAPI.createMessage(
+        '',
+        false,
+        'text',
+        { type: 'markdown', content: response.content }
+      );
+      setMessages(prev => [...prev, markdownMessage]);
       setTimeout(() => scrollToBottom(), 50);
     }
     else if (response.type === 'complete') {

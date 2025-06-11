@@ -1,4 +1,5 @@
 import { Content } from "@google/genai";
+import { fetch } from "expo/fetch";
 
 // API基础URL
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
@@ -22,7 +23,9 @@ export type AIResponseType =
   | { type: "chunk"; content: string }
   | { type: "command"; command: string; result: string; data?: any }
   | { type: "complete"; content: string }
-  | { type: "error"; error: string };
+  | { type: "error"; error: string }
+  | { type: "structured"; data: any }
+  | { type: "markdown"; content: string };
 
 // 账单接口
 export interface Expense {
@@ -46,13 +49,19 @@ export const readStream = async (
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value, { stream: true });
+      const buffer = decoder.decode(value, { stream: true });
       try {
         // 有可能一个chunk包含多个JSON对象，用换行分割
-        const jsonChunks = chunk.split("\n").filter((c) => c.trim());
+        const lines = buffer.split("\n\nid:");
 
-        for (const jsonChunk of jsonChunks) {
-          const data = JSON.parse(jsonChunk) as AIResponseType;
+        for (const chunk of lines) {
+          if (!chunk.trim()) continue;
+          let eventData = (chunk.match(/data:\s*([\s\S]*)/)?.[1] || "").replace(
+            /\n\n$/,
+            ""
+          );
+          if (!eventData) continue;
+          const data = JSON.parse(eventData) as AIResponseType;
           onChunk(data);
         }
       } catch (e) {
