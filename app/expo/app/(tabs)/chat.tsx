@@ -375,7 +375,11 @@ export default function ChatScreen() {
             <ScrollView
               ref={scrollViewRef}
               style={{ flex: 1 }}
-              contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+              contentContainerStyle={{
+                paddingTop: 16,
+                paddingHorizontal: 0,
+                paddingBottom: 24,
+              }}
             >
               {messages.map((message) => (
                 <MessageBubble key={message.id} message={message} />
