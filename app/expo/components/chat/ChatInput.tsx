@@ -1,7 +1,7 @@
-import React from 'react';
-import { Animated, Pressable } from 'react-native';
-import { XStack, YStack, Text, View,Input } from 'tamagui';
-import { Mic, Camera, Send, Plus, Keyboard } from 'lucide-react-native';
+import React from "react";
+import { Animated, Pressable } from "react-native";
+import { XStack, YStack, Text, View, Input } from "tamagui";
+import { Mic, Camera, Send, Plus, Keyboard } from "lucide-react-native";
 
 interface ChatInputProps {
   isTextMode: boolean;
@@ -66,10 +66,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               style={{
                 flex: 1,
                 height: 44,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: '#F3F4F6',
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "#F3F4F6",
                 borderRadius: 22,
                 paddingHorizontal: 16,
                 marginHorizontal: 8,
@@ -78,7 +78,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onPressOut={() => onStopRecording(recordingTimer > 0)}
             >
               <Text fontSize={16} color="$gray600">
-                {isRecording ? `Recording ${3 - recordingTimer}s...` : "Hold to speak"}
+                {isRecording
+                  ? `Recording ${3 - recordingTimer}s...`
+                  : "Hold to speak"}
               </Text>
               <Animated.View
                 style={[
@@ -86,8 +88,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     width: 32,
                     height: 32,
                     borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    alignItems: "center",
+                    justifyContent: "center",
                   },
                   { transform: [{ scale: micButtonScale }] },
                 ]}
@@ -139,9 +141,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               style={{
                 flex: 1,
                 height: 44,
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: '#F3F4F6',
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#F3F4F6",
                 borderRadius: 22,
                 paddingHorizontal: 16,
                 marginHorizontal: 8,
@@ -151,17 +153,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 placeholder="Send a message..."
                 value={inputText}
                 onChangeText={onChangeText}
-                multiline
+                multiline={false}
                 maxLength={1000}
                 borderWidth={0}
                 backgroundColor="transparent"
                 padding="$0"
-                onKeyPress={(e: React.KeyboardEvent<any>) => {
-                  if (e.nativeEvent.key === 'Enter') {
-                    e.preventDefault && e.preventDefault();
-                    onSend();
-                  }
-                }}
+                onSubmitEditing={onSend}
               />
             </View>
 
@@ -199,7 +196,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   justifyContent="center"
                   alignItems="center"
                 >
-                  <Send size={18}  />
+                  <Send size={18} />
                 </View>
               </Pressable>
             )}
@@ -208,4 +205,4 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </View>
     </YStack>
   );
-}; 
+};
