@@ -1,44 +1,74 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  KeyboardAvoidingView, 
-  Platform, 
-  SafeAreaView, 
+import React, { useState, useEffect, useRef } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
   StatusBar,
   ScrollView,
   Animated,
-  ActivityIndicator
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { XStack, YStack, Text, View } from 'tamagui';
-import { chatAPI, Message, AIResponseType } from '@/utils/api';
-import { saveBill } from '@/utils/bills.utils';
-import { updateUserPreferences } from '@/utils/userPreferences.utils';
-import { useAuth } from '@/providers/AuthProvider';
-import { useData } from '@/providers/DataProvider';
+  ActivityIndicator,
+} from "react-native";
+import { Stack, useRouter } from "expo-router";
+import { XStack, Text, View } from "tamagui";
+import { chatAPI, Message, AIResponseType } from "@/utils/api";
+import { saveBill } from "@/utils/bills.utils";
+import { updateUserPreferences } from "@/utils/userPreferences.utils";
+import { useAuth } from "@/providers/AuthProvider";
+import { useData } from "@/providers/DataProvider";
 
 // Import components
-import { ChatHeader } from '@/components/chat/ChatHeader';
-import { MessageBubble } from '@/components/chat/MessageBubble';
-import { ChatInput } from '@/components/chat/ChatInput';
-import { WelcomeScreen } from '@/components/chat/WelcomeScreen';
-import { MoreOptions } from '@/components/chat/MoreOptions';
+import { ChatHeader } from "@/components/chat/ChatHeader";
+import { MessageBubble } from "@/components/chat/MessageBubble";
+import { ChatInput } from "@/components/chat/ChatInput";
+import { WelcomeScreen } from "@/components/chat/WelcomeScreen";
+import { MoreOptions } from "@/components/chat/MoreOptions";
+import { Bill } from "@/types/bills.types";
+
+// 新增：本地缓存工具
+import { loadChatMessages, saveChatMessages } from "@/utils/chatStorage.utils";
 
 export default function ChatScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { refreshData } = useData();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isTextMode, setIsTextMode] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [recordingTimer, setRecordingTimer] = useState(0);
-  const [recordingTimeout, setRecordingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [recordingTimeout, setRecordingTimeout] =
+    useState<NodeJS.Timeout | null>(null);
   const [isThinking, setIsThinking] = useState(false);
-  const [currentStreamedMessage, setCurrentStreamedMessage] = useState('');
-  
+  const [currentStreamedMessage, setCurrentStreamedMessage] = useState("");
+
   const scrollViewRef = useRef<ScrollView>(null);
   const micButtonScale = useRef(new Animated.Value(1)).current;
+
+  /**
+   * firstLoadRef 标识首次加载（用于避免在初始化时就触发保存）
+   */
+  const firstLoadRef = useRef(true);
+
+  // 组件挂载时，尝试从本地读取聊天记录
+  useEffect(() => {
+    (async () => {
+      const cachedMessages = await loadChatMessages();
+      if (cachedMessages.length) {
+        setMessages(cachedMessages);
+        // 等待渲染后滚动到底部
+        setTimeout(() => scrollToBottom(), 50);
+      }
+      firstLoadRef.current = false;
+    })();
+  }, []);
+
+  // 当 messages 更新时，将其保存到本地（跳过首次初始化）
+  useEffect(() => {
+    if (!firstLoadRef.current) {
+      saveChatMessages(messages);
+    }
+  }, [messages]);
 
   useEffect(() => {
     // Clean up timer on unmount
@@ -50,84 +80,83 @@ export default function ChatScreen() {
   }, [recordingTimeout]);
 
   const handleSend = async () => {
-    if (inputText.trim() === '') return;
-    
+    if (inputText.trim() === "") return;
+
     // Add user message
     const userMessage = chatAPI.createMessage(inputText, true);
-    setMessages(prev => [...prev, userMessage]);
-    setInputText('');
-    
+    setMessages((prev) => [...prev, userMessage]);
+    setInputText("");
+
     // Scroll to bottom immediately after user sends message
     setTimeout(() => scrollToBottom(), 50);
-    
+
     // Prepare for AI response
     setIsThinking(true);
-    setCurrentStreamedMessage('');
-    
+    setCurrentStreamedMessage("");
+
     // Get message history for API
     const history = chatAPI.buildHistory(messages);
-    
+
     // Send message to API and handle streaming response
     await chatAPI.sendMessage(inputText, history, handleAIResponse);
   };
-  
+
   // Handle streaming AI response
-  const handleAIResponse = (response: AIResponseType) => {
-    if (response.type === 'thinking') {
+  const handleAIResponse = async (response: AIResponseType) => {
+    if (response.type === "thinking") {
       setIsThinking(response.content);
       if (!response.content && currentStreamedMessage) {
         const aiMessage = chatAPI.createMessage(currentStreamedMessage, false);
-        setMessages(prev => [...prev, aiMessage]);
-        setCurrentStreamedMessage('');
+        setMessages((prev) => [...prev, aiMessage]);
+        setCurrentStreamedMessage("");
         setTimeout(() => scrollToBottom(), 50);
       }
-    } 
+    }
     // else if (response.type === 'chunk') {
     //   setCurrentStreamedMessage(prev => prev + response.content);
     //   setTimeout(() => scrollToBottom(), 50);
     // }
-    else if (response.type === 'structured') {
+    else if (response.type === "structured") {
       // 结构化AI响应
       const { type, expense, query, budget, content } = response.data;
-      if (type === 'create_expense' && expense) {
+      if (type === "create_expense" && expense) {
         // Persist the expense locally
-        (async () => {
-          try {
-            await saveBill(
-              {
-                amount: expense.amount,
-                category: expense.category || 'others',
-                date: expense.date ? new Date(expense.date) : new Date(),
-                merchant: expense.merchant || '',
-                notes: expense.note || '',
-                account: expense.paymentMethod || 'Default',
-                isFamilyBill: false,
-              },
-              user || { id: 'local-user', name: 'Local User' }
-            );
-            // Refresh context so UI updates elsewhere
-            refreshData();
-          } catch (err) {
-            console.error('Failed to save expense from AI:', err);
-          }
-        })();
+        let newBill: Bill = expense;
+        try {
+          newBill = await saveBill(
+            {
+              amount: expense.amount,
+              category: expense.category || "others",
+              date: expense.date ? new Date(expense.date) : new Date(),
+              merchant: expense.merchant || "",
+              notes: expense.note || "",
+              account: expense.paymentMethod || "Default",
+              isFamilyBill: false,
+            },
+            user || { id: "local-user", name: "Local User" }
+          );
+          // Refresh context so UI updates elsewhere
+          refreshData();
+        } catch (err) {
+          console.error("Failed to save expense from AI:", err);
+        }
 
         const expenseMessage = chatAPI.createMessage(
-          'Expense created',
+          "Expense created",
           false,
-          'text',
-          { type: 'expense', expense }
+          "text",
+          { type: "expense_list", expenses: [newBill] }
         );
-        setMessages(prev => [...prev, expenseMessage]);
-      } else if (type === 'list_expenses' && query) {
+        setMessages((prev) => [...prev, expenseMessage]);
+      } else if (type === "list_expenses" && query) {
         const listMessage = chatAPI.createMessage(
-          'Expense query',
+          "Expense query",
           false,
-          'text',
-          { type: 'expense_list', expenses: [] }
+          "text",
+          { type: "expense_list", expenses: [] }
         );
-        setMessages(prev => [...prev, listMessage]);
-      } else if (type === 'set_budget' && budget) {
+        setMessages((prev) => [...prev, listMessage]);
+      } else if (type === "set_budget" && budget) {
         // Persist budget to user preferences
         (async () => {
           try {
@@ -136,55 +165,54 @@ export default function ChatScreen() {
               budgetPeriod: budget.period,
             });
           } catch (err) {
-            console.error('Failed to update budget preference:', err);
+            console.error("Failed to update budget preference:", err);
           }
         })();
 
         const budgetMessage = chatAPI.createMessage(
-          `Budget set: ${budget.amount} (${budget.category || 'All'}, ${budget.period})`,
+          `Budget set: ${budget.amount} (${budget.category || "All"}, ${budget.period})`,
           false,
-          'text',
-          { type: 'budget', budget }
+          "text",
+          { type: "budget", budget }
         );
-        setMessages(prev => [...prev, budgetMessage]);
-      } else if (type === 'markdown' && content) {
-        const markdownMessage = chatAPI.createMessage(
-          '',
-          false,
-          'text',
-          { type: 'markdown', content }
-        );
-        setMessages(prev => [...prev, markdownMessage]);
+        setMessages((prev) => [...prev, budgetMessage]);
+      } else if (type === "markdown" && content) {
+        const markdownMessage = chatAPI.createMessage("", false, "text", {
+          type: "markdown",
+          content,
+        });
+        setMessages((prev) => [...prev, markdownMessage]);
       } else {
         // fallback
-        const fallbackMessage = chatAPI.createMessage(JSON.stringify(response.data), false);
-        setMessages(prev => [...prev, fallbackMessage]);
+        const fallbackMessage = chatAPI.createMessage(
+          JSON.stringify(response.data),
+          false
+        );
+        setMessages((prev) => [...prev, fallbackMessage]);
       }
       setTimeout(() => scrollToBottom(), 50);
-    }
-    else if (response.type === 'markdown') {
-      const markdownMessage = chatAPI.createMessage(
-        '',
-        false,
-        'text',
-        { type: 'markdown', content: response.content }
-      );
-      setMessages(prev => [...prev, markdownMessage]);
+    } else if (response.type === "markdown") {
+      const markdownMessage = chatAPI.createMessage("", false, "text", {
+        type: "markdown",
+        content: response.content,
+      });
+      setMessages((prev) => [...prev, markdownMessage]);
       setTimeout(() => scrollToBottom(), 50);
-    }
-    else if (response.type === 'complete') {
+    } else if (response.type === "complete") {
       // Add complete message
       const aiMessage = chatAPI.createMessage(response.content, false);
-      setMessages(prev => [...prev, aiMessage]);
-      setCurrentStreamedMessage('');
+      setMessages((prev) => [...prev, aiMessage]);
+      setCurrentStreamedMessage("");
       setTimeout(() => scrollToBottom(), 50);
-    }
-    else if (response.type === 'error') {
+    } else if (response.type === "error") {
       // Handle error
-      const errorMessage = chatAPI.createMessage(`Sorry, an error occurred: ${response.error}`, false);
-      setMessages(prev => [...prev, errorMessage]);
+      const errorMessage = chatAPI.createMessage(
+        `Sorry, an error occurred: ${response.error}`,
+        false
+      );
+      setMessages((prev) => [...prev, errorMessage]);
       setIsThinking(false);
-      setCurrentStreamedMessage('');
+      setCurrentStreamedMessage("");
       setTimeout(() => scrollToBottom(), 50);
     }
   };
@@ -192,7 +220,7 @@ export default function ChatScreen() {
   const handleStartRecording = () => {
     setIsRecording(true);
     setRecordingTimer(0);
-    
+
     // Animate mic button
     Animated.sequence([
       Animated.timing(micButtonScale, {
@@ -206,7 +234,7 @@ export default function ChatScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-    
+
     // Start a timer for recording (max 3 seconds)
     const timer = setInterval(() => {
       setRecordingTimer((prev) => {
@@ -218,88 +246,94 @@ export default function ChatScreen() {
         return prev + 1;
       });
     }, 1000);
-    
+
     setRecordingTimeout(timer);
   };
-  
+
   const handleStopRecording = async (hasContent = false) => {
     setIsRecording(false);
-    
+
     if (recordingTimeout) {
       clearInterval(recordingTimeout);
       setRecordingTimeout(null);
     }
-    
+
     if (hasContent) {
       // Add voice message from user
-      const userMessage = chatAPI.createMessage('🎤 Voice message', true, 'voice');
-      setMessages(prev => [...prev, userMessage]);
-      
+      const userMessage = chatAPI.createMessage(
+        "🎤 Voice message",
+        true,
+        "voice"
+      );
+      setMessages((prev) => [...prev, userMessage]);
+
       // Prepare for AI response
       setIsThinking(true);
-      setCurrentStreamedMessage('');
-      
+      setCurrentStreamedMessage("");
+
       // Get message history for API
       const history = chatAPI.buildHistory(messages);
-      
+
       // Simulate voice transcription with default message
       const transcribedText = "Please help me record an expense";
-      
+
       // Send message to API and handle streaming response
       await chatAPI.sendMessage(transcribedText, history, handleAIResponse);
-      
+
       setTimeout(() => scrollToBottom(), 50);
     }
   };
 
   const handleImageUpload = async () => {
     setShowMoreOptions(false);
-    
+
     // Simulate image upload
-    const userMessage = chatAPI.createMessage('📷 Image', true, 'image');
-    setMessages(prev => [...prev, userMessage]);
-    
+    const userMessage = chatAPI.createMessage("📷 Image", true, "image");
+    setMessages((prev) => [...prev, userMessage]);
+
     // Prepare for AI response
     setIsThinking(true);
-    setCurrentStreamedMessage('');
-    
+    setCurrentStreamedMessage("");
+
     // Get message history for API
     const history = chatAPI.buildHistory(messages);
-    
+
     // Simulate image transcription with default message
-    const transcribedText = "This is a receipt, please help me record this expense";
-    
+    const transcribedText =
+      "This is a receipt, please help me record this expense";
+
     // Send message to API and handle streaming response
     await chatAPI.sendMessage(transcribedText, history, handleAIResponse);
-    
+
     setTimeout(() => scrollToBottom(), 50);
   };
 
   const handleFileUpload = async () => {
     setShowMoreOptions(false);
-    
+
     // Simulate file upload
-    const userMessage = chatAPI.createMessage('📄 File', true, 'file');
-    setMessages(prev => [...prev, userMessage]);
-    
+    const userMessage = chatAPI.createMessage("📄 File", true, "file");
+    setMessages((prev) => [...prev, userMessage]);
+
     // Prepare for AI response
     setIsThinking(true);
-    setCurrentStreamedMessage('');
-    
+    setCurrentStreamedMessage("");
+
     // Get message history for API
     const history = chatAPI.buildHistory(messages);
-    
+
     // Simulate file transcription with default message
-    const transcribedText = "This is my expense file, please analyze my spending";
-    
+    const transcribedText =
+      "This is my expense file, please analyze my spending";
+
     // Send message to API and handle streaming response
     await chatAPI.sendMessage(transcribedText, history, handleAIResponse);
-    
+
     setTimeout(() => scrollToBottom(), 50);
   };
 
   const handleAddExpense = () => {
-    router.push('/bills/add');
+    router.push("/bills/add");
   };
 
   const scrollToBottom = () => {
@@ -317,28 +351,28 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       <StatusBar barStyle="dark-content" />
       <Stack.Screen
         options={{
-          headerShown: false
+          headerShown: false,
         }}
       />
-      
+
       {/* Custom Header */}
       <ChatHeader onAddExpense={handleAddExpense} />
-      
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* Chat Messages */}
         <View flex={1} backgroundColor="$gray50">
           {messages.length === 0 ? (
             <WelcomeScreen />
           ) : (
-            <ScrollView 
+            <ScrollView
               ref={scrollViewRef}
               style={{ flex: 1 }}
               contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
@@ -346,7 +380,7 @@ export default function ChatScreen() {
               {messages.map((message) => (
                 <MessageBubble key={message.id} message={message} />
               ))}
-              
+
               {/* Streaming message */}
               {currentStreamedMessage && (
                 <XStack
@@ -383,7 +417,7 @@ export default function ChatScreen() {
                   </View>
                 </XStack>
               )}
-              
+
               {/* Thinking indicator */}
               {isThinking && !currentStreamedMessage && (
                 <XStack
@@ -425,9 +459,9 @@ export default function ChatScreen() {
             </ScrollView>
           )}
         </View>
-        
+
         {/* Input area */}
-        <ChatInput 
+        <ChatInput
           isTextMode={isTextMode}
           inputText={inputText}
           isRecording={isRecording}
@@ -443,10 +477,10 @@ export default function ChatScreen() {
           onStopRecording={handleStopRecording}
           onImageUpload={handleImageUpload}
         />
-        
+
         {/* More options modal */}
         {showMoreOptions && (
-          <MoreOptions 
+          <MoreOptions
             onImageUpload={handleImageUpload}
             onFileUpload={handleFileUpload}
           />

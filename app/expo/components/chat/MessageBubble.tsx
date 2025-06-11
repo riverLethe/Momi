@@ -1,10 +1,11 @@
-import React from 'react';
-import { View as RNView } from 'react-native';
-import { XStack, YStack, Text, View } from 'tamagui';
-import { Message } from '@/utils/api';
-import { formatTime } from '@/utils/format';
-import { ExpenseList } from './ExpenseList';
-import Markdown from 'react-native-markdown-display';
+import React from "react";
+// import { View as RNView } from 'react-native';
+import { XStack, YStack, Text, Avatar, Card } from "tamagui";
+import { Message } from "@/utils/api";
+import { formatTime } from "@/utils/format";
+import { Expense } from "@/utils/api";
+import Markdown from "react-native-markdown-display";
+import { ExpenseList } from "./ExpenseList";
 
 interface MessageBubbleProps {
   message: Message;
@@ -16,30 +17,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
       width="100%"
       marginBottom="$3"
       alignItems="flex-end"
-      justifyContent={message.isUser ? 'flex-end' : 'flex-start'}
+      justifyContent={message.isUser ? "flex-end" : "flex-start"}
     >
-      {!message.isUser && (
-        <View
-          width={32}
-          height={32}
-          borderRadius={16}
-          backgroundColor="$blue500"
-          alignItems="center"
-          justifyContent="center"
-          marginRight="$2"
-        >
-          <Text color="$white" fontSize={14} fontWeight="bold">
-            AI
-          </Text>
-        </View>
-      )}
-
       <YStack
         maxWidth="80%"
         borderRadius={18}
         paddingHorizontal="$4"
         paddingVertical="$2.75"
-        backgroundColor={message.isUser ? '$blue500' : '$gray100'}
+        backgroundColor={message.isUser ? "$blue500" : "$gray100"}
         borderBottomRightRadius={message.isUser ? 4 : 18}
         borderBottomLeftRadius={message.isUser ? 18 : 4}
         shadowColor="$black"
@@ -48,14 +33,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         shadowOffset={{ width: 0, height: 1 }}
       >
         {renderMessageContent(message)}
-        <Text
+        {/* <Text
           fontSize={12}
           marginTop="$1"
-          color={message.isUser ? 'rgba(255, 255, 255, 0.7)' : '$gray400'}
-          alignSelf={message.isUser ? 'flex-end' : 'flex-start'}
+          color={message.isUser ? "rgba(255, 255, 255, 0.7)" : "$gray400"}
+          alignSelf={message.isUser ? "flex-end" : "flex-start"}
         >
           {formatTime(message.timestamp)}
-        </Text>
+        </Text> */}
       </YStack>
     </XStack>
   );
@@ -65,104 +50,110 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 const renderMessageContent = (message: Message) => {
   // Handle special data types
   if (message.data) {
-    if (message.data.type === 'expense_list' && Array.isArray(message.data.expenses)) {
+    if (
+      message.data.type === "expense_list" &&
+      Array.isArray(message.data.expenses)
+    ) {
       return (
-        <YStack width="100%">
-          <Text fontSize={16} lineHeight={22}>
-            {message.text}
-          </Text>
-          <ExpenseList
-            expenses={message.data.expenses}
-            title="Expense List"
-            compact={true}
-          />
-        </YStack>
-      );
-    }
-
-    if (message.data.type === 'expense' && message.data.expense) {
-      return (
-        <YStack width="100%">
-          <Text fontSize={16} lineHeight={22}>
-            {message.text}
-          </Text>
-          <View
-            backgroundColor="$white"
-            borderRadius={8}
+        <YStack width="100%" alignItems="flex-start">
+          <Card
+            borderRadius="$4"
+            overflow="hidden"
+            elevation={0.5}
+            backgroundColor="white"
             padding="$3"
-            marginTop="$2"
-            shadowColor="$black"
-            shadowOffset={{ width: 0, height: 1 }}
-            shadowOpacity={0.05}
-            shadowRadius={1}
+            width="fit-content"
           >
-            <Text fontSize={18} fontWeight="bold" color="$blue500" marginBottom="$1">
-              {message.data.expense.amount.toFixed(2)}
+            <Text fontSize={12} lineHeight={16}>
+              {message.text}
             </Text>
-            <Text fontSize={14} color="$gray600" marginBottom="$1">
-              {message.data.expense.category}
-            </Text>
-            <Text fontSize={12} color="$gray500">
-              {message.data.expense.note}
-            </Text>
-          </View>
+          </Card>
+          <YStack marginTop="$2">
+            <ExpenseList bills={message.data.expenses} />
+          </YStack>
         </YStack>
       );
     }
 
-    if (message.data.type === 'expense_analysis' && message.data.analysis) {
+    if (message.data.type === "expense" && message.data.expense) {
+      return (
+        <YStack width="100%">
+          <Text fontSize={16} lineHeight={22}>
+            {message.text}
+          </Text>
+          <YStack marginTop="$2">
+            <ExpenseList bills={[message.data.expense]} />
+          </YStack>
+        </YStack>
+      );
+    }
+
+    if (message.data.type === "expense_analysis" && message.data.analysis) {
       const { totalAmount, categorySummary, count } = message.data.analysis;
       return (
         <YStack width="100%">
           <Text fontSize={16} lineHeight={22}>
             {message.text}
           </Text>
-          <View
-            backgroundColor="$white"
-            borderRadius={8}
-            padding="$3"
+          <Card
             marginTop="$2"
-            shadowColor="$black"
-            shadowOffset={{ width: 0, height: 1 }}
-            shadowOpacity={0.05}
-            shadowRadius={1}
+            padding="$3"
+            backgroundColor="$gray50"
+            borderColor="$gray200"
+            borderWidth={1}
           >
-            <Text fontSize={16} fontWeight="bold" color="$gray800" marginBottom="$1">
+            <Text
+              fontSize={16}
+              fontWeight="bold"
+              color="$gray800"
+              marginBottom="$1"
+            >
               Total Spending: {totalAmount.toFixed(2)}
             </Text>
             <Text fontSize={14} color="$gray500" marginBottom="$2">
               Total {count} transactions
             </Text>
-            {Object.entries(categorySummary).map(([category, amount], index) => (
-              <XStack key={index} justifyContent="space-between" marginVertical="$0.5">
-                <Text fontSize={14} color="$gray600">
-                  {category}
-                </Text>
-                <Text fontSize={14} fontWeight="500" color="$blue500">
-                  {(amount as number).toFixed(2)}
-                </Text>
-              </XStack>
-            ))}
-          </View>
+            {Object.entries(categorySummary).map(
+              ([category, amount], index) => (
+                <XStack
+                  key={index}
+                  justifyContent="space-between"
+                  marginVertical="$0.5"
+                >
+                  <Text fontSize={14} color="$gray600">
+                    {category}
+                  </Text>
+                  <Text fontSize={14} fontWeight="500" color="$blue500">
+                    {(amount as number).toFixed(2)}
+                  </Text>
+                </XStack>
+              )
+            )}
+          </Card>
         </YStack>
       );
     }
 
-    if (message.data.type === 'markdown' && message.data.content) {
-      return (
-        <Markdown>{message.data.content}</Markdown>
-      );
+    if (message.data.type === "markdown" && message.data.content) {
+      return <Markdown>{message.data.content}</Markdown>;
     }
   }
 
   // Regular text message
   return (
-    <Text
-      fontSize={16}
-      lineHeight={22}
-      color={message.isUser ? '$white' : '$gray800'}
-    >
-      {message.text}
-    </Text>
+    <YStack width="100%" alignItems="flex-end">
+      <Card
+        borderRadius="$4"
+        overflow="hidden"
+        elevation={0.5}
+        backgroundColor="white"
+        padding="$3"
+        width="fit-content"
+      >
+        <Text fontSize={12} lineHeight={16}>
+          {message.text}
+        </Text>
+      </Card>
+    </YStack>
   );
-}; 
+};

@@ -1,66 +1,31 @@
+import { Bill } from "@/types/bills.types";
 import React from "react";
-import { FlatList } from "react-native";
-import { XStack, YStack, Text, View } from "tamagui";
-import { Expense } from "@/utils/api";
-import { ExpenseItem } from "./ExpenseItem";
-import { formatCurrency } from "@/utils/format";
+import { Card, YStack, Separator } from "tamagui";
+import { BillListItem } from "../bills/BillListItem";
 
 interface ExpenseListProps {
-  expenses: Expense[];
-  title?: string;
-  compact?: boolean;
+  bills: Bill[];
 }
 
-export const ExpenseList: React.FC<ExpenseListProps> = React.memo(
-  ({ expenses, title, compact = false }) => {
-    // Calculate total expenses
-    const totalAmount = expenses.reduce(
-      (sum, expense) => sum + expense.amount,
-      0
-    );
-
-    return (
-      <YStack marginVertical="$2">
-        {title && (
-          <XStack
-            justifyContent="space-between"
-            alignItems="center"
-            marginBottom="$2"
-            paddingHorizontal="$1"
-          >
-            <Text fontSize={16} fontWeight="600" color="$gray700">
-              {title}
-            </Text>
-            <Text fontSize={16} fontWeight="600" color="$blue500">
-              {formatCurrency(totalAmount)}
-            </Text>
-          </XStack>
-        )}
-
-        {expenses.length === 0 ? (
-          <View
-            padding="$4"
-            backgroundColor="$gray50"
-            borderRadius={8}
-            alignItems="center"
-          >
-            <Text fontSize={14} color="$gray400">
-              No expense records
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={expenses}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <ExpenseItem expense={item} compact={compact} />
+export const ExpenseList: React.FC<ExpenseListProps> = ({ bills }) => {
+  return (
+    <Card
+      marginBottom="$3"
+      borderRadius="$4"
+      overflow="hidden"
+      elevation={0.5}
+      backgroundColor="white"
+    >
+      <YStack paddingVertical="$2">
+        {bills.map((bill, index) => (
+          <React.Fragment key={bill.id}>
+            <BillListItem item={bill} />
+            {index < bills.length - 1 && (
+              <Separator marginVertical="$2" borderColor="$gray3" />
             )}
-            contentContainerStyle={{ paddingBottom: 8 }}
-          />
-        )}
+          </React.Fragment>
+        ))}
       </YStack>
-    );
-  }
-);
-
-ExpenseList.displayName = "ExpenseList";
+    </Card>
+  );
+};

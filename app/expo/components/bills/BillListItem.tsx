@@ -49,8 +49,7 @@ export const BillListItem: React.FC<BillListItemProps> = ({ item }) => {
                 minute: "2-digit",
                 hour12: false,
               })}
-              {" | "}
-              {item.merchant}
+              {item.merchant && ` | ${item.merchant}`}
             </Text>
           </YStack>
         </XStack>
