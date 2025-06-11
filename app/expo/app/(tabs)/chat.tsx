@@ -118,36 +118,51 @@ export default function ChatScreen() {
     // }
     else if (response.type === "structured") {
       // 结构化AI响应
-      const { type, expense, query, budget, content } = response.data;
-      if (type === "create_expense" && expense) {
-        // Persist the expense locally
-        let newBill: Bill = expense;
-        try {
-          newBill = await saveBill(
-            {
-              amount: expense.amount,
-              category: expense.category || "others",
-              date: expense.date ? new Date(expense.date) : new Date(),
-              merchant: expense.merchant || "",
-              notes: expense.note || "",
-              account: expense.paymentMethod || "Default",
-              isFamilyBill: false,
-            },
-            user || { id: "local-user", name: "Local User" }
-          );
-          // Refresh context so UI updates elsewhere
-          refreshData();
-        } catch (err) {
-          console.error("Failed to save expense from AI:", err);
+      const { type, expense, expenses, query, budget, content } = response.data;
+      if (type === "create_expense" && (expense || expenses)) {
+        // Normalize to an array of expense objects
+        const expenseArray: any[] = Array.isArray(expenses)
+          ? expenses
+          : expense
+            ? [expense]
+            : [];
+
+        const newBills: Bill[] = [];
+
+        for (const exp of expenseArray) {
+          try {
+            const savedBill = await saveBill(
+              {
+                amount: exp.amount,
+                category: exp.category || "others",
+                date: exp.date ? new Date(exp.date) : new Date(),
+                merchant: exp.merchant || "",
+                notes: exp.note || "",
+                account: exp.paymentMethod || "Default",
+                isFamilyBill: false,
+              },
+              user || { id: "local-user", name: "Local User" }
+            );
+            newBills.push(savedBill);
+          } catch (err) {
+            console.error("Failed to save expense from AI:", err);
+          }
         }
 
-        const expenseMessage = chatAPI.createMessage(
-          "Expense created",
-          false,
-          "text",
-          { type: "expense_list", expenses: [newBill] }
-        );
-        setMessages((prev) => [...prev, expenseMessage]);
+        if (newBills.length) {
+          // Refresh context so UI updates elsewhere
+          refreshData();
+
+          const expenseMessage = chatAPI.createMessage(
+            newBills.length > 1
+              ? `${newBills.length} expenses created`
+              : "Expense created",
+            false,
+            "text",
+            { type: "expense_list", expenses: newBills }
+          );
+          setMessages((prev) => [...prev, expenseMessage]);
+        }
       } else if (type === "list_expenses" && query) {
         const listMessage = chatAPI.createMessage(
           "Expense query",

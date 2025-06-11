@@ -50,6 +50,7 @@ const generationConfig = {
 Rules:
 1. First decide the intent: create_expense • list_expenses • set_budget • markdown (default).
 2. If intent = create_expense:
+   • The user may mention multiple expenses in a single message (e.g. a long diary-style text). If multiple expenses are found, return *all* of them inside an **array** called "expenses" instead of a single "expense" object. Each array item must follow the same structure defined below.
    • If the user does NOT provide a date, set "date" to undefined (omit the field in the JSON).
    • If the user does NOT provide a category, intelligently infer one that best matches the description. Use ONLY one of the following ids:
      food, cafe, groceries, transport, shopping, entertainment, utilities, housing, communication, gifts, education, health, insurance, travel, personal_care, pets, subscriptions, taxes, other
@@ -66,17 +67,39 @@ Response MUST be a single JSON object with structure below and **never contain p
 
 for example outputs:
 
-- Create expense:
+- Create expense (single):
   {
     "type": "create_expense",
     "expense": {
       "amount": number,
       "category": "category",
-      "date": "YYYY-MM-DD" // optional, omit or null if not provided,
+      "date": "YYYY-MM-DD", // optional, omit or null if not provided
       "note": "note", // optional
       "paymentMethod": "payment method",
       "merchant": "merchant name" // optional
     }
+  }
+- Create expense (multiple):
+  {
+    "type": "create_expense",
+    "expenses": [
+      {
+        "amount": number,
+        "category": "category",
+        "date": "YYYY-MM-DD", // optional
+        "note": "note", // optional
+        "paymentMethod": "payment method",
+        "merchant": "merchant name" // optional
+      },
+      {
+        "amount": number,
+        "category": "category",
+        "date": "YYYY-MM-DD", // optional
+        "note": "note", // optional
+        "paymentMethod": "payment method",
+        "merchant": "merchant name" // optional
+      }
+    ]
   }
 - List expenses:
   {
