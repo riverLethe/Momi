@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { TextInput, Animated, Pressable } from 'react-native';
-import { XStack, YStack, Text, View } from 'tamagui';
+import React from 'react';
+import { Animated, Pressable } from 'react-native';
+import { XStack, YStack, Text, View,Input } from 'tamagui';
 import { Mic, Camera, Send, Plus, Keyboard } from 'lucide-react-native';
 
 interface ChatInputProps {
@@ -122,22 +122,40 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </XStack>
         ) : (
           /* Text mode input */
-          <XStack alignItems="center">
+          <XStack alignItems="center" paddingVertical="$1">
+            {/* camera */}
+            <Pressable onPress={onImageUpload}>
+              <View
+                width={40}
+                height={40}
+                borderRadius={20}
+                justifyContent="center"
+                alignItems="center"
+              >
+                <Camera size={22} color="#4B5563" />
+              </View>
+            </Pressable>
             <View
-              flex={1}
-              backgroundColor="$gray100"
-              borderRadius={20}
-              paddingHorizontal="$4"
-              paddingVertical="$2"
-              marginRight="$2"
+              style={{
+                flex: 1,
+                height: 44,
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#F3F4F6',
+                borderRadius: 22,
+                paddingHorizontal: 16,
+                marginHorizontal: 8,
+              }}
             >
-              <TextInput
-                style={{ fontSize: 16, maxHeight: 100 }}
+              <Input
                 placeholder="Send a message..."
                 value={inputText}
                 onChangeText={onChangeText}
                 multiline
                 maxLength={1000}
+                borderWidth={0}
+                backgroundColor="transparent"
+                padding="$0"
               />
             </View>
 
