@@ -13,11 +13,10 @@ interface MessageBubbleProps {
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   return (
     <XStack
-      width="80%"
-      maxWidth="80%"
+      width="100%"
       marginBottom="$3"
       alignItems="flex-end"
-      alignSelf={message.isUser ? 'flex-end' : 'flex-start'}
+      justifyContent={message.isUser ? 'flex-end' : 'flex-start'}
     >
       {!message.isUser && (
         <View
@@ -36,13 +35,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
       )}
 
       <YStack
+        maxWidth="80%"
         borderRadius={18}
-        paddingHorizontal="$3.5"
-        paddingVertical="$2.5"
+        paddingHorizontal="$4"
+        paddingVertical="$2.75"
         backgroundColor={message.isUser ? '$blue500' : '$gray100'}
         borderBottomRightRadius={message.isUser ? 4 : 18}
         borderBottomLeftRadius={message.isUser ? 18 : 4}
-        flex={1}
+        shadowColor="$black"
+        shadowOpacity={0.08}
+        shadowRadius={2}
+        shadowOffset={{ width: 0, height: 1 }}
       >
         {renderMessageContent(message)}
         <Text

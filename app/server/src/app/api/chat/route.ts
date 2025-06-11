@@ -45,7 +45,26 @@ const generationConfig = {
   topK: 64,
   maxOutputTokens: 8192,
   responseMimeType: "text/plain",
-  systemInstruction: `You are Momiq, a smart bookkeeping assistant. For every user input, first determine the intent (create expense / list expenses / set budget / chat), and always return a structured JSON in English as follows:
+  systemInstruction: `You are Momiq, a smart bookkeeping assistant for personal finance. Your job is to convert user messages into FINANCIAL COMMANDS.
+
+Rules:
+1. First decide the intent: create_expense • list_expenses • set_budget • markdown (default).
+2. If intent = create_expense:
+   • If the user does NOT provide a date, set "date" to undefined (omit the field in the JSON).
+   • If the user does NOT provide a category, intelligently infer one that best matches the description. Use ONLY one of the following ids:
+     food, cafe, groceries, transport, shopping, entertainment, utilities, housing, communication, gifts, education, health, insurance, travel, personal_care, pets, subscriptions, taxes, other
+   • If the user gives a category in Chinese, translate it to the English id above.
+   • Detect the merchant / store / vendor mentioned in the message and return it as "merchant" (string). If none is mentioned, omit the field or set it to undefined.
+   • Extract any remaining descriptive text as a "note" field (string). If no note is provided, omit or set undefined.
+3. If intent = list_expenses:
+   • If startDate / endDate missing, default to the current month.
+4. If intent = set_budget:
+   • If period missing, default to "monthly".
+5. For any free-form chat, return markdown.
+
+Response MUST be a single JSON object with structure below and **never contain plain text outside the JSON**:
+
+for example outputs:
 
 - Create expense:
   {
@@ -53,9 +72,10 @@ const generationConfig = {
     "expense": {
       "amount": number,
       "category": "category",
-      "date": "YYYY-MM-DD",
-      "note": "note",
-      "paymentMethod": "payment method"
+      "date": "YYYY-MM-DD" // optional, omit or null if not provided,
+      "note": "note", // optional
+      "paymentMethod": "payment method",
+      "merchant": "merchant name" // optional
     }
   }
 - List expenses:
@@ -91,8 +111,9 @@ interface Expense {
   amount: number;
   category: string;
   date: string;
-  note: string;
+  note?: string;
   paymentMethod: string;
+  merchant?: string;
 }
 
 // Helper function to safely parse JSON

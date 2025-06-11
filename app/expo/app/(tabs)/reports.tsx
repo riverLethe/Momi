@@ -39,7 +39,6 @@ export default function ReportsScreen() {
   const [periodType, setPeriodType] = useState<DatePeriodEnum>(DatePeriodEnum.WEEK);
   const [periodSelectors, setPeriodSelectors] = useState<PeriodSelectorData[]>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("");
-  const [hasData, setHasData] = useState(true);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   
   // Check if family mode is accessible
@@ -96,10 +95,8 @@ export default function ReportsScreen() {
       }
       
       setReportData(data);
-      setHasData(data.categoryData.length > 0 && data.categoryData.some(cat => cat.value > 0));
     } catch (error) {
       console.error("Error fetching report data:", error);
-      setHasData(false);
     } finally {
       setLoading(false);
     }
@@ -124,7 +121,7 @@ export default function ReportsScreen() {
         {/* <AppHeader /> */}
 
         {/* Date & Comparison Filters */}
-        {hasData&&(<YStack
+        {bills.length > 0 && (<YStack
           marginHorizontal="$4" 
           marginTop="$3.5" 
           marginBottom="$3.5" 
@@ -150,7 +147,7 @@ export default function ReportsScreen() {
             <ActivityIndicator size="large" color="#3B82F6" />
             <Text marginTop="$4" color="$gray10">{t("Loading reports")}</Text>
           </YStack>
-        ) : !hasData ? (
+        ) : bills.length === 0 ? (
           <EmptyState />
         ) : (
           <ScrollView 

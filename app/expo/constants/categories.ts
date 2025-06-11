@@ -1,4 +1,4 @@
-import { PizzaIcon, Train, ShoppingBag, Film, Zap, Home, Smartphone, Gift, BookOpen, Coffee, Utensils, DollarSign } from "lucide-react-native";
+import { PizzaIcon, Train, ShoppingBag, Film, Zap, Home, Smartphone, Gift, BookOpen, Coffee, Utensils, DollarSign, ShoppingCart, Shield, Plane, Scissors, Dog, HeartPulse, ReceiptText, CreditCard } from "lucide-react-native";
 import { useTranslation } from 'react-i18next';
 
 export interface ExpenseCategory {
@@ -86,6 +86,62 @@ export const EXPENSE_CATEGORIES = [
     color: "#6B7280",
     lightColor: "#F3F4F6",
     icon: "DollarSign"
+  },
+  {
+    id: "groceries",
+    name: "Groceries",
+    color: "#22C55E",
+    lightColor: "#ECFDF5",
+    icon: "ShoppingCart"
+  },
+  {
+    id: "health",
+    name: "Health",
+    color: "#EF4444",
+    lightColor: "#FEE2E2",
+    icon: "HeartPulse"
+  },
+  {
+    id: "insurance",
+    name: "Insurance",
+    color: "#0EA5E9",
+    lightColor: "#E0F2FE",
+    icon: "Shield"
+  },
+  {
+    id: "travel",
+    name: "Travel",
+    color: "#F97316",
+    lightColor: "#FFEDD5",
+    icon: "Plane"
+  },
+  {
+    id: "personal_care",
+    name: "Personal Care",
+    color: "#DB2777",
+    lightColor: "#FCE7F3",
+    icon: "Scissors"
+  },
+  {
+    id: "pets",
+    name: "Pets",
+    color: "#F59E0B",
+    lightColor: "#FEF3C7",
+    icon: "Dog"
+  },
+  {
+    id: "subscriptions",
+    name: "Subscriptions",
+    color: "#8B5CF6",
+    lightColor: "#F3E8FF",
+    icon: "CreditCard"
+  },
+  {
+    id: "taxes",
+    name: "Taxes",
+    color: "#6B7280",
+    lightColor: "#F3F4F6",
+    icon: "ReceiptText"
   }
 ];
 
@@ -128,6 +184,22 @@ export const getCategoryIcon = (categoryId: string) => {
       return BookOpen;
     case "Coffee":
       return Coffee;
+    case "ShoppingCart":
+      return ShoppingCart;
+    case "Shield":
+      return Shield;
+    case "Plane":
+      return Plane;
+    case "Scissors":
+      return Scissors;
+    case "Dog":
+      return Dog;
+    case "HeartPulse":
+      return HeartPulse;
+    case "ReceiptText":
+      return ReceiptText;
+    case "CreditCard":
+      return CreditCard;
     case "DollarSign":
     default:
       return DollarSign;

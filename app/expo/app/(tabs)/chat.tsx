@@ -11,6 +11,10 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { XStack, YStack, Text, View } from 'tamagui';
 import { chatAPI, Message, AIResponseType } from '@/utils/api';
+import { saveBill } from '@/utils/bills.utils';
+import { updateUserPreferences } from '@/utils/userPreferences.utils';
+import { useAuth } from '@/providers/AuthProvider';
+import { useData } from '@/providers/DataProvider';
 
 // Import components
 import { ChatHeader } from '@/components/chat/ChatHeader';
@@ -21,6 +25,8 @@ import { MoreOptions } from '@/components/chat/MoreOptions';
 
 export default function ChatScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { refreshData } = useData();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -84,9 +90,31 @@ export default function ChatScreen() {
       // 结构化AI响应
       const { type, expense, query, budget, content } = response.data;
       if (type === 'create_expense' && expense) {
+        // Persist the expense locally
+        (async () => {
+          try {
+            await saveBill(
+              {
+                amount: expense.amount,
+                category: expense.category || 'others',
+                date: expense.date ? new Date(expense.date) : new Date(),
+                merchant: expense.merchant || '',
+                notes: expense.note || '',
+                account: expense.paymentMethod || 'Default',
+                isFamilyBill: false,
+              },
+              user || { id: 'local-user', name: 'Local User' }
+            );
+            // Refresh context so UI updates elsewhere
+            refreshData();
+          } catch (err) {
+            console.error('Failed to save expense from AI:', err);
+          }
+        })();
+
         const expenseMessage = chatAPI.createMessage(
-          'Expense created', 
-          false, 
+          'Expense created',
+          false,
           'text',
           { type: 'expense', expense }
         );
@@ -100,6 +128,18 @@ export default function ChatScreen() {
         );
         setMessages(prev => [...prev, listMessage]);
       } else if (type === 'set_budget' && budget) {
+        // Persist budget to user preferences
+        (async () => {
+          try {
+            await updateUserPreferences({
+              budgetAmount: budget.amount,
+              budgetPeriod: budget.period,
+            });
+          } catch (err) {
+            console.error('Failed to update budget preference:', err);
+          }
+        })();
+
         const budgetMessage = chatAPI.createMessage(
           `Budget set: ${budget.amount} (${budget.category || 'All'}, ${budget.period})`,
           false,
