@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { 
-  YStack, 
-  XStack, 
-  Text, 
-  Button, 
-  Input, 
+import {
+  YStack,
+  XStack,
+  Text,
+  Button,
+  Input,
   Label,
   Dialog,
   Adapt,
@@ -35,27 +35,34 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
   onSaveBudget,
 }) => {
   const { t } = useTranslation();
-  const [selectedPeriod, setSelectedPeriod] = useState<BudgetPeriod>(currentPeriod);
-  const [budgetAmount, setBudgetAmount] = useState(currentBudget?.toString() || "");
+  const [selectedPeriod, setSelectedPeriod] =
+    useState<BudgetPeriod>(currentPeriod);
+  const [budgetAmount, setBudgetAmount] = useState(
+    currentBudget?.toString() || ""
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   // Get period label
   const getPeriodLabel = (period: BudgetPeriod) => {
     switch (period) {
-      case "weekly": return t("Weekly");
-      case "monthly": return t("Monthly");
-      case "yearly": return t("Yearly");
-      default: return "";
+      case "weekly":
+        return t("Weekly");
+      case "monthly":
+        return t("Monthly");
+      case "yearly":
+        return t("Yearly");
+      default:
+        return "";
     }
   };
 
   // Save budget
   const handleSaveBudget = async () => {
     if (!budgetAmount) return;
-    
+
     const amount = parseFloat(budgetAmount);
     if (isNaN(amount) || amount <= 0) return;
-    
+
     setIsLoading(true);
     try {
       await onSaveBudget(amount, selectedPeriod);
@@ -70,18 +77,14 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <Adapt platform="touch">
-        <Sheet
-          modal
-          dismissOnSnapToBottom
-          animation="medium"
-        >
+        <Sheet modal dismissOnSnapToBottom animation="medium">
           <Sheet.Frame padding="$4">
             <Sheet.Handle />
             <YStack space="$4" marginTop="$2">
               <Text fontSize="$5" fontWeight="$8" textAlign="center">
                 {currentBudget ? t("Update Budget") : t("Set Your Budget")}
               </Text>
-              
+
               <YStack space="$3">
                 <Label htmlFor="amount" fontSize="$3" color="$gray11">
                   {t("Budget Amount")}
@@ -98,28 +101,32 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
                   backgroundColor="$gray1"
                 />
               </YStack>
-              
+
               <YStack space="$3">
                 <Label fontSize="$3" color="$gray11">
                   {t("Budget Period")}
                 </Label>
                 <XStack space="$2">
-                  {(["weekly", "monthly", "yearly"] as BudgetPeriod[]).map((period) => (
-                    <Button
-                      key={period}
-                      size="$3"
-                      flex={1}
-                      backgroundColor={selectedPeriod === period ? "$blue9" : "$gray3"}
-                      color={selectedPeriod === period ? "white" : "$gray11"}
-                      onPress={() => setSelectedPeriod(period)}
-                      pressStyle={{ opacity: 0.8 }}
-                    >
-                      {getPeriodLabel(period)}
-                    </Button>
-                  ))}
+                  {(["weekly", "monthly", "yearly"] as BudgetPeriod[]).map(
+                    (period) => (
+                      <Button
+                        key={period}
+                        size="$3"
+                        flex={1}
+                        backgroundColor={
+                          selectedPeriod === period ? "$blue9" : "$gray3"
+                        }
+                        color={selectedPeriod === period ? "white" : "$gray11"}
+                        onPress={() => setSelectedPeriod(period)}
+                        pressStyle={{ opacity: 0.8 }}
+                      >
+                        {getPeriodLabel(period)}
+                      </Button>
+                    )
+                  )}
                 </XStack>
               </YStack>
-              
+
               <XStack space="$3" marginTop="$2">
                 <Button
                   size="$4"
@@ -137,7 +144,9 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
                   onPress={handleSaveBudget}
                   disabled={isLoading || !budgetAmount}
                   pressStyle={{ opacity: 0.8 }}
-                  iconAfter={isLoading ? () => <Spinner color="white" /> : <></>}
+                  iconAfter={
+                    isLoading ? () => <Spinner color="white" /> : <></>
+                  }
                 >
                   {t("Save")}
                 </Button>
@@ -151,4 +160,4 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
   );
 };
 
-export default BudgetUpdateModal; 
+export default BudgetUpdateModal;
