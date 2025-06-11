@@ -432,19 +432,6 @@ export default function ChatScreen() {
                   alignSelf="flex-start"
                 >
                   <View
-                    width={32}
-                    height={32}
-                    borderRadius={16}
-                    backgroundColor="$blue500"
-                    alignItems="center"
-                    justifyContent="center"
-                    marginRight="$2"
-                  >
-                    <Text color="$white" fontSize={14} fontWeight="bold">
-                      AI
-                    </Text>
-                  </View>
-                  <View
                     flexDirection="row"
                     alignItems="center"
                     borderRadius={18}

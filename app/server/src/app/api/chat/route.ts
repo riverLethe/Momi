@@ -54,8 +54,8 @@ Rules:
    • If the user does NOT provide a category, intelligently infer one that best matches the description. Use ONLY one of the following ids:
      food, cafe, groceries, transport, shopping, entertainment, utilities, housing, communication, gifts, education, health, insurance, travel, personal_care, pets, subscriptions, taxes, other
    • If the user gives a category in Chinese, translate it to the English id above.
-   • Detect the merchant / store / vendor mentioned in the message and return it as "merchant" (string). If none is mentioned, omit the field or set it to undefined.
-   • Extract any remaining descriptive text as a "note" field (string). If no note is provided, omit or set undefined.
+   • Detect the merchant / store / vendor mentioned in the message and return it as "merchant" (string). Keep the original language exactly as the user wrote it. If none is mentioned, omit the field or set it to undefined.
+   • Extract any remaining descriptive text as a "note" field (string). Keep it exactly as provided by the user without translation. If no note is provided, omit or set undefined.
 3. If intent = list_expenses:
    • If startDate / endDate missing, default to the current month.
 4. If intent = set_budget:
@@ -102,7 +102,7 @@ for example outputs:
     "content": "markdown content"
   }
 
-All content, including categories, notes, and markdown, must be in English. Always return JSON, never plain text. If user input is in Chinese, translate it to English in the response.`,
+Categories and markdown content must be in English. The "note" and "merchant" values should remain in the original language provided by the user (do NOT translate them). Always return JSON, never plain text. If user input is in Chinese, translate any necessary parts (except note and merchant) to English in the response.`,
   safetySettings,
 };
 
@@ -146,11 +146,13 @@ export async function POST(req: Request) {
     const idString = `id:${uuidv4()}\ndata:`;
     const stream = new ReadableStream({
       async start(controller) {
-        controller.enqueue(idString +
-          JSON.stringify({
-            type: "thinking",
-            content: true,
-          })+"\n\n"
+        controller.enqueue(
+          idString +
+            JSON.stringify({
+              type: "thinking",
+              content: true,
+            }) +
+            "\n\n"
         );
 
         let fullResponse = "";
@@ -160,10 +162,12 @@ export async function POST(req: Request) {
           fullResponse += chunkText;
 
           controller.enqueue(
-            idString + JSON.stringify({
-              type: "chunk",
-              content: chunkText,
-            })+"\n\n"
+            idString +
+              JSON.stringify({
+                type: "chunk",
+                content: chunkText,
+              }) +
+              "\n\n"
           );
         }
         fullResponse = fullResponse
@@ -172,28 +176,34 @@ export async function POST(req: Request) {
           .trim();
 
         controller.enqueue(
-          idString + JSON.stringify({
-            type: "thinking",
-            content: false,
-          })+"\n\n"
+          idString +
+            JSON.stringify({
+              type: "thinking",
+              content: false,
+            }) +
+            "\n\n"
         );
 
         // 优先尝试解析为结构化JSON
         const parsed = tryParseJSON(fullResponse);
         if (parsed && parsed.type) {
           controller.enqueue(
-            idString + JSON.stringify({
-              type: "structured",
-              data: parsed,
-            })+"\n\n"
+            idString +
+              JSON.stringify({
+                type: "structured",
+                data: parsed,
+              }) +
+              "\n\n"
           );
         } else {
           // fallback: markdown文本
           controller.enqueue(
-            idString + JSON.stringify({
-              type: "markdown",
-              content: fullResponse.trim(),
-            })+"\n\n"
+            idString +
+              JSON.stringify({
+                type: "markdown",
+                content: fullResponse.trim(),
+              }) +
+              "\n\n"
           );
         }
 
