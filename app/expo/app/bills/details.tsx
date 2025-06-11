@@ -30,7 +30,7 @@ import { useData } from "@/providers/DataProvider";
 import { useLocale } from "@/i18n/useLocale";
 import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
 import AmountInputSheet from "@/components/ui/AmountInputSheet";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DatePickerSheet from "@/components/ui/DatePickerSheet";
 
 export default function BillDetailsScreen() {
   const router = useRouter();
@@ -49,13 +49,13 @@ export default function BillDetailsScreen() {
   const [merchantText, setMerchantText] = useState("");
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
 
   // long-press handlers
   const onAmountLongPress = () => setIsAmountSheetOpen(true);
   const onMerchantLongPress = () => setEditingMerchant(true);
   const onNotesLongPress = () => setEditingNotes(true);
-  const onDateLongPress = () => setShowDatePicker(true);
+  const onDateLongPress = () => setIsDateSheetOpen(true);
 
   // 从本地存储加载账单详情
   useEffect(() => {
@@ -335,10 +335,12 @@ export default function BillDetailsScreen() {
                   color="white"
                   opacity={0.85}
                 >
-                  {new Date(bill.updatedAt).toLocaleDateString(locale, {
+                  {new Date(bill.updatedAt).toLocaleString(locale, {
                     year: "numeric",
-                    month: "long",
-                    day: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
                   })}
                 </Text>
               </XStack>
@@ -427,7 +429,7 @@ export default function BillDetailsScreen() {
                   <Text color="$gray10" fontSize="$3">
                     {t("Record Time")}
                   </Text>
-                  <Pressable onLongPress={onDateLongPress} delayLongPress={300}>
+                  <Pressable onPress={onDateLongPress}>
                     <Text fontSize="$3" fontWeight="$6">
                       {new Date(bill.date).toLocaleDateString(locale, {
                         year: "numeric",
@@ -521,20 +523,13 @@ export default function BillDetailsScreen() {
           onSubmit={(val) => handleUpdateField("amount", val)}
         />
 
-        {/* 日期选择器 */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={new Date(bill.date)}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (selectedDate) {
-                handleUpdateField("date", selectedDate);
-              }
-            }}
-          />
-        )}
+        {/* 日期选择底部弹窗 */}
+        <DatePickerSheet
+          open={isDateSheetOpen}
+          onOpenChange={setIsDateSheetOpen}
+          initialDate={new Date(bill.date)}
+          onConfirm={(date) => handleUpdateField("date", date)}
+        />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
