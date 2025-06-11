@@ -1,3 +1,4 @@
 packages:
   - "app/expo"
+  - "app/server"
   - "packages/*"
