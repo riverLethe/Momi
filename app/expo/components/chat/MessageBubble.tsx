@@ -1,11 +1,13 @@
 import React from "react";
 // import { View as RNView } from 'react-native';
-import { XStack, YStack, Text, Avatar, Card } from "tamagui";
+import { XStack, YStack, Text, Avatar, Card, Separator } from "tamagui";
 import { Message } from "@/utils/api";
 import { formatTime } from "@/utils/format";
-import { Expense } from "@/utils/api";
 import Markdown from "react-native-markdown-display";
 import { ExpenseList } from "./ExpenseList";
+import { Image, Pressable, ActivityIndicator } from "react-native";
+import { Audio } from "expo-av";
+import { Play, File as FileIcon } from "lucide-react-native";
 
 interface MessageBubbleProps {
   message: Message;
@@ -48,6 +50,66 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 
 // Helper function to render message content based on type
 const renderMessageContent = (message: Message) => {
+  // 媒体消息处理（图片 / 语音 / 文件）
+  if (message.type === "image" && message.data?.uri) {
+    return (
+      <YStack>
+        <Image
+          source={{ uri: message.data.uri }}
+          style={{ width: 50, height: 50, borderRadius: 5 }}
+          resizeMode="cover"
+        />
+        {message.data.uploading && (
+          <YStack
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            alignItems="center"
+            justifyContent="center"
+            backgroundColor="rgba(0,0,0,0.4)"
+            borderRadius={12}
+          >
+            <ActivityIndicator color="#fff" />
+          </YStack>
+        )}
+      </YStack>
+    );
+  }
+
+  if (message.type === "voice" && message.data?.uri) {
+    const handlePlay = async () => {
+      try {
+        const { sound } = await Audio.Sound.createAsync({
+          uri: message.data.uri,
+        });
+        await sound.playAsync();
+      } catch (err) {
+        console.error("Failed to play audio", err);
+      }
+    };
+
+    return (
+      <XStack alignItems="center">
+        <Pressable onPress={handlePlay} style={{ marginRight: 8 }}>
+          <Play size={20} color="#3B82F6" />
+        </Pressable>
+        <Text fontSize={14} color="$gray800">
+          {message.text || "Voice message"}
+        </Text>
+      </XStack>
+    );
+  }
+
+  if (message.type === "file" && message.data?.mimeType) {
+    return (
+      <Text fontSize={14} color="$gray800">
+        {message.text}
+      </Text>
+    );
+  }
+
   // Handle special data types
   if (message.data) {
     if (
@@ -61,7 +123,7 @@ const renderMessageContent = (message: Message) => {
             overflow="hidden"
             elevation={0.5}
             backgroundColor="white"
-            padding="$3"
+            padding="$2"
             width="fit-content"
           >
             <Text fontSize={12} lineHeight={16}>
@@ -97,7 +159,7 @@ const renderMessageContent = (message: Message) => {
           </Text>
           <Card
             marginTop="$2"
-            padding="$3"
+            padding="$2"
             backgroundColor="$gray50"
             borderColor="$gray200"
             borderWidth={1}
@@ -137,6 +199,72 @@ const renderMessageContent = (message: Message) => {
     if (message.data.type === "markdown" && message.data.content) {
       return <Markdown>{message.data.content}</Markdown>;
     }
+
+    // Attachments from combined message
+    if (
+      Array.isArray(message.data.attachments) &&
+      message.data.attachments.length
+    ) {
+      const hasText = message.text && message.text.trim().length > 0;
+      return (
+        <YStack width="100%" alignItems="flex-end" gap="$1">
+          {hasText && (
+            <Card
+              borderRadius="$4"
+              overflow="hidden"
+              elevation={0.5}
+              backgroundColor="white"
+              width="fit-content"
+            >
+              <XStack flexWrap="wrap" gap="$1" padding="$2">
+                {message.data.attachments.map((att: any) => {
+                  if (att.type === "image") {
+                    return (
+                      <Image
+                        key={att.id}
+                        source={{ uri: att.uri }}
+                        style={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: 5,
+                        }}
+                      />
+                    );
+                  }
+                  // file preview
+                  return (
+                    <XStack
+                      key={att.id}
+                      width={30}
+                      borderRadius={5}
+                      backgroundColor="#F3F4F6"
+                      paddingHorizontal={8}
+                      paddingVertical={6}
+                      alignItems="center"
+                    >
+                      <FileIcon size={20} color="#6B7280" />
+                      <Text
+                        fontSize={12}
+                        color="#374151"
+                        marginLeft={6}
+                        numberOfLines={2}
+                        style={{ flexShrink: 1 }}
+                      >
+                        {att.name || "file"}
+                      </Text>
+                    </XStack>
+                  );
+                })}
+              </XStack>
+              <Separator />
+              <Text fontSize={12} lineHeight={16} padding="$2">
+                {message.text}
+              </Text>
+            </Card>
+          )}
+        </YStack>
+      );
+    }
   }
 
   // Regular text message
@@ -147,7 +275,7 @@ const renderMessageContent = (message: Message) => {
         overflow="hidden"
         elevation={0.5}
         backgroundColor="white"
-        padding="$3"
+        padding="$2"
         width="fit-content"
       >
         <Text fontSize={12} lineHeight={16}>

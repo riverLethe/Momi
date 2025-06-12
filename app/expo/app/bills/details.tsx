@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
-import { ArrowLeft, ChevronLeft, Edit2, Trash2, X } from "lucide-react-native";
+import { ChevronLeft, Trash2 } from "lucide-react-native";
 import {
   View,
   Text,
@@ -305,12 +305,7 @@ export default function BillDetailsScreen() {
               <Text fontSize="$3" fontWeight="$5" color="white" opacity={0.85}>
                 {t("Expense Amount")}
               </Text>
-              <Pressable
-                onLongPress={onAmountLongPress}
-                onPress={onAmountLongPress}
-                delayLongPress={250}
-                hitSlop={10}
-              >
+              <Pressable onPress={onAmountLongPress} hitSlop={10}>
                 <Text
                   fontSize="$10"
                   fontWeight="$8"
@@ -407,10 +402,7 @@ export default function BillDetailsScreen() {
                       />
                     </XStack>
                   ) : (
-                    <Pressable
-                      onLongPress={onMerchantLongPress}
-                      delayLongPress={300}
-                    >
+                    <Pressable onPress={onMerchantLongPress}>
                       <Text
                         fontSize="$3"
                         fontWeight="$6"
@@ -488,10 +480,7 @@ export default function BillDetailsScreen() {
                       placeholder={t("Enter notes")}
                     />
                   ) : (
-                    <Pressable
-                      onLongPress={onNotesLongPress}
-                      delayLongPress={300}
-                    >
+                    <Pressable onPress={onNotesLongPress}>
                       <Text
                         fontSize="$3"
                         color={!bill.notes ? "$gray6" : "$gray800"}

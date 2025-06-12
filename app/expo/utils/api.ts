@@ -37,6 +37,13 @@ export interface Expense {
   paymentMethod: string;
 }
 
+// 附件接口
+export interface AttachmentPayload {
+  mimeType: string;
+  data: string; // base64 encoded string of file content
+  name?: string;
+}
+
 // 流式读取处理函数
 export const readStream = async (
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -81,7 +88,8 @@ export const chatAPI = {
   sendMessage: async (
     message: string,
     history: Content[],
-    onResponse: (response: AIResponseType) => void
+    onResponse: (response: AIResponseType) => void,
+    attachments: AttachmentPayload[] = []
   ): Promise<void> => {
     try {
       const response = await fetch(`${API_URL}/api/chat`, {
@@ -92,6 +100,7 @@ export const chatAPI = {
         body: JSON.stringify({
           message,
           histories: history,
+          attachments,
         }),
       });
 

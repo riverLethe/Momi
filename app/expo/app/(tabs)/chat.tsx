@@ -5,8 +5,9 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
-  Animated,
   ActivityIndicator,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { XStack, Text, View } from "tamagui";
@@ -27,6 +28,14 @@ import { Bill } from "@/types/bills.types";
 // 新增：本地缓存工具
 import { loadChatMessages, saveChatMessages } from "@/utils/chatStorage.utils";
 
+// 新增：设备能力库
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+
+// 语音识别与播放
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+
 export default function ChatScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -41,14 +50,22 @@ export default function ChatScreen() {
     useState<NodeJS.Timeout | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [currentStreamedMessage, setCurrentStreamedMessage] = useState("");
+  const [attachments, setAttachments] = useState<any[]>([]);
 
   const scrollViewRef = useRef<ScrollView>(null);
-  const micButtonScale = useRef(new Animated.Value(1)).current;
 
   /**
    * firstLoadRef 标识首次加载（用于避免在初始化时就触发保存）
    */
   const firstLoadRef = useRef(true);
+
+  /** 临时保存语音识别结果与文件路径，待两者都就绪后生成消息 */
+  const voiceUriRef = useRef<string | null>(null);
+  const voiceTranscriptRef = useRef<string | null>(null);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  /** 保存事件订阅，便于结束时移除 */
+  const recordingListeners = useRef<any[]>([]);
 
   // 组件挂载时，尝试从本地读取聊天记录
   useEffect(() => {
@@ -74,31 +91,57 @@ export default function ChatScreen() {
     // Clean up timer on unmount
     return () => {
       if (recordingTimeout) {
-        clearInterval(recordingTimeout);
+        clearTimeout(recordingTimeout);
       }
     };
   }, [recordingTimeout]);
 
   const handleSend = async () => {
-    if (inputText.trim() === "") return;
+    if (inputText.trim() === "" && attachments.length === 0) return;
 
-    // Add user message
-    const userMessage = chatAPI.createMessage(inputText, true);
-    setMessages((prev) => [...prev, userMessage]);
-    setInputText("");
+    // Prepare attachments payload for API
+    const attachmentsPayload: import("@/utils/api").AttachmentPayload[] = [];
+    for (const att of attachments) {
+      try {
+        const base64 = await FileSystem.readAsStringAsync(att.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        attachmentsPayload.push({
+          mimeType:
+            att.mimeType ||
+            (att.type === "image" ? "image/jpeg" : "application/octet-stream"),
+          data: base64,
+          name: att.name,
+        });
+      } catch (e) {
+        console.warn("Failed to read attachment", e);
+      }
+    }
 
-    // Scroll to bottom immediately after user sends message
+    // Build user message combining text & attachments (for local UI)
+    const combinedMessage = chatAPI.createMessage(inputText, true, "text", {
+      attachments,
+    });
+    setMessages((prev) => [...prev, combinedMessage]);
+
+    // Scroll after rendering
     setTimeout(() => scrollToBottom(), 50);
 
     // Prepare for AI response
+    const history = chatAPI.buildHistory([...messages, combinedMessage]);
     setIsThinking(true);
     setCurrentStreamedMessage("");
 
-    // Get message history for API
-    const history = chatAPI.buildHistory(messages);
+    await chatAPI.sendMessage(
+      inputText,
+      history,
+      handleAIResponse,
+      attachmentsPayload
+    );
 
-    // Send message to API and handle streaming response
-    await chatAPI.sendMessage(inputText, history, handleAIResponse);
+    // clear input and attachments
+    setInputText("");
+    setAttachments([]);
   };
 
   // Handle streaming AI response
@@ -232,120 +275,222 @@ export default function ChatScreen() {
     }
   };
 
-  const handleStartRecording = () => {
-    setIsRecording(true);
-    setRecordingTimer(0);
+  const handleStartRecording = async () => {
+    try {
+      // 请求权限
+      const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (!perm.granted) {
+        console.warn("Speech permission denied");
+        return;
+      }
 
-    // Animate mic button
-    Animated.sequence([
-      Animated.timing(micButtonScale, {
-        toValue: 1.2,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(micButtonScale, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
+      setIsRecording(true);
+      setRecordingTimer(0);
 
-    // Start a timer for recording (max 3 seconds)
-    const timer = setInterval(() => {
-      setRecordingTimer((prev) => {
-        if (prev >= 3) {
-          handleStopRecording(true);
-          clearInterval(timer);
-          return 0;
+      // 注册事件监听
+      const resultListener = ExpoSpeechRecognitionModule.addListener(
+        "result",
+        (event: any) => {
+          if (event.isFinal) {
+            voiceTranscriptRef.current = event.results?.[0]?.transcript || "";
+            maybeFinalizeVoiceMessage();
+          }
         }
-        return prev + 1;
-      });
-    }, 1000);
+      );
 
-    setRecordingTimeout(timer);
+      const audioEndListener = ExpoSpeechRecognitionModule.addListener(
+        "audioend",
+        (event: any) => {
+          if (event.uri) {
+            voiceUriRef.current = event.uri;
+            maybeFinalizeVoiceMessage();
+          }
+        }
+      );
+
+      // 启动识别并持久化音频
+      ExpoSpeechRecognitionModule.start({
+        lang: "en-US",
+        interimResults: false,
+        recordingOptions: {
+          persist: true,
+        },
+      });
+
+      // 最长录制 15 秒自动停止
+      const timer = setTimeout(() => handleStopRecording(), 15000);
+      setRecordingTimeout(timer as unknown as NodeJS.Timeout);
+
+      // 计时器 UI
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTimer((prev) => prev + 1);
+      }, 1000);
+
+      // 保存监听到 state 方便清理
+      recordingListeners.current = [resultListener, audioEndListener];
+    } catch (err) {
+      console.error("Failed to start speech recognition", err);
+    }
   };
 
-  const handleStopRecording = async (hasContent = false) => {
-    setIsRecording(false);
+  const maybeFinalizeVoiceMessage = () => {
+    if (voiceUriRef.current && voiceTranscriptRef.current) {
+      const transcript = voiceTranscriptRef.current;
+      const uri = voiceUriRef.current;
 
-    if (recordingTimeout) {
-      clearInterval(recordingTimeout);
-      setRecordingTimeout(null);
-    }
-
-    if (hasContent) {
-      // Add voice message from user
-      const userMessage = chatAPI.createMessage(
-        "🎤 Voice message",
+      // 创建用户消息
+      const userMessage: any = chatAPI.createMessage(
+        transcript,
         true,
-        "voice"
+        "voice",
+        {
+          uri,
+        }
       );
       setMessages((prev) => [...prev, userMessage]);
 
-      // Prepare for AI response
+      // 清理
+      voiceUriRef.current = null;
+      voiceTranscriptRef.current = null;
+
+      // 开始调用 AI
       setIsThinking(true);
       setCurrentStreamedMessage("");
 
-      // Get message history for API
-      const history = chatAPI.buildHistory(messages);
-
-      // Simulate voice transcription with default message
-      const transcribedText = "Please help me record an expense";
-
-      // Send message to API and handle streaming response
-      await chatAPI.sendMessage(transcribedText, history, handleAIResponse);
+      const history = chatAPI.buildHistory([...messages, userMessage]);
+      chatAPI.sendMessage(transcript, history, handleAIResponse, []);
 
       setTimeout(() => scrollToBottom(), 50);
     }
   };
 
-  const handleImageUpload = async () => {
+  const handleStopRecording = async (hasContent?: boolean) => {
+    // hasContent indicates whether we should proceed to finalize voice message
+    const shouldKeepContent = Boolean(hasContent);
+
+    setIsRecording(false);
+
+    if (recordingTimeout) {
+      clearTimeout(recordingTimeout);
+      setRecordingTimeout(null);
+    }
+
+    // 停止识别
+    try {
+      ExpoSpeechRecognitionModule.stop();
+    } catch (err) {
+      console.warn("stop recognition error", err);
+    }
+
+    if (recordingIntervalRef.current) {
+      clearTimeout(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+
+    // 移除监听
+    recordingListeners.current.forEach((l) => l.remove && l.remove());
+    recordingListeners.current = [];
+
+    setRecordingTimer(0);
+
+    // If recording considered canceled / too short, purge any captured data
+    if (!shouldKeepContent) {
+      voiceUriRef.current = null;
+      voiceTranscriptRef.current = null;
+    }
+  };
+
+  /** 从相册选择图片 */
+  const handlePickImage = async () => {
     setShowMoreOptions(false);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      console.warn("Media library permission denied");
+      return;
+    }
 
-    // Simulate image upload
-    const userMessage = chatAPI.createMessage("📷 Image", true, "image");
-    setMessages((prev) => [...prev, userMessage]);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+    });
 
-    // Prepare for AI response
-    setIsThinking(true);
-    setCurrentStreamedMessage("");
+    if (!result.canceled && result.assets?.length) {
+      const asset = result.assets[0];
+      const attachment = {
+        id: Date.now().toString(),
+        uri: asset.uri,
+        width: asset.width,
+        height: asset.height,
+        type: "image" as const,
+      };
+      setAttachments((prev) => [...prev, attachment]);
+      setIsTextMode(true);
+    }
+  };
 
-    // Get message history for API
-    const history = chatAPI.buildHistory(messages);
+  /** 拍照 */
+  const handleTakePhoto = async () => {
+    setShowMoreOptions(false);
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      console.warn("Camera permission denied");
+      return;
+    }
 
-    // Simulate image transcription with default message
-    const transcribedText =
-      "This is a receipt, please help me record this expense";
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+    });
 
-    // Send message to API and handle streaming response
-    await chatAPI.sendMessage(transcribedText, history, handleAIResponse);
-
-    setTimeout(() => scrollToBottom(), 50);
+    if (!result.canceled && result.assets?.length) {
+      const asset = result.assets[0];
+      const attachment = {
+        id: Date.now().toString(),
+        uri: asset.uri,
+        width: asset.width,
+        height: asset.height,
+        type: "image" as const,
+      };
+      setAttachments((prev) => [...prev, attachment]);
+      setIsTextMode(true);
+    }
   };
 
   const handleFileUpload = async () => {
     setShowMoreOptions(false);
 
-    // Simulate file upload
-    const userMessage = chatAPI.createMessage("📄 File", true, "file");
-    setMessages((prev) => [...prev, userMessage]);
+    try {
+      const result: any = await DocumentPicker.getDocumentAsync({
+        type: [
+          "text/csv",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ],
+      });
 
-    // Prepare for AI response
-    setIsThinking(true);
-    setCurrentStreamedMessage("");
-
-    // Get message history for API
-    const history = chatAPI.buildHistory(messages);
-
-    // Simulate file transcription with default message
-    const transcribedText =
-      "This is my expense file, please analyze my spending";
-
-    // Send message to API and handle streaming response
-    await chatAPI.sendMessage(transcribedText, history, handleAIResponse);
-
-    setTimeout(() => scrollToBottom(), 50);
+      if (result?.type === "success") {
+        const { uri, name, mimeType } = result;
+        const attachment = {
+          id: Date.now().toString(),
+          uri,
+          name,
+          mimeType,
+          type: "file" as const,
+        };
+        setAttachments((prev) => [...prev, attachment]);
+        setIsTextMode(true);
+      }
+    } catch (err) {
+      console.error("File picker error", err);
+    }
   };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  // 相机按钮直接调用拍照
+  const handleImageUpload = handleTakePhoto;
 
   const handleAddExpense = () => {
     router.push("/bills/add");
@@ -366,132 +511,147 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
-      <StatusBar barStyle="dark-content" />
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
-
-      {/* Custom Header */}
-      <ChatHeader onAddExpense={handleAddExpense} />
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
-        {/* Chat Messages */}
-        <View flex={1} backgroundColor="$gray2">
-          {messages.length === 0 ? (
-            <WelcomeScreen />
-          ) : (
-            <ScrollView
-              ref={scrollViewRef}
-              style={{ flex: 1 }}
-              contentContainerStyle={{
-                paddingTop: 16,
-                paddingHorizontal: 0,
-                paddingBottom: 24,
-              }}
-            >
-              {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
-              ))}
-
-              {/* Streaming message */}
-              {currentStreamedMessage && (
-                <XStack
-                  width="80%"
-                  maxWidth="80%"
-                  marginBottom="$3"
-                  alignItems="flex-end"
-                  alignSelf="flex-start"
-                >
-                  <View
-                    width={32}
-                    height={32}
-                    borderRadius={16}
-                    backgroundColor="$blue500"
-                    alignItems="center"
-                    justifyContent="center"
-                    marginRight="$2"
-                  >
-                    <Text color="$white" fontSize={14} fontWeight="bold">
-                      AI
-                    </Text>
-                  </View>
-                  <View
-                    flex={1}
-                    borderRadius={18}
-                    borderBottomLeftRadius={4}
-                    backgroundColor="$gray100"
-                    paddingHorizontal="$3.5"
-                    paddingVertical="$2.5"
-                  >
-                    <Text fontSize={16} lineHeight={22} color="$gray800">
-                      {currentStreamedMessage}
-                    </Text>
-                  </View>
-                </XStack>
-              )}
-
-              {/* Thinking indicator */}
-              {isThinking && !currentStreamedMessage && (
-                <XStack
-                  width="80%"
-                  maxWidth="80%"
-                  marginBottom="$3"
-                  alignItems="flex-end"
-                  alignSelf="flex-start"
-                >
-                  <View
-                    flexDirection="row"
-                    alignItems="center"
-                    borderRadius={18}
-                    borderBottomLeftRadius={4}
-                    backgroundColor="$gray100"
-                    paddingHorizontal="$3.5"
-                    paddingVertical="$2"
-                  >
-                    <ActivityIndicator size="small" color="#3B82F6" />
-                    <Text marginLeft="$2" fontSize={14} color="$gray500">
-                      Thinking...
-                    </Text>
-                  </View>
-                </XStack>
-              )}
-            </ScrollView>
-          )}
-        </View>
-
-        {/* Input area */}
-        <ChatInput
-          isTextMode={isTextMode}
-          inputText={inputText}
-          isRecording={isRecording}
-          recordingTimer={recordingTimer}
-          isThinking={isThinking}
-          showMoreOptions={showMoreOptions}
-          micButtonScale={micButtonScale}
-          onChangeText={setInputText}
-          onSend={handleSend}
-          onToggleInputMode={toggleInputMode}
-          onToggleMoreOptions={toggleMoreOptions}
-          onStartRecording={handleStartRecording}
-          onStopRecording={handleStopRecording}
-          onImageUpload={handleImageUpload}
+    <>
+      {/* 背景点击区域 */}
+      {isTextMode && (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View
+            height="100%"
+            width="100%"
+            position="absolute"
+            top={0}
+            left={0}
+            zIndex={1}
+          />
+        </TouchableWithoutFeedback>
+      )}
+      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
+        <StatusBar barStyle="dark-content" />
+        <Stack.Screen
+          options={{
+            headerShown: false,
+          }}
         />
 
-        {/* More options modal */}
-        {showMoreOptions && (
-          <MoreOptions
+        {/* Custom Header */}
+        <ChatHeader onAddExpense={handleAddExpense} />
+
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        >
+          {/* Chat Messages */}
+          <View flex={1} backgroundColor="$gray2">
+            {messages.length === 0 ? (
+              <WelcomeScreen />
+            ) : (
+              <ScrollView
+                ref={scrollViewRef}
+                style={{ flex: 1 }}
+                contentContainerStyle={{
+                  paddingTop: 16,
+                  paddingHorizontal: 0,
+                  paddingBottom: 24,
+                }}
+              >
+                {messages.map((message) => (
+                  <MessageBubble key={message.id} message={message} />
+                ))}
+
+                {/* Streaming message */}
+                {currentStreamedMessage && (
+                  <XStack
+                    width="80%"
+                    maxWidth="80%"
+                    marginBottom="$3"
+                    alignItems="flex-end"
+                    alignSelf="flex-start"
+                  >
+                    <View
+                      width={32}
+                      height={32}
+                      borderRadius={16}
+                      backgroundColor="$blue500"
+                      alignItems="center"
+                      justifyContent="center"
+                      marginRight="$2"
+                    >
+                      <Text color="$white" fontSize={14} fontWeight="bold">
+                        AI
+                      </Text>
+                    </View>
+                    <View
+                      flex={1}
+                      borderRadius={18}
+                      borderBottomLeftRadius={4}
+                      backgroundColor="$gray100"
+                      paddingHorizontal="$3.5"
+                      paddingVertical="$2.5"
+                    >
+                      <Text fontSize={16} lineHeight={22} color="$gray800">
+                        {currentStreamedMessage}
+                      </Text>
+                    </View>
+                  </XStack>
+                )}
+
+                {/* Thinking indicator */}
+                {isThinking && !currentStreamedMessage && (
+                  <XStack
+                    width="80%"
+                    maxWidth="80%"
+                    marginBottom="$3"
+                    alignItems="flex-end"
+                    alignSelf="flex-start"
+                  >
+                    <View
+                      flexDirection="row"
+                      alignItems="center"
+                      borderRadius={18}
+                      borderBottomLeftRadius={4}
+                      backgroundColor="$gray100"
+                      paddingHorizontal="$3.5"
+                      paddingVertical="$2"
+                    >
+                      <ActivityIndicator size="small" color="#3B82F6" />
+                      <Text marginLeft="$2" fontSize={14} color="$gray500">
+                        Thinking...
+                      </Text>
+                    </View>
+                  </XStack>
+                )}
+              </ScrollView>
+            )}
+          </View>
+
+          {/* Input area */}
+          <ChatInput
+            isTextMode={isTextMode}
+            inputText={inputText}
+            isRecording={isRecording}
+            recordingTimer={recordingTimer}
+            onChangeText={setInputText}
+            onSend={handleSend}
+            onToggleInputMode={toggleInputMode}
+            onToggleMoreOptions={toggleMoreOptions}
+            onStartRecording={handleStartRecording}
+            onStopRecording={handleStopRecording}
             onImageUpload={handleImageUpload}
-            onFileUpload={handleFileUpload}
+            attachments={attachments}
+            onRemoveAttachment={removeAttachment}
           />
-        )}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+          {/* More options modal */}
+          {showMoreOptions && (
+            <MoreOptions
+              onPickImage={handlePickImage}
+              onTakePhoto={handleTakePhoto}
+              onFileUpload={handleFileUpload}
+            />
+          )}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </>
   );
 }

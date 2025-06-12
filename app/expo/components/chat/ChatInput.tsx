@@ -1,16 +1,25 @@
 import React from "react";
-import { Animated, Pressable } from "react-native";
+import { Pressable, Animated, Easing, ScrollView, Image } from "react-native";
 import { XStack, YStack, Text, View, Input } from "tamagui";
-import { Mic, Camera, Send, Plus, Keyboard } from "lucide-react-native";
+import {
+  Camera,
+  Plus,
+  X as CloseIcon,
+  File as FileIcon,
+} from "lucide-react-native";
+
+interface Attachment {
+  id: string;
+  uri: string;
+  type: "image" | "file";
+  name?: string;
+}
 
 interface ChatInputProps {
   isTextMode: boolean;
   inputText: string;
   isRecording: boolean;
   recordingTimer: number;
-  isThinking: boolean;
-  showMoreOptions: boolean;
-  micButtonScale: Animated.Value;
   onChangeText: (text: string) => void;
   onSend: () => void;
   onToggleInputMode: () => void;
@@ -18,6 +27,8 @@ interface ChatInputProps {
   onStartRecording: () => void;
   onStopRecording: (hasContent: boolean) => void;
   onImageUpload: () => void;
+  attachments: Attachment[];
+  onRemoveAttachment: (id: string) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -25,9 +36,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   inputText,
   isRecording,
   recordingTimer,
-  isThinking,
-  showMoreOptions,
-  micButtonScale,
   onChangeText,
   onSend,
   onToggleInputMode,
@@ -35,9 +43,97 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onStartRecording,
   onStopRecording,
   onImageUpload,
+  attachments,
+  onRemoveAttachment,
 }) => {
+  /* Waveform animation setup */
+  const BAR_COUNT = 50;
+  const barAnimatedValues = React.useRef(
+    Array.from({ length: BAR_COUNT }, () => new Animated.Value(1))
+  ).current;
+  const barAnimations = React.useRef<Animated.CompositeAnimation[]>([]);
+
+  React.useEffect(() => {
+    if (isRecording) {
+      // Start looping animations for each bar
+      barAnimations.current = barAnimatedValues.map((val) =>
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(val, {
+              toValue: Math.random() * 1.5 + 1.2,
+              duration: 200 + Math.random() * 150,
+              easing: Easing.linear,
+              useNativeDriver: true,
+            }),
+            Animated.timing(val, {
+              toValue: 1,
+              duration: 200 + Math.random() * 150,
+              easing: Easing.linear,
+              useNativeDriver: true,
+            }),
+          ])
+        )
+      );
+      barAnimations.current.forEach((anim) => anim.start());
+    } else {
+      // Stop animations and reset bars
+      barAnimations.current.forEach((anim) => anim.stop && anim.stop());
+      barAnimatedValues.forEach((v) => v.setValue(1));
+    }
+    // Cleanup on unmount
+    return () => {
+      barAnimations.current.forEach((anim) => anim.stop && anim.stop());
+    };
+  }, [isRecording]);
+
   return (
     <YStack>
+      {/* Attachment preview */}
+      {attachments.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8 }}
+        >
+          {attachments.map((att) => (
+            <View key={att.id} marginRight={8} position="relative">
+              {att.type === "image" ? (
+                <Image
+                  source={{ uri: att.uri }}
+                  style={{ width: 40, height: 40, borderRadius: 5 }}
+                />
+              ) : (
+                <YStack
+                  width={40}
+                  height={40}
+                  borderRadius={5}
+                  backgroundColor="#E5E7EB"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <FileIcon size={28} color="#6B7280" />
+                </YStack>
+              )}
+              {/* Remove button */}
+              <Pressable
+                onPress={() => onRemoveAttachment(att.id)}
+                style={{ position: "absolute", top: -6, right: -6 }}
+              >
+                <View
+                  width={15}
+                  height={15}
+                  borderRadius={10}
+                  backgroundColor="rgba(0,0,0,0.6)"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <CloseIcon size={12} color="#fff" />
+                </View>
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
+      )}
       <View
         borderTopWidth={1}
         borderTopColor="$gray4"
@@ -45,10 +141,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         paddingHorizontal="$3"
         paddingVertical="$2"
       >
-        {/* Voice mode input */}
-        {!isTextMode ? (
-          <XStack alignItems="center" paddingVertical="$1">
-            {/**camera */}
+        {/* Placeholder / Voice mode */}
+        <XStack alignItems="center" paddingVertical="$1">
+          {!isTextMode && !isRecording && (
+            /* Camera icon only when voice mode & not recording */
             <Pressable onPress={onImageUpload}>
               <View
                 width={40}
@@ -60,83 +156,72 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <Camera size={22} color="#4B5563" />
               </View>
             </Pressable>
-            {/**record voice */}
+          )}
 
+          {/* Core pressable – stays mounted during recording */}
+          {(!isTextMode || isRecording) && (
             <Pressable
               style={{
                 flex: 1,
                 height: 44,
                 flexDirection: "row",
                 alignItems: "center",
-                justifyContent: "space-between",
-                backgroundColor: "#F3F4F6",
-                borderRadius: 22,
-                paddingHorizontal: 16,
+                backgroundColor: isRecording ? "transparent" : "#F3F4F6",
+                borderRadius: isRecording ? 0 : 22,
                 marginHorizontal: 8,
+                paddingHorizontal: isRecording ? 0 : 16,
               }}
-              onPressIn={onStartRecording}
-              onPressOut={() => onStopRecording(recordingTimer > 0)}
+              android_disableSound
+              onPress={onToggleInputMode}
+              onLongPress={onStartRecording}
+              onPressOut={() => onStopRecording(recordingTimer >= 3)}
             >
-              <Text fontSize={16} color="$gray600">
-                {isRecording
-                  ? `Recording ${3 - recordingTimer}s...`
-                  : "Hold to speak"}
-              </Text>
-              <Animated.View
-                style={[
-                  {
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  },
-                  { transform: [{ scale: micButtonScale }] },
-                ]}
-              >
-                <Mic size={20} color={isRecording ? "#EF4444" : "#4B5563"} />
-              </Animated.View>
+              {isRecording ? (
+                <YStack flex={1} justifyContent="center" alignItems="center">
+                  <Text color="$gray9" fontSize={10} marginBottom="$2">
+                    Release to send, slide up to cancel
+                  </Text>
+                  <View
+                    width="90%"
+                    paddingVertical={10}
+                    backgroundColor="$blue9"
+                    borderRadius={20}
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    <Animated.View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                      }}
+                    >
+                      {barAnimatedValues.map((val, i) => (
+                        <Animated.View
+                          key={i}
+                          style={{
+                            width: 3,
+                            height: 6,
+                            marginHorizontal: 1,
+                            backgroundColor: "white",
+                            borderRadius: 1,
+                            opacity: i % 5 === 0 ? 1 : 0.6,
+                            transform: [{ scaleY: val }],
+                          }}
+                        />
+                      ))}
+                    </Animated.View>
+                  </View>
+                </YStack>
+              ) : (
+                <Text fontSize={14} color="$gray9">
+                  Send a message or hold to talk...
+                </Text>
+              )}
             </Pressable>
+          )}
 
-            <Pressable onPress={onToggleInputMode}>
-              <View
-                width={40}
-                height={40}
-                borderRadius={20}
-                justifyContent="center"
-                alignItems="center"
-              >
-                <Keyboard size={22} color="#4B5563" />
-              </View>
-            </Pressable>
-
-            <Pressable onPress={onToggleMoreOptions}>
-              <View
-                width={40}
-                height={40}
-                borderRadius={20}
-                justifyContent="center"
-                alignItems="center"
-              >
-                <Plus size={22} color="#4B5563" />
-              </View>
-            </Pressable>
-          </XStack>
-        ) : (
-          /* Text mode input */
-          <XStack alignItems="center" paddingVertical="$1">
-            {/* camera */}
-            <Pressable onPress={onImageUpload}>
-              <View
-                width={40}
-                height={40}
-                borderRadius={20}
-                justifyContent="center"
-                alignItems="center"
-              >
-                <Camera size={22} color="#4B5563" />
-              </View>
-            </Pressable>
+          {/* Text mode input field */}
+          {isTextMode && !isRecording && (
             <View
               style={{
                 flex: 1,
@@ -150,7 +235,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               }}
             >
               <Input
-                placeholder="Send a message..."
+                autoFocus
+                placeholder={
+                  attachments.length > 0
+                    ? "Enter text or send directly..."
+                    : "Send a message..."
+                }
                 value={inputText}
                 onChangeText={onChangeText}
                 multiline={false}
@@ -159,10 +249,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 backgroundColor="transparent"
                 padding="$0"
                 onSubmitEditing={onSend}
+                onBlur={() => {
+                  if (!inputText) onToggleInputMode();
+                }}
               />
             </View>
+          )}
 
-            <Pressable onPress={onToggleInputMode}>
+          {/* Plus icon hidden during recording */}
+          {!isRecording && (
+            <Pressable onPress={onToggleMoreOptions}>
               <View
                 width={40}
                 height={40}
@@ -170,38 +266,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 justifyContent="center"
                 alignItems="center"
               >
-                <Mic size={22} color="#4B5563" />
+                <Plus size={22} color="#4B5563" />
               </View>
             </Pressable>
-
-            {inputText.trim() === "" ? (
-              <Pressable onPress={onToggleMoreOptions}>
-                <View
-                  width={40}
-                  height={40}
-                  borderRadius={20}
-                  justifyContent="center"
-                  alignItems="center"
-                >
-                  <Plus size={22} color="#4B5563" />
-                </View>
-              </Pressable>
-            ) : (
-              <Pressable onPress={onSend} disabled={isThinking}>
-                <View
-                  width={40}
-                  height={40}
-                  borderRadius={20}
-                  backgroundColor="$blue500"
-                  justifyContent="center"
-                  alignItems="center"
-                >
-                  <Send size={18} />
-                </View>
-              </Pressable>
-            )}
-          </XStack>
-        )}
+          )}
+        </XStack>
       </View>
     </YStack>
   );

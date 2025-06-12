@@ -11,12 +11,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.momiq.app"
+      "bundleIdentifier": "com.momiq.app",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "We use speech recognition to convert your voice to text for quick expense recording.",
+        "NSMicrophoneUsageDescription": "We use the microphone to record your voice for speech recognition features."
+      }
     },
     "android": {
       "package": "com.momiq.app"
@@ -44,7 +46,14 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Momiq to access your microphone for voice input.",
+          "speechRecognitionPermission": "Allow Momiq to use speech recognition to transcribe your speech."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

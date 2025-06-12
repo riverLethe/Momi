@@ -1,7 +1,7 @@
-import React from 'react';
-import { Image, TouchableOpacity } from 'react-native';
-import { XStack, YStack, Text, View } from 'tamagui';
-import { PlusCircle } from 'lucide-react-native';
+import React from "react";
+import { Image, TouchableOpacity } from "react-native";
+import { XStack, Text, View } from "tamagui";
+import { PlusCircle } from "lucide-react-native";
 
 interface ChatHeaderProps {
   onAddExpense: () => void;
@@ -28,8 +28,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ onAddExpense }) => {
           marginRight="$2"
         >
           <Image
-            source={{ uri: 'https://placehold.co/100x100/3B82F6/FFFFFF.png?text=M' }}
-            style={{ width: '100%', height: '100%' }}
+            source={{
+              uri: "https://placehold.co/100x100/3B82F6/FFFFFF.png?text=M",
+            }}
+            style={{ width: "100%", height: "100%" }}
           />
         </View>
         <Text fontSize={18} fontWeight="600" color="$gray800">
@@ -43,4 +45,4 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ onAddExpense }) => {
       </View>
     </XStack>
   );
-}; 
+};

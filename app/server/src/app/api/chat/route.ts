@@ -139,6 +139,13 @@ interface Expense {
   merchant?: string;
 }
 
+// 附件接口（来自客户端）
+interface AttachmentPayload {
+  mimeType: string;
+  data: string; // base64 string
+  name?: string;
+}
+
 // Helper function to safely parse JSON
 function tryParseJSON(text: string): any | null {
   try {
@@ -149,8 +156,33 @@ function tryParseJSON(text: string): any | null {
 }
 
 export async function POST(req: Request) {
-  const { histories, message }: { histories: Content[]; message: string } =
-    await req.json();
+  const {
+    histories,
+    message,
+    attachments = [],
+  }: {
+    histories: Content[];
+    message: string;
+    attachments?: AttachmentPayload[];
+  } = await req.json();
+
+  // Build parts array combining text and attachments
+  const parts: Array<any> = [];
+  if (message && message.trim()) {
+    parts.push({ text: message });
+  }
+  if (attachments && attachments.length) {
+    attachments.forEach((att) => {
+      if (att.data && att.mimeType) {
+        parts.push({
+          inlineData: {
+            mimeType: att.mimeType,
+            data: att.data,
+          },
+        });
+      }
+    });
+  }
 
   try {
     // 开始聊天会话
@@ -161,9 +193,9 @@ export async function POST(req: Request) {
     });
 
     // 发送消息并获取流式响应
-    const result = await chat.sendMessageStream({
-      message: message,
-    });
+    const result = await (chat as any).sendMessageStream({
+      contents: [{ role: "user", parts }],
+    } as any);
 
     // 处理流式响应
     const idString = `id:${uuidv4()}\ndata:`;

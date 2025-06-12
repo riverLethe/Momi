@@ -1,16 +1,21 @@
-import React from 'react';
-import { XStack, YStack, Text, Circle } from 'tamagui';
-import { Image as ImageIcon, Camera, File } from 'lucide-react-native';
-import { Pressable } from 'react-native';
+import React from "react";
+import { XStack, YStack, Text, Circle } from "tamagui";
+import { Image as ImageIcon, Camera, File } from "lucide-react-native";
+import { Pressable } from "react-native";
 
 interface MoreOptionsProps {
-  onImageUpload: () => void;
+  /** 选择相册图片 */
+  onPickImage: () => void;
+  /** 拍照 */
+  onTakePhoto: () => void;
+  /** 选择 CSV/Excel 文件 */
   onFileUpload: () => void;
 }
 
-export const MoreOptions: React.FC<MoreOptionsProps> = ({ 
-  onImageUpload, 
-  onFileUpload 
+export const MoreOptions: React.FC<MoreOptionsProps> = ({
+  onPickImage,
+  onTakePhoto,
+  onFileUpload,
 }) => {
   return (
     <XStack
@@ -22,7 +27,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
       justifyContent="space-around"
     >
       <YStack alignItems="center">
-        <Pressable onPress={onImageUpload}>
+        <Pressable onPress={onPickImage}>
           <Circle size={50} backgroundColor="$gray100">
             <ImageIcon size={24} color="#4B5563" />
           </Circle>
@@ -38,7 +43,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
       </YStack>
 
       <YStack alignItems="center">
-        <Pressable onPress={onImageUpload}>
+        <Pressable onPress={onTakePhoto}>
           <Circle size={50} backgroundColor="$gray100">
             <Camera size={24} color="#4B5563" />
           </Circle>
@@ -70,4 +75,4 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
       </YStack>
     </XStack>
   );
-}; 
+};
