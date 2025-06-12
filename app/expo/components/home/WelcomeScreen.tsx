@@ -11,18 +11,18 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onStartChatPress,
 }) => {
   const { t } = useTranslation();
-  
+
   return (
     <EmptyStateView
       title={t("Welcome to Momiq")}
-      description={t("Your personal finance tracker to help you manage expenses and reach your financial goals")}
+      description={t("Track bills and reach your financial goals")}
       imageSrc={require("@/assets/images/welcome-home.png")}
       actionText={t("Record your first bill")}
-      actionSubtitle={t("Use our AI chat to easily log your expenses")}
+      actionSubtitle={t("Use our AI chat to easily log your bills")}
       actionIcon={<MessageSquarePlus size={28} color="#3B82F6" />}
       onActionPress={onStartChatPress}
     />
   );
 };
 
-export default WelcomeScreen; 
+export default WelcomeScreen;

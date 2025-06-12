@@ -366,7 +366,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
       <StatusBar barStyle="dark-content" />
       <Stack.Screen
         options={{
@@ -383,7 +383,7 @@ export default function ChatScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* Chat Messages */}
-        <View flex={1} backgroundColor="$gray50">
+        <View flex={1} backgroundColor="$gray2">
           {messages.length === 0 ? (
             <WelcomeScreen />
           ) : (
