@@ -1,8 +1,7 @@
 import React from "react";
 // import { View as RNView } from 'react-native';
-import { XStack, YStack, Text, Avatar, Card, Separator } from "tamagui";
+import { XStack, YStack, Text, Card, Separator } from "tamagui";
 import { Message } from "@/utils/api";
-import { formatTime } from "@/utils/format";
 import Markdown from "react-native-markdown-display";
 import { ExpenseList } from "./ExpenseList";
 import { Image, Pressable, ActivityIndicator } from "react-native";
@@ -197,7 +196,18 @@ const renderMessageContent = (message: Message) => {
     }
 
     if (message.data.type === "markdown" && message.data.content) {
-      return <Markdown>{message.data.content}</Markdown>;
+      return (
+        <Card
+          borderRadius="$4"
+          overflow="hidden"
+          elevation={0.5}
+          backgroundColor="white"
+          padding="$2"
+          width="fit-content"
+        >
+          <Markdown>{message.data.content}</Markdown>
+        </Card>
+      );
     }
 
     // Attachments from combined message
@@ -208,60 +218,63 @@ const renderMessageContent = (message: Message) => {
       const hasText = message.text && message.text.trim().length > 0;
       return (
         <YStack width="100%" alignItems="flex-end" gap="$1">
-          {hasText && (
-            <Card
-              borderRadius="$4"
-              overflow="hidden"
-              elevation={0.5}
-              backgroundColor="white"
-              width="fit-content"
-            >
-              <XStack flexWrap="wrap" gap="$1" padding="$2">
-                {message.data.attachments.map((att: any) => {
-                  if (att.type === "image") {
-                    return (
-                      <Image
-                        key={att.id}
-                        source={{ uri: att.uri }}
-                        style={{
-                          width: 30,
-                          height: 30,
-                          borderRadius: 5,
-                        }}
-                      />
-                    );
-                  }
-                  // file preview
+          <Card
+            borderRadius="$4"
+            overflow="hidden"
+            elevation={0.5}
+            backgroundColor="white"
+            width="fit-content"
+          >
+            <XStack flexWrap="wrap" gap="$1" padding="$2">
+              {message.data.attachments.map((att: any) => {
+                if (att.type === "image") {
                   return (
-                    <XStack
+                    <Image
                       key={att.id}
-                      width={30}
-                      borderRadius={5}
-                      backgroundColor="#F3F4F6"
-                      paddingHorizontal={8}
-                      paddingVertical={6}
-                      alignItems="center"
-                    >
-                      <FileIcon size={20} color="#6B7280" />
-                      <Text
-                        fontSize={12}
-                        color="#374151"
-                        marginLeft={6}
-                        numberOfLines={2}
-                        style={{ flexShrink: 1 }}
-                      >
-                        {att.name || "file"}
-                      </Text>
-                    </XStack>
+                      source={{ uri: att.uri }}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 5,
+                      }}
+                    />
                   );
-                })}
-              </XStack>
-              <Separator />
-              <Text fontSize={12} lineHeight={16} padding="$2">
-                {message.text}
-              </Text>
-            </Card>
-          )}
+                }
+                // file preview
+                return (
+                  <YStack
+                    key={att.id}
+                    minWidth={30}
+                    maxWidth={100}
+                    borderRadius={5}
+                    backgroundColor="#F3F4F6"
+                    paddingHorizontal={8}
+                    paddingVertical={6}
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    <FileIcon size={20} color="#6B7280" />
+                    <Text
+                      fontSize={12}
+                      color="#374151"
+                      numberOfLines={1}
+                      style={{ flexShrink: 1, textAlign: "center" }}
+                    >
+                      {att.name || "file"}
+                    </Text>
+                  </YStack>
+                );
+              })}
+            </XStack>
+            {hasText && (
+              <>
+                <Separator />
+                <Text fontSize={12} lineHeight={16} padding="$2">
+                  {message.text}
+                </Text>
+              </>
+            )}
+          </Card>
         </YStack>
       );
     }

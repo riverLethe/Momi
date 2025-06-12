@@ -16,6 +16,7 @@ import { saveBill } from "@/utils/bills.utils";
 import { updateUserPreferences } from "@/utils/userPreferences.utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
+import uuid from "react-native-uuid";
 
 // Import components
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -99,6 +100,12 @@ export default function ChatScreen() {
   const handleSend = async () => {
     if (inputText.trim() === "" && attachments.length === 0) return;
 
+    setIsTextMode(false);
+    Keyboard.dismiss();
+    // clear input and attachments
+    setInputText("");
+    setAttachments([]);
+
     // Prepare attachments payload for API
     const attachmentsPayload: import("@/utils/api").AttachmentPayload[] = [];
     for (const att of attachments) {
@@ -138,10 +145,6 @@ export default function ChatScreen() {
       handleAIResponse,
       attachmentsPayload
     );
-
-    // clear input and attachments
-    setInputText("");
-    setAttachments([]);
   };
 
   // Handle streaming AI response
@@ -318,7 +321,7 @@ export default function ChatScreen() {
       });
 
       // 最长录制 15 秒自动停止
-      const timer = setTimeout(() => handleStopRecording(), 15000);
+      const timer = setTimeout(() => handleStopRecording(), 60000);
       setRecordingTimeout(timer as unknown as NodeJS.Timeout);
 
       // 计时器 UI
@@ -467,17 +470,20 @@ export default function ChatScreen() {
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         ],
       });
-
-      if (result?.type === "success") {
-        const { uri, name, mimeType } = result;
-        const attachment = {
-          id: Date.now().toString(),
-          uri,
-          name,
-          mimeType,
-          type: "file" as const,
-        };
-        setAttachments((prev) => [...prev, attachment]);
+      if (result.assets?.length) {
+        const tmpAttachments: any[] = [];
+        for (const asset of result.assets) {
+          const { uri, name, mimeType } = asset;
+          const attachment = {
+            id: uuid.v4(),
+            uri,
+            name,
+            mimeType,
+            type: "file" as const,
+          };
+          tmpAttachments.push(attachment);
+        }
+        setAttachments((prev) => [...prev, ...tmpAttachments]);
         setIsTextMode(true);
       }
     } catch (err) {
@@ -514,7 +520,13 @@ export default function ChatScreen() {
     <>
       {/* 背景点击区域 */}
       {isTextMode && (
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <TouchableWithoutFeedback
+          onPress={() => {
+            Keyboard.dismiss();
+            setIsTextMode(false);
+          }}
+          accessible={false}
+        >
           <View
             height="100%"
             width="100%"

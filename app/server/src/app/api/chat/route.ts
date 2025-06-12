@@ -186,16 +186,21 @@ export async function POST(req: Request) {
 
   try {
     // 开始聊天会话
-    const chat = ai.chats.create({
-      model: "gemini-2.5-flash-preview-05-20",
-      history: histories,
-      config: generationConfig,
-    });
+    // const chat = ai.chats.create({
+    //   model: "gemini-2.5-flash-preview-05-20",
+    //   history: histories,
+    //   config: generationConfig,
+    // });
 
     // 发送消息并获取流式响应
-    const result = await (chat as any).sendMessageStream({
+    // const result = await chat.sendMessageStream({
+    //   contents: [{ role: "user", parts }],
+    // });
+    const result = await ai.models.generateContentStream({
+      model: "gemini-2.5-flash-preview-05-20",
       contents: [{ role: "user", parts }],
-    } as any);
+      config: generationConfig,
+    });
 
     // 处理流式响应
     const idString = `id:${uuidv4()}\ndata:`;
