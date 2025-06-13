@@ -5,7 +5,6 @@ import {
   XStack,
   YStack,
   Sheet,
-  ScrollView,
   ListItem,
   Separator,
   Text,
@@ -38,7 +37,7 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
   useAvatarStyle = false,
 }) => {
   const { t } = useTranslation();
-  
+
   const defaultTitle = t("Select Category");
   const defaultAllCategoryLabel = t("All Categories");
 
@@ -52,19 +51,36 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
     >
       <Sheet.Overlay />
       <Sheet.Handle />
-      <Sheet.Frame padding="$4">
-        <YStack>
-          <XStack justifyContent="space-between" alignItems="center" marginBottom="$3">
-            <Paragraph fontSize={18} fontWeight="700">{title || defaultTitle}</Paragraph>
-            <Button size="$3" circular onPress={() => setIsOpen(false)} icon={X} />
+      <Sheet.Frame padding="$4" paddingBottom="$6">
+        <YStack flex={1}>
+          <XStack
+            justifyContent="space-between"
+            alignItems="center"
+            marginBottom="$3"
+          >
+            <Paragraph fontSize={18} fontWeight="700">
+              {title || defaultTitle}
+            </Paragraph>
+            <Button
+              size="$3"
+              circular
+              onPress={() => setIsOpen(false)}
+              icon={X}
+            />
           </XStack>
-          
-          <ScrollView showsVerticalScrollIndicator={false}>
+
+          <Sheet.ScrollView
+            showsVerticalScrollIndicator={false}
+            flex={1}
+            borderRadius="$4"
+          >
             {showAllOption && (
               <>
                 <ListItem
                   title={allCategoryLabel || defaultAllCategoryLabel}
-                  iconAfter={selectedCategory === "all" ? <Check size={16} /> : undefined}
+                  iconAfter={
+                    selectedCategory === "all" ? <Check size={16} /> : undefined
+                  }
                   onPress={() => {
                     onCategoryChange("all");
                     setIsOpen(false);
@@ -74,7 +90,7 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
                 <Separator />
               </>
             )}
-            
+
             {useAvatarStyle ? (
               <YStack space="$3" paddingBottom="$10">
                 {EXPENSE_CATEGORIES.map((cat) => {
@@ -82,8 +98,14 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
                   return (
                     <Button
                       key={cat.id}
-                      backgroundColor={cat.id === selectedCategory ? cat.lightColor : "transparent"}
-                      borderColor={cat.id === selectedCategory ? cat.color : "$gray4"}
+                      backgroundColor={
+                        cat.id === selectedCategory
+                          ? cat.lightColor
+                          : "transparent"
+                      }
+                      borderColor={
+                        cat.id === selectedCategory ? cat.color : "$gray4"
+                      }
                       borderWidth={1}
                       paddingVertical="$3"
                       pressStyle={{ scale: 0.98, opacity: 0.9 }}
@@ -93,10 +115,16 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
                       }}
                     >
                       <XStack alignItems="center" space="$3">
-                        <Avatar circular size="$3.5" backgroundColor={`${cat.color}20`}>
+                        <Avatar
+                          circular
+                          size="$3.5"
+                          backgroundColor={`${cat.color}20`}
+                        >
                           <CategoryIcon size={18} color={cat.color} />
                         </Avatar>
-                        <Text fontSize="$3.5" fontWeight="$6">{t(cat.name)}</Text>
+                        <Text fontSize="$3" fontWeight="$6">
+                          {t(cat.name)}
+                        </Text>
                       </XStack>
                     </Button>
                   );
@@ -110,7 +138,11 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
                     key={cat.id}
                     title={t(cat.name)}
                     icon={<CategoryIcon size={18} color={cat.color} />}
-                    iconAfter={selectedCategory === cat.id ? <Check size={16} /> : undefined}
+                    iconAfter={
+                      selectedCategory === cat.id ? (
+                        <Check size={16} />
+                      ) : undefined
+                    }
                     onPress={() => {
                       onCategoryChange(cat.id);
                       setIsOpen(false);
@@ -120,11 +152,11 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
                 );
               })
             )}
-          </ScrollView>
+          </Sheet.ScrollView>
         </YStack>
       </Sheet.Frame>
     </Sheet>
   );
 };
 
-export default CategorySelectSheet; 
+export default CategorySelectSheet;
