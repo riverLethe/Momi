@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { View, Pressable } from "react-native";
 import {
@@ -9,14 +9,7 @@ import {
   Button,
   Separator,
   Progress,
-  Dialog,
-  Adapt,
-  Sheet,
-  Input,
-  Label,
   Avatar,
-  Heading,
-  Group,
   Spinner,
 } from "tamagui";
 import {
@@ -24,13 +17,8 @@ import {
   TrendingUp,
   AlertTriangle,
   EditIcon,
-  Check,
-  ArrowRight,
-  CheckCircle,
-  PlusCircle,
   DollarSign,
 } from "lucide-react-native";
-import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
 
 // 预算状态类型
 export type BudgetStatusType = "good" | "warning" | "danger" | "none";
@@ -67,9 +55,13 @@ interface BudgetSummaryCardProps {
   isPersonalView?: boolean;
   currentPeriod: BudgetPeriod;
   currentBudget: number | null;
-  onSaveBudget: (amount: number, period: BudgetPeriod) => Promise<void>;
   onCategoryPress?: (categoryId: string) => void;
   onManageBudgetPress?: () => void;
+  /**
+   * Triggered when the user presses either the "Set Budget" or "Edit" button.
+   * Use this to open the BudgetUpdateModal from the parent component.
+   */
+  onEditBudgetPress?: () => void;
   isLoading?: boolean;
   currency?: string;
 }
@@ -150,15 +142,14 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   isPersonalView = true,
   currentPeriod,
   currentBudget,
-  onSaveBudget,
   onCategoryPress,
   onManageBudgetPress,
+  onEditBudgetPress,
   isLoading = false,
   currency = "¥",
 }) => {
   const { t } = useTranslation();
   const statusInfo = getBudgetStatusInfo(budgetStatus.status);
-  const [showBudgetModal, setShowBudgetModal] = useState(false);
 
   // Check if we have actual spending data
   const hasSpendingData = budgetStatus.spent > 0 || categories.length > 0;
@@ -202,7 +193,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 borderWidth={2}
                 borderColor={statusInfo.color}
                 size="$2.5"
-                borderRadius="$15"
+                borderRadius="$10"
               >
                 {statusInfo.icon}
               </Avatar>
@@ -218,7 +209,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                   borderWidth={1}
                   paddingHorizontal="$2"
                   pressStyle={{ opacity: 0.8 }}
-                  onPress={() => setShowBudgetModal(true)}
+                  onPress={onEditBudgetPress}
                 >
                   <EditIcon size={16} />
                 </Button>
@@ -270,7 +261,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                     <Text color="$gray10" fontSize="$3" marginHorizontal="$1">
                       /
                     </Text>
-                    <Text fontSize="$2.5" fontWeight="$6" color="$gray10">
+                    <Text fontSize="$3" fontWeight="$6" color="$gray10">
                       {getPeriodLabel(currentPeriod, t)}
                     </Text>
                   </XStack>
@@ -302,7 +293,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 paddingHorizontal="$4"
                 marginTop="$2"
                 pressStyle={{ opacity: 0.8 }}
-                onPress={() => setShowBudgetModal(true)}
+                onPress={onEditBudgetPress}
               >
                 {t("Set Budget")}
               </Button>
@@ -410,16 +401,6 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
           )}
         </YStack>
       </Card>
-
-      {/* Budget Update Modal */}
-      <BudgetUpdateModal
-        isOpen={showBudgetModal}
-        onOpenChange={setShowBudgetModal}
-        currentPeriod={currentPeriod}
-        currentBudget={currentBudget}
-        currency={currency}
-        onSaveBudget={onSaveBudget}
-      />
     </>
   );
 };

@@ -1,13 +1,15 @@
-import { storage, secureStorage, STORAGE_KEYS } from './storage.utils';
-import { UserPreferences, User } from '@/types/user.types';
+import { storage, secureStorage, STORAGE_KEYS } from "./storage.utils";
+import { UserPreferences, User } from "@/types/user.types";
 
 // Default user preferences
 const DEFAULT_USER_PREFERENCES: UserPreferences = {
-  currency: 'USD',
-  language: 'en',
-  theme: 'light',
+  currency: "USD",
+  language: "en",
+  theme: "light",
   notificationsEnabled: true,
-  defaultAccount: 'main',
+  defaultAccount: "main",
+  budgetIncludedCategories: [],
+  budgetExcludedCategories: [],
 };
 
 /**
@@ -15,10 +17,12 @@ const DEFAULT_USER_PREFERENCES: UserPreferences = {
  */
 export const getUserPreferences = async (): Promise<UserPreferences> => {
   try {
-    const preferences = await storage.getItem<UserPreferences>(STORAGE_KEYS.USER_PREFERENCES);
+    const preferences = await storage.getItem<UserPreferences>(
+      STORAGE_KEYS.USER_PREFERENCES
+    );
     return preferences || DEFAULT_USER_PREFERENCES;
   } catch (error) {
-    console.error('Failed to get user preferences:', error);
+    console.error("Failed to get user preferences:", error);
     return DEFAULT_USER_PREFERENCES;
   }
 };
@@ -35,11 +39,11 @@ export const updateUserPreferences = async (
       ...currentPreferences,
       ...preferences,
     };
-    
+
     await storage.setItem(STORAGE_KEYS.USER_PREFERENCES, updatedPreferences);
     return updatedPreferences;
   } catch (error) {
-    console.error('Failed to update user preferences:', error);
+    console.error("Failed to update user preferences:", error);
     throw error;
   }
 };
@@ -49,10 +53,13 @@ export const updateUserPreferences = async (
  */
 export const resetUserPreferences = async (): Promise<UserPreferences> => {
   try {
-    await storage.setItem(STORAGE_KEYS.USER_PREFERENCES, DEFAULT_USER_PREFERENCES);
+    await storage.setItem(
+      STORAGE_KEYS.USER_PREFERENCES,
+      DEFAULT_USER_PREFERENCES
+    );
     return DEFAULT_USER_PREFERENCES;
   } catch (error) {
-    console.error('Failed to reset user preferences:', error);
+    console.error("Failed to reset user preferences:", error);
     throw error;
   }
 };
@@ -64,7 +71,7 @@ export const storeAuthToken = async (token: string): Promise<void> => {
   try {
     await secureStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
   } catch (error) {
-    console.error('Failed to store auth token:', error);
+    console.error("Failed to store auth token:", error);
     throw error;
   }
 };
@@ -76,7 +83,7 @@ export const getAuthToken = async (): Promise<string | null> => {
   try {
     return await secureStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
   } catch (error) {
-    console.error('Failed to get auth token:', error);
+    console.error("Failed to get auth token:", error);
     return null;
   }
 };
@@ -88,7 +95,7 @@ export const removeAuthToken = async (): Promise<void> => {
   try {
     await secureStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
   } catch (error) {
-    console.error('Failed to remove auth token:', error);
+    console.error("Failed to remove auth token:", error);
     throw error;
   }
 };
@@ -106,10 +113,10 @@ export const isAuthenticated = async (): Promise<boolean> => {
  */
 export const getMockUser = (): User => {
   return {
-    id: 'local-user',
-    name: 'Local User',
-    email: 'local@example.com',
+    id: "local-user",
+    name: "Local User",
+    email: "local@example.com",
     createdAt: new Date(),
     updatedAt: new Date(),
   };
-}; 
+};

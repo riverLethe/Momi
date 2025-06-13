@@ -20,6 +20,7 @@ import BudgetSummaryCard, {
   CategorySpending,
   BudgetPeriod,
 } from "@/components/home/BudgetSummaryCard";
+import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
 import RecentBillsList from "@/components/home/RecentBillsList";
 import WelcomeScreen from "@/components/home/WelcomeScreen";
 
@@ -31,6 +32,7 @@ import {
   updateUserPreferences,
 } from "@/utils/userPreferences.utils";
 import { syncRemoteData } from "@/utils/sync.utils";
+import { UserPreferences } from "@/types/user.types";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -66,11 +68,18 @@ export default function HomeScreen() {
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
 
+  // Modal open state for BudgetUpdateModal
+  const [isBudgetModalOpen, setBudgetModalOpen] = useState(false);
+
   // Remote data synchronization
   const [syncingRemote, setSyncingRemote] = useState(false);
 
   // Budget amount
   const [currentBudget, setCurrentBudget] = useState<number | null>(null);
+
+  // Category filter state
+  const [includedCategories, setIncludedCategories] = useState<string[]>([]);
+  const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
 
   // Sync remote data
   useEffect(() => {
@@ -100,14 +109,22 @@ export default function HomeScreen() {
       try {
         const preferences = await getUserPreferences();
 
-        // Use budget amount if set
-        if (preferences && preferences.budgetAmount) {
-          setCurrentBudget(preferences.budgetAmount);
-        }
+        if (preferences) {
+          if (preferences.budgetAmount) {
+            setCurrentBudget(preferences.budgetAmount);
+          }
 
-        // Use budget period if set
-        if (preferences && preferences.budgetPeriod) {
-          setBudgetPeriod(preferences.budgetPeriod as BudgetPeriod);
+          if (preferences.budgetPeriod) {
+            setBudgetPeriod(preferences.budgetPeriod as BudgetPeriod);
+          }
+
+          if (preferences.budgetIncludedCategories) {
+            setIncludedCategories(preferences.budgetIncludedCategories);
+          }
+
+          if (preferences.budgetExcludedCategories) {
+            setExcludedCategories(preferences.budgetExcludedCategories);
+          }
         }
       } catch (error) {
         console.error("Failed to load user preferences:", error);
@@ -134,6 +151,15 @@ export default function HomeScreen() {
     const filteredTransactions = transactions.filter((tx) => {
       const txDate = new Date(tx.date);
 
+      // Category filter
+      const shouldSkipCategory =
+        (includedCategories.length > 0 &&
+          !includedCategories.includes(tx.category)) ||
+        (includedCategories.length === 0 &&
+          excludedCategories.includes(tx.category));
+
+      if (shouldSkipCategory) return false;
+
       if (budgetPeriod === "weekly") {
         // Get start of week
         const startOfWeek = new Date(today);
@@ -154,6 +180,15 @@ export default function HomeScreen() {
     // Filter bills
     const filteredBills = bills.filter((bill) => {
       const billDate = new Date(bill.date);
+
+      // Category filter
+      const shouldSkipCategory =
+        (includedCategories.length > 0 &&
+          !includedCategories.includes(bill.category)) ||
+        (includedCategories.length === 0 &&
+          excludedCategories.includes(bill.category));
+
+      if (shouldSkipCategory) return false;
 
       if (budgetPeriod === "weekly") {
         // Get start of week
@@ -258,21 +293,58 @@ export default function HomeScreen() {
       .slice(0, 5); // Only take top five
 
     setCategories(categorySpending);
-  }, [transactions, bills, budgetPeriod, currentBudget, viewMode]);
+  }, [
+    transactions,
+    bills,
+    budgetPeriod,
+    currentBudget,
+    viewMode,
+    includedCategories,
+    excludedCategories,
+  ]);
 
   // Handle setting budget
-  const handleSaveBudget = async (amount: number, period: BudgetPeriod) => {
+  const handleSaveBudget = async (
+    amount: number,
+    period: BudgetPeriod,
+    filterMode: "all" | "include" | "exclude",
+    selectedCategories: string[]
+  ) => {
     setIsLoading(true);
     try {
       // Save to user preferences
-      await updateUserPreferences({
+      const newPrefs: Partial<UserPreferences> = {
         budgetAmount: amount,
         budgetPeriod: period,
-      });
+      };
+
+      if (filterMode === "include") {
+        newPrefs.budgetIncludedCategories = selectedCategories;
+        newPrefs.budgetExcludedCategories = [];
+      } else if (filterMode === "exclude") {
+        newPrefs.budgetExcludedCategories = selectedCategories;
+        newPrefs.budgetIncludedCategories = [];
+      } else {
+        newPrefs.budgetIncludedCategories = [];
+        newPrefs.budgetExcludedCategories = [];
+      }
+
+      await updateUserPreferences(newPrefs);
 
       // Update state
       setCurrentBudget(amount);
       setBudgetPeriod(period);
+
+      if (filterMode === "include") {
+        setIncludedCategories(selectedCategories);
+        setExcludedCategories([]);
+      } else if (filterMode === "exclude") {
+        setExcludedCategories(selectedCategories);
+        setIncludedCategories([]);
+      } else {
+        setIncludedCategories([]);
+        setExcludedCategories([]);
+      }
     } catch (error) {
       console.error("Failed to save budget:", error);
     } finally {
@@ -334,42 +406,53 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-      <YStack flex={1}>
-        {/* Content */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isDataLoading || syncingRemote}
-              onRefresh={handleRefresh}
-              colors={["#3B82F6"]}
+    <>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+        <YStack flex={1}>
+          {/* Content */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isDataLoading || syncingRemote}
+                onRefresh={handleRefresh}
+                colors={["#3B82F6"]}
+              />
+            }
+          >
+            {/* Budget Summary Card */}
+            <BudgetSummaryCard
+              budgetStatus={budgetStatus}
+              categories={categories}
+              isLoading={isLoading}
+              currentPeriod={budgetPeriod}
+              currentBudget={currentBudget}
+              onCategoryPress={handleCategoryPress}
+              onManageBudgetPress={handleManageBudget}
+              onEditBudgetPress={() => setBudgetModalOpen(true)}
+              isPersonalView={viewMode === "personal"}
             />
-          }
-        >
-          {/* Budget Summary Card */}
-          <BudgetSummaryCard
-            budgetStatus={budgetStatus}
-            categories={categories}
-            isLoading={isLoading}
-            currentPeriod={budgetPeriod}
-            currentBudget={currentBudget}
-            onSaveBudget={handleSaveBudget}
-            onCategoryPress={handleCategoryPress}
-            onManageBudgetPress={handleManageBudget}
-            isPersonalView={viewMode === "personal"}
-          />
 
-          {/* Recent Bills List */}
-          <RecentBillsList
-            bills={bills.slice(0, 5)}
-            isLoading={false}
-            maxItems={5}
-          />
-        </ScrollView>
-      </YStack>
-    </SafeAreaView>
+            {/* Recent Bills List */}
+            <RecentBillsList
+              bills={bills.slice(0, 5)}
+              isLoading={false}
+              maxItems={5}
+            />
+          </ScrollView>
+        </YStack>
+      </SafeAreaView>
+      {/* Budget Update Modal */}
+      <BudgetUpdateModal
+        isOpen={isBudgetModalOpen}
+        onOpenChange={setBudgetModalOpen}
+        currentPeriod={budgetPeriod}
+        currentBudget={currentBudget}
+        onSaveBudget={handleSaveBudget}
+        initialCategories={excludedCategories}
+      />
+    </>
   );
 }

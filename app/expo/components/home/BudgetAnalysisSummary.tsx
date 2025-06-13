@@ -1,8 +1,22 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { View, Pressable } from "react-native";
-import { Card, YStack, XStack, Text, Button, Separator, Progress } from "tamagui";
-import { BarChart4, TrendingDown, TrendingUp, AlertTriangle, BadgeDollarSignIcon } from "lucide-react-native";
+import {
+  Card,
+  YStack,
+  XStack,
+  Text,
+  Button,
+  Separator,
+  Progress,
+} from "tamagui";
+import {
+  BarChart4,
+  TrendingDown,
+  TrendingUp,
+  AlertTriangle,
+  BadgeDollarSignIcon,
+} from "lucide-react-native";
 
 // 预算状态类型
 export type BudgetStatusType = "good" | "warning" | "danger";
@@ -51,42 +65,45 @@ const getBudgetStatusInfo = (status: BudgetStatusType) => {
         icon: <TrendingUp size={18} color="#10B981" />,
         color: "#10B981",
         backgroundColor: "#ECFDF5",
-        label: "On Track"
+        label: "On Track",
       };
     case "warning":
       return {
         icon: <AlertTriangle size={18} color="#F59E0B" />,
         color: "#F59E0B",
         backgroundColor: "#FFFBEB",
-        label: "Watch Spending"
+        label: "Watch Spending",
       };
     case "danger":
       return {
         icon: <TrendingDown size={18} color="#EF4444" />,
         color: "#EF4444",
         backgroundColor: "#FEF2F2",
-        label: "Over Budget"
+        label: "Over Budget",
       };
   }
 };
 
 // 获取类别状态信息
-const getCategoryStatusInfo = (status: CategoryStatusType, percentage: number) => {
+const getCategoryStatusInfo = (
+  status: CategoryStatusType,
+  percentage: number
+) => {
   switch (status) {
     case "normal":
       return {
         color: "#10B981",
-        label: "Normal"
+        label: "Normal",
       };
     case "exceeding":
       return {
         color: "#EF4444",
-        label: `Exceeding by ${percentage}%`
+        label: `Exceeding by ${percentage}%`,
       };
     case "save":
       return {
         color: "#3B82F6",
-        label: `Save ${percentage}%`
+        label: `Save ${percentage}%`,
       };
   }
 };
@@ -111,23 +128,23 @@ const BudgetAnalysisSummary: React.FC<BudgetAnalysisSummaryProps> = ({
   period,
   onManageBudgetPress,
   onCategoryPress,
-  currency = "¥"
+  currency = "¥",
 }) => {
   const { t } = useTranslation();
   const statusInfo = getBudgetStatusInfo(budgetStatus.status);
-  
+
   // 格式化货币金额
   const formatCurrency = (amount: number) => {
     return `${currency}${amount.toLocaleString()}`;
   };
-  
+
   // 计算进度条颜色
   const getProgressColor = (status: BudgetStatusType, percentage: number) => {
     if (status === "danger") return "#EF4444";
     if (status === "warning" || percentage > 70) return "#F59E0B";
     return "#10B981";
   };
-  
+
   return (
     <Card
       backgroundColor="white"
@@ -148,8 +165,8 @@ const BudgetAnalysisSummary: React.FC<BudgetAnalysisSummaryProps> = ({
               {t("Budget Analysis")}
             </Text>
           </XStack>
-          
-          <XStack 
+
+          <XStack
             backgroundColor={statusInfo.backgroundColor}
             paddingHorizontal="$2"
             paddingVertical="$1"
@@ -158,16 +175,12 @@ const BudgetAnalysisSummary: React.FC<BudgetAnalysisSummaryProps> = ({
             space="$1"
           >
             {statusInfo.icon}
-            <Text 
-              fontSize="$2" 
-              fontWeight="$6" 
-              color={statusInfo.color}
-            >
+            <Text fontSize="$2" fontWeight="$6" color={statusInfo.color}>
               {t(statusInfo.label)}
             </Text>
           </XStack>
         </XStack>
-        
+
         {/* 周期和金额 */}
         <YStack space="$3">
           <XStack justifyContent="space-between" alignItems="center">
@@ -176,31 +189,32 @@ const BudgetAnalysisSummary: React.FC<BudgetAnalysisSummaryProps> = ({
             </Text>
             <XStack space="$1" alignItems="center">
               <BadgeDollarSignIcon size={16} color="#3B82F6" />
-              <Text fontSize="$2.5" color="$gray10">
+              <Text fontSize="$2" color="$gray10">
                 {t("Total Budget")}: {formatCurrency(budgetStatus.total)}
               </Text>
             </XStack>
           </XStack>
-          
+
           {/* 进度条 */}
           <YStack space="$2">
-            <Progress 
-              value={budgetStatus.percentage} 
-              backgroundColor="$gray4"
-            >
-              <Progress.Indicator 
-                animation="bouncy" 
-                backgroundColor={getProgressColor(budgetStatus.status, budgetStatus.percentage)} 
+            <Progress value={budgetStatus.percentage} backgroundColor="$gray4">
+              <Progress.Indicator
+                animation="bouncy"
+                backgroundColor={getProgressColor(
+                  budgetStatus.status,
+                  budgetStatus.percentage
+                )}
               />
             </Progress>
-            
+
             <XStack justifyContent="space-between">
               <Text fontSize="$2" color="$gray10">
-                {t("Spent")}: {formatCurrency(budgetStatus.spent)} ({budgetStatus.percentage}%)
+                {t("Spent")}: {formatCurrency(budgetStatus.spent)} (
+                {budgetStatus.percentage}%)
               </Text>
-              <Text 
-                fontSize="$3" 
-                fontWeight="$7" 
+              <Text
+                fontSize="$3"
+                fontWeight="$7"
                 color={budgetStatus.remaining > 0 ? "$green9" : "$red9"}
               >
                 {t("Remaining")}: {formatCurrency(budgetStatus.remaining)}
@@ -208,54 +222,62 @@ const BudgetAnalysisSummary: React.FC<BudgetAnalysisSummaryProps> = ({
             </XStack>
           </YStack>
         </YStack>
-        
+
         <Separator />
-        
+
         {/* 类别分析 */}
         <YStack space="$3">
           <Text fontSize="$3" fontWeight="$6" color="$gray11">
             {t("Category Analysis")}
           </Text>
-          
+
           {categories.length === 0 ? (
-            <Text fontSize="$2" color="$gray9" textAlign="center" paddingVertical="$3">
+            <Text
+              fontSize="$2"
+              color="$gray9"
+              textAlign="center"
+              paddingVertical="$3"
+            >
               {t("No spending data available")}
             </Text>
           ) : (
             <YStack space="$3">
               {categories.map((category) => {
-                const catStatus = getCategoryStatusInfo(category.status, category.percentage);
+                const catStatus = getCategoryStatusInfo(
+                  category.status,
+                  category.percentage
+                );
                 return (
-                  <Pressable 
+                  <Pressable
                     key={category.id}
                     onPress={() => onCategoryPress?.(category.id)}
                   >
-                    <XStack 
-                      justifyContent="space-between" 
+                    <XStack
+                      justifyContent="space-between"
                       alignItems="center"
                       paddingVertical="$2"
                       pressStyle={{ opacity: onCategoryPress ? 0.7 : 1 }}
                     >
                       <XStack space="$2" alignItems="center">
-                        <View 
-                          style={{ 
-                            width: 12, 
-                            height: 12, 
-                            borderRadius: 6, 
-                            backgroundColor: category.color || catStatus.color
-                          }} 
+                        <View
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: 6,
+                            backgroundColor: category.color || catStatus.color,
+                          }}
                         />
                         <Text fontSize="$3" color="$gray11">
                           {t(category.label)}
                         </Text>
                       </XStack>
-                      
+
                       <XStack alignItems="center" space="$2">
                         <Text fontSize="$3" fontWeight="$5">
                           {formatCurrency(category.amount)}
                         </Text>
-                        <Text 
-                          fontSize="$2" 
+                        <Text
+                          fontSize="$2"
                           color={catStatus.color}
                           backgroundColor={`${catStatus.color}10`}
                           paddingHorizontal="$2"
@@ -272,7 +294,7 @@ const BudgetAnalysisSummary: React.FC<BudgetAnalysisSummaryProps> = ({
             </YStack>
           )}
         </YStack>
-        
+
         {/* 操作按钮 */}
         <Button
           backgroundColor="$blue2"
@@ -290,4 +312,4 @@ const BudgetAnalysisSummary: React.FC<BudgetAnalysisSummaryProps> = ({
   );
 };
 
-export default BudgetAnalysisSummary; 
+export default BudgetAnalysisSummary;

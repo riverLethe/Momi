@@ -10,11 +10,22 @@ export interface User {
 export interface UserPreferences {
   currency: string;
   language: string;
-  theme: 'light' | 'dark' | 'system';
+  theme: "light" | "dark" | "system";
   notificationsEnabled: boolean;
   defaultAccount: string;
   budgetAmount?: number;
-  budgetPeriod?: 'weekly' | 'monthly' | 'yearly';
+  budgetPeriod?: "weekly" | "monthly" | "yearly";
+  /**
+   * Categories that should be INCLUDED when calculating budget statistics.
+   * If this array is non-empty it takes precedence over excluded categories.
+   */
+  budgetIncludedCategories?: string[];
+
+  /**
+   * Categories that should be EXCLUDED when calculating budget statistics.
+   * Only consulted when `budgetIncludedCategories` is empty.
+   */
+  budgetExcludedCategories?: string[];
 }
 
 export interface AuthState {
@@ -22,4 +33,4 @@ export interface AuthState {
   isLoading: boolean;
   user: User | null;
   error: string | null;
-} 
+}

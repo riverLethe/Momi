@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Check, X } from "lucide-react-native";
 import {
   Button,
@@ -24,6 +24,9 @@ export interface CategorySelectSheetProps {
   showAllOption?: boolean;
   allCategoryLabel?: string;
   useAvatarStyle?: boolean;
+  multiSelect?: boolean;
+  selectedCategories?: string[];
+  onCategoriesChange?: (categories: string[]) => void;
 }
 
 export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
@@ -35,8 +38,20 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
   showAllOption = true,
   allCategoryLabel,
   useAvatarStyle = false,
+  multiSelect = false,
+  selectedCategories = [],
+  onCategoriesChange,
 }) => {
   const { t } = useTranslation();
+
+  const [localSelected, setLocalSelected] =
+    useState<string[]>(selectedCategories);
+
+  useEffect(() => {
+    if (multiSelect) {
+      setLocalSelected(selectedCategories);
+    }
+  }, [selectedCategories.join(","), multiSelect]);
 
   const defaultTitle = t("Select Category");
   const defaultAllCategoryLabel = t("All Categories");
@@ -45,7 +60,12 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
     <Sheet
       modal
       open={isOpen}
-      onOpenChange={setIsOpen}
+      onOpenChange={(open: boolean) => {
+        if (!open && multiSelect && onCategoriesChange) {
+          onCategoriesChange(localSelected);
+        }
+        setIsOpen(open);
+      }}
       snapPoints={[useAvatarStyle ? 60 : 50]}
       dismissOnSnapToBottom
     >
@@ -61,12 +81,26 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
             <Paragraph fontSize={18} fontWeight="700">
               {title || defaultTitle}
             </Paragraph>
-            <Button
-              size="$3"
-              circular
-              onPress={() => setIsOpen(false)}
-              icon={X}
-            />
+            {multiSelect ? (
+              <Button
+                size="$2"
+                backgroundColor="$blue9"
+                color="white"
+                onPress={() => {
+                  onCategoriesChange?.(localSelected);
+                  setIsOpen(false);
+                }}
+              >
+                {t("Done")}
+              </Button>
+            ) : (
+              <Button
+                size="$3"
+                circular
+                onPress={() => setIsOpen(false)}
+                icon={X}
+              />
+            )}
           </XStack>
 
           <Sheet.ScrollView
@@ -74,7 +108,7 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
             flex={1}
             borderRadius="$4"
           >
-            {showAllOption && (
+            {showAllOption && !multiSelect && (
               <>
                 <ListItem
                   title={allCategoryLabel || defaultAllCategoryLabel}
@@ -82,7 +116,7 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
                     selectedCategory === "all" ? <Check size={16} /> : undefined
                   }
                   onPress={() => {
-                    onCategoryChange("all");
+                    onCategoryChange?.("all");
                     setIsOpen(false);
                   }}
                   pressTheme
@@ -95,23 +129,30 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
               <YStack space="$3" paddingBottom="$10">
                 {EXPENSE_CATEGORIES.map((cat) => {
                   const CategoryIcon = getCategoryIcon(cat.id);
+                  const selected = multiSelect
+                    ? localSelected.includes(cat.id)
+                    : cat.id === selectedCategory;
                   return (
                     <Button
                       key={cat.id}
                       backgroundColor={
-                        cat.id === selectedCategory
-                          ? cat.lightColor
-                          : "transparent"
+                        selected ? cat.lightColor : "transparent"
                       }
-                      borderColor={
-                        cat.id === selectedCategory ? cat.color : "$gray4"
-                      }
+                      borderColor={selected ? cat.color : "$gray4"}
                       borderWidth={1}
                       paddingVertical="$3"
                       pressStyle={{ scale: 0.98, opacity: 0.9 }}
                       onPress={() => {
-                        onCategoryChange(cat.id);
-                        setIsOpen(false);
+                        if (multiSelect) {
+                          setLocalSelected((prev) =>
+                            prev.includes(cat.id)
+                              ? prev.filter((c) => c !== cat.id)
+                              : [...prev, cat.id]
+                          );
+                        } else {
+                          onCategoryChange?.(cat.id);
+                          setIsOpen(false);
+                        }
                       }}
                     >
                       <XStack alignItems="center" space="$3">
@@ -125,6 +166,7 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
                         <Text fontSize="$3" fontWeight="$6">
                           {t(cat.name)}
                         </Text>
+                        {multiSelect && selected && <Check size={16} />}
                       </XStack>
                     </Button>
                   );
@@ -133,19 +175,26 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
             ) : (
               EXPENSE_CATEGORIES.map((cat) => {
                 const CategoryIcon = getCategoryIcon(cat.id);
+                const selected = multiSelect
+                  ? localSelected.includes(cat.id)
+                  : selectedCategory === cat.id;
                 return (
                   <ListItem
                     key={cat.id}
                     title={t(cat.name)}
                     icon={<CategoryIcon size={18} color={cat.color} />}
-                    iconAfter={
-                      selectedCategory === cat.id ? (
-                        <Check size={16} />
-                      ) : undefined
-                    }
+                    iconAfter={selected ? <Check size={16} /> : undefined}
                     onPress={() => {
-                      onCategoryChange(cat.id);
-                      setIsOpen(false);
+                      if (multiSelect) {
+                        setLocalSelected((prev) =>
+                          prev.includes(cat.id)
+                            ? prev.filter((c) => c !== cat.id)
+                            : [...prev, cat.id]
+                        );
+                      } else {
+                        onCategoryChange?.(cat.id);
+                        setIsOpen(false);
+                      }
                     }}
                     pressTheme
                   />
