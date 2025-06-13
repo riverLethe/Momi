@@ -1,13 +1,18 @@
 import React from "react";
 import { Image, TouchableOpacity } from "react-native";
-import { XStack, Text, View } from "tamagui";
-import { PlusCircle } from "lucide-react-native";
+import { XStack, Text, View, Button } from "tamagui";
+import { BrushCleaningIcon, PlusCircle, PlusIcon } from "lucide-react-native";
 
 interface ChatHeaderProps {
   onAddExpense: () => void;
+  /** Handler to clear all chat messages */
+  onClearChat?: () => void;
 }
 
-export const ChatHeader: React.FC<ChatHeaderProps> = ({ onAddExpense }) => {
+export const ChatHeader: React.FC<ChatHeaderProps> = ({
+  onAddExpense,
+  onClearChat,
+}) => {
   return (
     <XStack
       alignItems="center"
@@ -18,7 +23,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ onAddExpense }) => {
       borderBottomColor="$gray4"
       backgroundColor="$white"
     >
-      <View width={40} />
       <XStack alignItems="center" justifyContent="center">
         <View
           width={28}
@@ -38,11 +42,16 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ onAddExpense }) => {
           Momiq
         </Text>
       </XStack>
-      <View width={40} alignItems="flex-end">
-        <TouchableOpacity onPress={onAddExpense}>
-          <PlusCircle size={24} color="#3B82F6" />
-        </TouchableOpacity>
-      </View>
+      <XStack alignItems="flex-end" gap="$2">
+        <Button onPress={onAddExpense} circular>
+          <PlusIcon size={22} color="#3B82F6" />
+        </Button>
+        {onClearChat && (
+          <Button onPress={onClearChat} circular>
+            <BrushCleaningIcon size={22} color="#EF4444" />
+          </Button>
+        )}
+      </XStack>
     </XStack>
   );
 };

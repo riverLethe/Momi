@@ -34,7 +34,7 @@
     "expo-speech-recognition": "^2.1.0",
     "expo-status-bar": "~2.0.1",
     "i18next": "^23.7.11",
-    "lucide-react-native": "^0.471.0",
+    "lucide-react-native": "^0.514.0",
     "nativewind": "^4.1.23",
     "react": "18.3.1",
     "react-dom": "18.3.1",

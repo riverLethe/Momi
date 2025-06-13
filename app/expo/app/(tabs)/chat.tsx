@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableWithoutFeedback,
   Keyboard,
+  Alert,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { XStack, Text, View } from "tamagui";
@@ -515,6 +516,24 @@ export default function ChatScreen() {
     setShowMoreOptions(!showMoreOptions);
   };
 
+  /** Clear all chat messages */
+  const handleClearChat = () => {
+    if (messages.length === 0 && currentStreamedMessage === "") return;
+
+    Alert.alert("Clear Chat", "Are you sure you want to delete all messages?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear",
+        style: "destructive",
+        onPress: () => {
+          setMessages([]);
+          setCurrentStreamedMessage("");
+          setAttachments([]);
+        },
+      },
+    ]);
+  };
+
   return (
     <>
       {/* 背景点击区域 */}
@@ -545,7 +564,10 @@ export default function ChatScreen() {
         />
 
         {/* Custom Header */}
-        <ChatHeader onAddExpense={handleAddExpense} />
+        <ChatHeader
+          onAddExpense={handleAddExpense}
+          onClearChat={handleClearChat}
+        />
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           {/* Chat Messages */}

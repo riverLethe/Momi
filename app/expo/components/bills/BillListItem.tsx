@@ -12,9 +12,16 @@ import { useLocale } from "@/i18n/useLocale";
 
 interface BillListItemProps {
   item: Bill;
+  /**
+   * When true the list item is rendered in a disabled state and is not clickable.
+   */
+  disabled?: boolean;
 }
 
-export const BillListItem: React.FC<BillListItemProps> = ({ item }) => {
+export const BillListItem: React.FC<BillListItemProps> = ({
+  item,
+  disabled = false,
+}) => {
   const router = useRouter();
   const { locale } = useLocale();
 
@@ -33,7 +40,12 @@ export const BillListItem: React.FC<BillListItemProps> = ({ item }) => {
     <TouchableOpacity
       activeOpacity={0.6}
       onPress={handlePress}
-      style={{ paddingVertical: 4, paddingHorizontal: 10 }}
+      disabled={disabled}
+      style={{
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        opacity: disabled ? 0.4 : 1,
+      }}
     >
       <XStack alignItems="center" justifyContent="space-between" width="100%">
         <XStack alignItems="center" space="$3">
@@ -60,7 +72,11 @@ export const BillListItem: React.FC<BillListItemProps> = ({ item }) => {
         </XStack>
 
         <YStack alignItems="flex-end">
-          <Text fontSize="$3" fontWeight="500" color="$red10">
+          <Text
+            fontSize="$3"
+            fontWeight="500"
+            color={disabled ? "$gray9" : "$red10"}
+          >
             -¥{item.amount.toFixed(2)}
           </Text>
         </YStack>
