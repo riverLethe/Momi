@@ -26,18 +26,17 @@ import { useTranslation } from "react-i18next";
 
 import { Bill } from "@/types/bills.types";
 import { getCategoryById, getCategoryIcon } from "@/constants/categories";
-import { getBills, updateBill, deleteBill } from "@/utils/bills.utils";
-import { useData } from "@/providers/DataProvider";
+import { getBills } from "@/utils/bills.utils";
 import { useLocale } from "@/i18n/useLocale";
 import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
 import AmountInputSheet from "@/components/ui/AmountInputSheet";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
+import { useBillActions } from "@/hooks/useBillActions";
 
 export default function BillDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { id } = params;
-  const { refreshData } = useData();
   const { t } = useTranslation();
   const { locale } = useLocale();
 
@@ -51,6 +50,7 @@ export default function BillDetailsScreen() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState("");
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
+  const { confirmDeleteBill, updateBillField } = useBillActions();
 
   // long-press handlers
   const onAmountLongPress = () => setIsAmountSheetOpen(true);
@@ -105,100 +105,41 @@ export default function BillDetailsScreen() {
   const handleDeletePress = () => {
     if (!bill) return;
 
-    Alert.alert(
-      t("Delete Bill"),
-      t(
-        "Are you sure you want to delete this bill? This action cannot be undone."
-      ),
-      [
-        {
-          text: t("Cancel"),
-          style: "cancel",
-        },
-        {
-          text: t("Delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setUpdating(true);
-              // 删除账单
-              const success = await deleteBill(bill.id);
-
-              if (success) {
-                // 刷新数据提供者中的数据
-                await refreshData();
-                router.back();
-              } else {
-                Alert.alert(t("Error"), t("Failed to delete bill"));
-              }
-            } catch (error) {
-              console.error("Failed to delete bill:", error);
-              Alert.alert(t("Error"), t("Failed to delete bill"));
-            } finally {
-              setUpdating(false);
-            }
-          },
-        },
-      ]
-    );
+    setUpdating(true);
+    confirmDeleteBill(bill, {
+      onSuccess: () => {
+        setUpdating(false);
+        router.back();
+      },
+      onError: () => {
+        setUpdating(false);
+        Alert.alert(t("Error"), t("Failed to delete bill"));
+      },
+    });
   };
 
   const handleCategoryChange = async (categoryId: string) => {
     if (!bill) return;
-
-    try {
-      setUpdating(true);
-      // 更新账单分类
-      const updatedBill = await updateBill(bill.id, {
-        ...bill,
-        category: categoryId,
-      });
-
-      if (updatedBill) {
-        setBill(updatedBill);
-        // 刷新数据提供者中的数据
-        await refreshData();
-      } else {
-        Alert.alert(t("Error"), t("Failed to update bill category"));
-      }
-    } catch (error) {
-      console.error("Failed to update bill category:", error);
-      Alert.alert(t("Error"), t("Failed to update bill category"));
-    } finally {
-      setUpdating(false);
-    }
+    setUpdating(true);
+    updateBillField(bill, "category", categoryId, {
+      onSuccess: (updated) => {
+        setBill(updated);
+        setUpdating(false);
+      },
+      onError: () => setUpdating(false),
+    });
   };
 
   const handleUpdateField = async (field: keyof Bill, value: any) => {
     if (!bill) return;
-
-    // 若值无变化则不进行保存，避免更新时间更新
-    const prevVal: any = (bill as any)[field];
-    const isSame = (() => {
-      if (field === "date") {
-        return new Date(prevVal).getTime() === new Date(value).getTime();
-      }
-      return prevVal === value;
-    })();
-
-    if (isSame) return; // 跳过保存
-
-    try {
-      setUpdating(true);
-      const updatedBill = await updateBill(bill.id, {
-        ...bill,
-        [field]: value,
-      });
-      if (updatedBill) {
-        setBill(updatedBill);
-        await refreshData();
-      }
-    } catch (err) {
-      console.error("Failed to update bill field", err);
-      Alert.alert(t("Error"), t("Failed to update bill"));
-    } finally {
-      setUpdating(false);
-    }
+    setUpdating(true);
+    updateBillField(bill, field, value, {
+      onSuccess: (updated) => {
+        setBill(updated);
+        setUpdating(false);
+      },
+      onError: () => setUpdating(false),
+    });
   };
 
   if (loading) {

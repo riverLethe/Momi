@@ -15,6 +15,7 @@ import {
 import { BillDateGroup } from "@/components/bills/BillDateGroup";
 import { EmptyState } from "@/components/bills/EmptyState";
 import { syncRemoteData } from "@/utils/sync.utils";
+import { useBillActions } from "@/hooks/useBillActions";
 
 export default function BillsScreen() {
   const { viewMode } = useViewStore();
@@ -24,12 +25,12 @@ export default function BillsScreen() {
 
   const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
   const [syncingRemote, setSyncingRemote] = useState(false);
+  const { confirmDeleteBill } = useBillActions();
 
   // Filter states
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [categoryFilter, setCategoryFilter] =
-    useState<CategoryFilterType>("all");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilterType>([]);
 
   // Sync with remote data if authenticated
   useEffect(() => {
@@ -97,8 +98,10 @@ export default function BillsScreen() {
     }
 
     // Category filter
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((bill) => bill.category === categoryFilter);
+    if (categoryFilter.length > 0) {
+      filtered = filtered.filter((bill) =>
+        categoryFilter.includes(bill.category)
+      );
     }
 
     setFilteredBills(filtered);
@@ -135,8 +138,17 @@ export default function BillsScreen() {
     setEndDate(end);
   };
 
+  const handleDeleteBill = (bill: Bill) => {
+    confirmDeleteBill(bill, {
+      ignoreRefresh: true,
+      onSuccess: () => {
+        setFilteredBills(filteredBills.filter((b) => b.id !== bill.id));
+      },
+    });
+  };
+
   const renderDateGroup = ({ item }: { item: (typeof billGroups)[0] }) => (
-    <BillDateGroup item={item} />
+    <BillDateGroup item={item} onDelete={handleDeleteBill} />
   );
 
   // Handle refresh (pull-to-refresh)
@@ -190,7 +202,7 @@ export default function BillsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "white",
   },
   listContainer: {
     paddingVertical: 4,

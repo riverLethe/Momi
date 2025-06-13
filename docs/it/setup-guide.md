@@ -3,12 +3,14 @@
 ## 目录结构说明
 
 本项目采用 `app/expo` 的目录结构，其中：
+
 - `app/` 是应用程序的主目录
 - `app/expo/` 是 Expo React Native 子项目
 
 ## 初始化步骤
 
 ### 1. 创建项目结构
+
 ```bash
 # 在项目根目录执行
 mkdir -p app
@@ -17,6 +19,7 @@ npx create-expo-app@latest expo --template blank-typescript
 ```
 
 ### 2. 安装依赖
+
 ```bash
 # 在根目录安装 monorepo 依赖
 pnpm install
@@ -35,11 +38,12 @@ npx expo install expo-constants expo-linking expo-status-bar
 ### 3. 配置文件设置
 
 #### app/expo/app.json
+
 ```json
 {
   "expo": {
     "name": "Momiq",
-    "slug": "momi",
+    "slug": "momiq",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -65,14 +69,16 @@ npx expo install expo-constants expo-linking expo-status-bar
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "scheme": "momi",
+    "scheme": "momiq",
     "plugins": ["expo-router"]
   }
 }
 ```
 
 #### app/expo/package.json
+
 确保 package.json 中包含正确的 name 字段：
+
 ```json
 {
   "name": "app-expo",
@@ -90,7 +96,9 @@ npx expo install expo-constants expo-linking expo-status-bar
 ### 4. 验证设置
 
 #### 检查工作区配置
+
 确保根目录的 `pnpm-workspace.yaml` 包含：
+
 ```yaml
 packages:
   - "app/expo"
@@ -98,6 +106,7 @@ packages:
 ```
 
 #### 测试开发服务器
+
 ```bash
 # 在根目录执行
 pnpm dev:expo
@@ -133,13 +142,17 @@ Momiq/
 ## 常见问题
 
 ### Q: 为什么使用 app/expo 而不是直接使用 expo？
+
 A: 这种结构有以下优势：
+
 1. 更清晰的应用层级划分
 2. 便于未来扩展其他应用类型（如 web、desktop）
 3. 符合现代 monorepo 的最佳实践
 
 ### Q: 如何在不同目录间共享代码？
+
 A: 通过 `packages/` 目录创建共享包：
+
 ```bash
 # 创建共享 UI 包
 mkdir -p packages/ui
@@ -148,11 +161,13 @@ npm init -y
 ```
 
 ### Q: 如何调试 Turbo 构建问题？
+
 A: 使用以下命令：
+
 ```bash
 # 查看构建图
 pnpm turbo run build --graph
 
 # 详细日志
 pnpm turbo run dev:expo --verbose
-``` 
+```

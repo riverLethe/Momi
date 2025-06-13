@@ -3,6 +3,7 @@
 ## 项目设置
 
 ### 初始化 Expo 项目
+
 ```bash
 # 在项目根目录下创建 app/expo 子项目
 mkdir -p app
@@ -11,6 +12,7 @@ npx create-expo-app@latest expo --template blank-typescript
 ```
 
 ### 安装核心依赖
+
 ```bash
 # 导航和路由
 npx expo install expo-router
@@ -33,11 +35,12 @@ npx expo install expo-constants expo-linking expo-status-bar
 ## 配置文件设置
 
 ### app.json 配置
+
 ```json
 {
   "expo": {
     "name": "Momiq",
-    "slug": "momi",
+    "slug": "momiq",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -47,9 +50,7 @@ npx expo install expo-constants expo-linking expo-status-bar
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.momiq.app"
@@ -65,15 +66,14 @@ npx expo install expo-constants expo-linking expo-status-bar
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "scheme": "momi",
-    "plugins": [
-      "expo-router"
-    ]
+    "scheme": "momiq",
+    "plugins": ["expo-router"]
   }
 }
 ```
 
 ### tailwind.config.js
+
 ```javascript
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -82,36 +82,38 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          50: '#f0f9ff',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
+          50: "#f0f9ff",
+          500: "#3b82f6",
+          600: "#2563eb",
+          700: "#1d4ed8",
         },
         secondary: {
-          50: '#f8fafc',
-          500: '#64748b',
-          600: '#475569',
-        }
-      }
+          50: "#f8fafc",
+          500: "#64748b",
+          600: "#475569",
+        },
+      },
     },
   },
   plugins: [],
-}
+};
 ```
 
 ### metro.config.js
+
 ```javascript
-const { getDefaultConfig } = require('expo/metro-config');
-const { withNativeWind } = require('nativewind/metro');
+const { getDefaultConfig } = require("expo/metro-config");
+const { withNativeWind } = require("nativewind/metro");
 
 const config = getDefaultConfig(__dirname);
 
-module.exports = withNativeWind(config, { input: './global.css' });
+module.exports = withNativeWind(config, { input: "./global.css" });
 ```
 
 ## 项目结构
 
 ### app/ 目录 (Expo Router)
+
 ```
 app/
 ├── (tabs)/                 # 底部导航
@@ -130,6 +132,7 @@ app/
 ```
 
 ### components/ 目录
+
 ```
 components/
 ├── ui/                    # 基础 UI 组件
@@ -151,6 +154,7 @@ components/
 ## 开发最佳实践
 
 ### 1. 使用 Expo Router 进行导航
+
 ```typescript
 // app/_layout.tsx
 import { Stack } from 'expo-router';
@@ -166,6 +170,7 @@ export default function RootLayout() {
 ```
 
 ### 2. NativeWind 样式开发
+
 ```typescript
 // components/ui/Button.tsx
 import React from 'react';
@@ -204,6 +209,7 @@ export const Button: React.FC<ButtonProps> = ({
 ```
 
 ### 3. Tamagui 组件使用
+
 ```typescript
 // components/ui/Card.tsx
 import React from 'react';
@@ -227,6 +233,7 @@ export const Card: React.FC<CardProps> = ({ children, header, footer }) => {
 ```
 
 ### 4. 聊天功能实现
+
 ```typescript
 // app/(tabs)/chat.tsx
 import React, { useState, useCallback } from 'react';
@@ -260,6 +267,7 @@ export default function ChatScreen() {
 ## 调试和测试
 
 ### 开发工具
+
 ```bash
 # 启动开发服务器
 npx expo start
@@ -275,9 +283,10 @@ npx expo start --web
 ```
 
 ### 性能监控
+
 ```typescript
 // utils/performance.ts
-import { InteractionManager } from 'react-native';
+import { InteractionManager } from "react-native";
 
 export const runAfterInteractions = (callback: () => void) => {
   InteractionManager.runAfterInteractions(callback);
@@ -294,6 +303,7 @@ export const measurePerformance = (name: string, fn: () => void) => {
 ## 构建和部署
 
 ### 开发构建
+
 ```bash
 # EAS 构建 (推荐)
 npx eas build --platform ios --profile development
@@ -301,6 +311,7 @@ npx eas build --platform android --profile development
 ```
 
 ### 生产构建
+
 ```bash
 # 生产构建
 npx eas build --platform all --profile production
@@ -313,17 +324,21 @@ npx eas submit --platform android
 ## 常见问题
 
 ### 1. Metro 缓存问题
+
 ```bash
 npx expo start --clear
 ```
 
 ### 2. 依赖版本冲突
+
 ```bash
 npx expo install --fix
 ```
 
 ### 3. 类型错误
+
 确保安装了正确的类型定义：
+
 ```bash
 npm install --save-dev @types/react @types/react-native
 ```
@@ -334,4 +349,4 @@ npm install --save-dev @types/react @types/react-native
 - [Expo Router 文档](https://expo.github.io/router/)
 - [NativeWind 文档](https://www.nativewind.dev/)
 - [Tamagui 文档](https://tamagui.dev/)
-- [React Native Gifted Chat](https://github.com/FaridSafi/react-native-gifted-chat) 
+- [React Native Gifted Chat](https://github.com/FaridSafi/react-native-gifted-chat)

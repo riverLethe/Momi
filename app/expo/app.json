@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Momiq",
-    "slug": "momi",
+    "slug": "momiq",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -27,7 +27,7 @@
       "favicon": "./assets/images/favicon.png",
       "bundler": "metro"
     },
-    "scheme": "momi",
+    "scheme": "momiq",
     "plugins": [
       [
         "expo-camera",
@@ -47,6 +47,7 @@
       "expo-font",
       "expo-secure-store",
       "expo-asset",
+      "./plugins/with-app-intents-quick-bill",
       [
         "expo-speech-recognition",
         {

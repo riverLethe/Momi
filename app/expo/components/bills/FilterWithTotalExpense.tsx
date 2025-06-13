@@ -7,10 +7,10 @@ import { useTranslatedCategoryName } from "@/constants/categories";
 import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
 import { DateRangeSheet } from "@/components/ui/DateRangeSheet";
 
-export type CategoryFilterType = "all" | string;
+export type CategoryFilterType = string[]; // empty array means "all"
 
 interface FilterWithTotalExpenseProps {
-  onCategoryFilterChange: (filter: CategoryFilterType) => void;
+  onCategoryFilterChange: (filters: CategoryFilterType) => void;
   onDateRangeChange: (startDate: Date | null, endDate: Date | null) => void;
   categoryFilter: CategoryFilterType;
   totalExpense: number;
@@ -31,16 +31,23 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
 
   const SelectedCategoryName = () => {
-    if (categoryFilter === "all")
+    if (categoryFilter.length === 0)
       return (
         <Text fontSize="$2.5" color="$gray11">
           {t("All Categories")}
         </Text>
       );
-    const name = useTranslatedCategoryName(categoryFilter);
+    if (categoryFilter.length === 1) {
+      const name = useTranslatedCategoryName(categoryFilter[0]);
+      return (
+        <Text fontSize="$2.5" color="$gray11">
+          {name}
+        </Text>
+      );
+    }
     return (
       <Text fontSize="$2.5" color="$gray11">
-        {name}
+        {t("{{count}} Categories", { count: categoryFilter.length })}
       </Text>
     );
   };
@@ -140,9 +147,12 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
       <CategorySelectSheet
         isOpen={isCategorySheetOpen}
         setIsOpen={setIsCategorySheetOpen}
-        selectedCategory={categoryFilter}
-        onCategoryChange={onCategoryFilterChange}
-        showAllOption={true}
+        selectedCategory=""
+        multiSelect
+        selectedCategories={categoryFilter}
+        onCategoriesChange={onCategoryFilterChange}
+        onCategoryChange={() => {}}
+        showAllOption={false}
       />
 
       <DateRangeSheet

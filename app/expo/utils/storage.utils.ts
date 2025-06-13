@@ -1,14 +1,23 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
 // Storage keys
 export const STORAGE_KEYS = {
-  BILLS: 'momi_bills',
-  TRANSACTIONS: 'momi_transactions',
-  REPORTS: 'momi_reports',
-  USER_PREFERENCES: 'momi_user_preferences',
-  AUTH_TOKEN: 'momi_auth_token',
-  FAMILY_SPACES: 'momi_family_spaces',
+  BILLS: "momiq_bills",
+  TRANSACTIONS: "momiq_transactions",
+  REPORTS: "momiq_reports",
+  USER_PREFERENCES: "momiq_user_preferences",
+  AUTH_TOKEN: "momiq_auth_token",
+  FAMILY_SPACES: "momiq_family_spaces",
+};
+
+//todo: remove this after migration
+// Utility: given a new-format key, derive its legacy counterpart (if any)
+const deriveLegacyKey = (key: string): string | null => {
+  if (key.startsWith("momiq_")) {
+    return key.replace("momiq_", "momi_");
+  }
+  return null;
 };
 
 // Regular storage for non-sensitive data
@@ -31,8 +40,25 @@ export const storage = {
    */
   getItem: async <T>(key: string): Promise<T | null> => {
     try {
+      // 1. Try to read using the new key
       const jsonValue = await AsyncStorage.getItem(key);
-      return jsonValue != null ? JSON.parse(jsonValue) : null;
+      if (jsonValue != null) {
+        return JSON.parse(jsonValue);
+      }
+
+      // 2. Fallback to legacy key if data under new key is missing
+      const legacyKey = deriveLegacyKey(key);
+      if (legacyKey) {
+        const legacyValue = await AsyncStorage.getItem(legacyKey);
+        if (legacyValue != null) {
+          // Migrate data to the new key asynchronously (fire-and-forget)
+          AsyncStorage.setItem(key, legacyValue).catch(() => {});
+          AsyncStorage.removeItem(legacyKey).catch(() => {});
+          return JSON.parse(legacyValue);
+        }
+      }
+
+      return null;
     } catch (error) {
       console.error(`Error retrieving ${key}:`, error);
       return null;
@@ -58,7 +84,7 @@ export const storage = {
     try {
       await AsyncStorage.clear();
     } catch (error) {
-      console.error('Error clearing storage:', error);
+      console.error("Error clearing storage:", error);
       throw error;
     }
   },
@@ -83,7 +109,25 @@ export const secureStorage = {
    */
   getItem: async (key: string): Promise<string | null> => {
     try {
-      return await SecureStore.getItemAsync(key);
+      // 1. Attempt to fetch using the new key
+      const value = await SecureStore.getItemAsync(key);
+      if (value != null) {
+        return value;
+      }
+
+      // 2. Fallback to legacy key
+      const legacyKey = deriveLegacyKey(key);
+      if (legacyKey) {
+        const legacyValue = await SecureStore.getItemAsync(legacyKey);
+        if (legacyValue != null) {
+          // Migrate to the new key (fire-and-forget)
+          SecureStore.setItemAsync(key, legacyValue).catch(() => {});
+          SecureStore.deleteItemAsync(legacyKey).catch(() => {});
+          return legacyValue;
+        }
+      }
+
+      return null;
     } catch (error) {
       console.error(`Error retrieving ${key} securely:`, error);
       return null;
@@ -101,4 +145,4 @@ export const secureStorage = {
       throw error;
     }
   },
-}; 
+};

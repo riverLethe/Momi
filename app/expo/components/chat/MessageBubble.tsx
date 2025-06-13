@@ -1,12 +1,12 @@
 import React from "react";
-// import { View as RNView } from 'react-native';
 import { XStack, YStack, Text, Card, Separator } from "tamagui";
 import { Message } from "@/utils/api";
 import Markdown from "react-native-markdown-display";
 import { ExpenseList } from "./ExpenseList";
-import { Image, Pressable, ActivityIndicator } from "react-native";
+import { Pressable } from "react-native";
 import { Audio } from "expo-av";
 import { Play, File as FileIcon } from "lucide-react-native";
+import { SingleImage } from "@/components/ui/SingleImage";
 
 interface MessageBubbleProps {
   message: Message;
@@ -51,30 +51,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 const renderMessageContent = (message: Message) => {
   // 媒体消息处理（图片 / 语音 / 文件）
   if (message.type === "image" && message.data?.uri) {
-    return (
-      <YStack>
-        <Image
-          source={{ uri: message.data.uri }}
-          style={{ width: 50, height: 50, borderRadius: 5 }}
-          resizeMode="cover"
-        />
-        {message.data.uploading && (
-          <YStack
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            bottom={0}
-            alignItems="center"
-            justifyContent="center"
-            backgroundColor="rgba(0,0,0,0.4)"
-            borderRadius={12}
-          >
-            <ActivityIndicator color="#fff" />
-          </YStack>
-        )}
-      </YStack>
-    );
+    return <SingleImage uri={message.data.uri} />;
   }
 
   if (message.type === "voice" && message.data?.uri) {
@@ -228,17 +205,7 @@ const renderMessageContent = (message: Message) => {
             <XStack flexWrap="wrap" gap="$1" padding="$2">
               {message.data.attachments.map((att: any) => {
                 if (att.type === "image") {
-                  return (
-                    <Image
-                      key={att.id}
-                      source={{ uri: att.uri }}
-                      style={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: 5,
-                      }}
-                    />
-                  );
+                  return <SingleImage key={att.id} uri={att.uri} small />;
                 }
                 // file preview
                 return (
@@ -255,7 +222,7 @@ const renderMessageContent = (message: Message) => {
                   >
                     <FileIcon size={20} color="#6B7280" />
                     <Text
-                      fontSize={12}
+                      fontSize={10}
                       color="#374151"
                       numberOfLines={1}
                       style={{ flexShrink: 1, textAlign: "center" }}

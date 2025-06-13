@@ -25,7 +25,7 @@ interface ChatInputProps {
   onToggleInputMode: () => void;
   onToggleMoreOptions: () => void;
   onStartRecording: () => void;
-  onStopRecording: (hasContent: boolean) => void;
+  onStopRecording: () => void;
   onImageUpload: () => void;
   attachments: Attachment[];
   onRemoveAttachment: (id: string) => void;
@@ -174,7 +174,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               android_disableSound
               onPress={onToggleInputMode}
               onLongPress={onStartRecording}
-              onPressOut={() => onStopRecording(recordingTimer >= 3)}
+              onPressOut={onStopRecording}
             >
               {isRecording ? (
                 <YStack flex={1} justifyContent="center" alignItems="center">

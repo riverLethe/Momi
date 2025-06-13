@@ -81,26 +81,12 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
             <Paragraph fontSize={18} fontWeight="700">
               {title || defaultTitle}
             </Paragraph>
-            {multiSelect ? (
-              <Button
-                size="$2"
-                backgroundColor="$blue9"
-                color="white"
-                onPress={() => {
-                  onCategoriesChange?.(localSelected);
-                  setIsOpen(false);
-                }}
-              >
-                {t("Done")}
-              </Button>
-            ) : (
-              <Button
-                size="$3"
-                circular
-                onPress={() => setIsOpen(false)}
-                icon={X}
-              />
-            )}
+            <Button
+              size="$3"
+              circular
+              onPress={() => setIsOpen(false)}
+              icon={X}
+            />
           </XStack>
 
           <Sheet.ScrollView

@@ -9,6 +9,7 @@ import React from "react";
 import { TouchableOpacity } from "react-native";
 import { Avatar, Text, XStack, YStack } from "tamagui";
 import { useLocale } from "@/i18n/useLocale";
+import { SwipeableRow } from "../ui/SwipeableRow";
 
 interface BillListItemProps {
   item: Bill;
@@ -16,11 +17,16 @@ interface BillListItemProps {
    * When true the list item is rendered in a disabled state and is not clickable.
    */
   disabled?: boolean;
+  /**
+   * Callback fired when the user confirms the deletion of the bill.
+   */
+  onDelete?: (bill: Bill) => void;
 }
 
 export const BillListItem: React.FC<BillListItemProps> = ({
   item,
   disabled = false,
+  onDelete,
 }) => {
   const router = useRouter();
   const { locale } = useLocale();
@@ -37,50 +43,56 @@ export const BillListItem: React.FC<BillListItemProps> = ({
   };
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.6}
-      onPress={handlePress}
+    <SwipeableRow
       disabled={disabled}
-      style={{
-        paddingVertical: 4,
-        paddingHorizontal: 10,
-        opacity: disabled ? 0.4 : 1,
-      }}
+      onDelete={onDelete ? () => onDelete(item) : undefined}
     >
-      <XStack alignItems="center" justifyContent="space-between" width="100%">
-        <XStack alignItems="center" space="$3">
-          <Avatar circular size="$3" backgroundColor={category.lightColor}>
-            <CategoryIcon size={18} color={category.color} />
-          </Avatar>
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={handlePress}
+        disabled={disabled}
+        style={{
+          paddingVertical: 4,
+          paddingHorizontal: 16,
+          opacity: disabled ? 0.4 : 1,
+          backgroundColor: "white",
+        }}
+      >
+        <XStack alignItems="center" justifyContent="space-between" width="100%">
+          <XStack alignItems="center" space="$3">
+            <Avatar circular size="$3" backgroundColor={category.lightColor}>
+              <CategoryIcon size={18} color={category.color} />
+            </Avatar>
 
-          <YStack>
-            <Text fontSize="$3" fontWeight="500" lineHeight={22}>
-              {categoryName}
-            </Text>
-            <Text fontSize="$2" color="$gray9" lineHeight={16}>
-              {new Date(item.date).toLocaleTimeString(locale, {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              })}
-              {item.merchant && ` | ${item.merchant}`}
+            <YStack>
+              <Text fontSize="$3" fontWeight="500" lineHeight={22}>
+                {categoryName}
+              </Text>
+              <Text fontSize="$2" color="$gray9" lineHeight={16}>
+                {new Date(item.date).toLocaleTimeString(locale, {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })}
+                {item.merchant && ` | ${item.merchant}`}
+              </Text>
+            </YStack>
+          </XStack>
+
+          <YStack alignItems="flex-end">
+            <Text
+              fontSize="$3"
+              fontWeight="500"
+              color={disabled ? "$gray9" : "$red10"}
+            >
+              -¥{item.amount.toFixed(2)}
             </Text>
           </YStack>
         </XStack>
-
-        <YStack alignItems="flex-end">
-          <Text
-            fontSize="$3"
-            fontWeight="500"
-            color={disabled ? "$gray9" : "$red10"}
-          >
-            -¥{item.amount.toFixed(2)}
-          </Text>
-        </YStack>
-      </XStack>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </SwipeableRow>
   );
 };

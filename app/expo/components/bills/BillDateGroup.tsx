@@ -11,6 +11,7 @@ interface BillDateGroupProps {
     bills: Bill[];
     totalAmount: number;
   };
+  onDelete?: (bill: Bill) => void;
 }
 
 const formatDate = (dateStr: string, t: (key: string) => string) => {
@@ -31,7 +32,10 @@ const formatDate = (dateStr: string, t: (key: string) => string) => {
   }
 };
 
-export const BillDateGroup: React.FC<BillDateGroupProps> = ({ item }) => {
+export const BillDateGroup: React.FC<BillDateGroupProps> = ({
+  item,
+  onDelete,
+}) => {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -41,38 +45,36 @@ export const BillDateGroup: React.FC<BillDateGroupProps> = ({ item }) => {
 
   return (
     <Card
-      marginHorizontal="$3.5"
-      marginBottom="$3"
-      borderRadius="$4"
+      marginHorizontal="$0"
+      borderRadius="$0"
       overflow="hidden"
       elevation={0.5}
       backgroundColor="white"
     >
-     <XStack
-          justifyContent="space-between"
-          paddingHorizontal="$4"
-          paddingVertical="$3.5"
-          alignItems="center"
-          backgroundColor="white"
-        >
-          <XStack alignItems="center" space="$1.5">
-            <Calendar size={16} color="#777777" />
-            <Text fontSize="$3" color="$gray10" fontWeight="600">
-              {formatDate(item.date, t)}
-            </Text>
-          </XStack>
-          <Text fontSize="$3" color="$gray10">
-            -¥{item.totalAmount.toFixed(2)}
+      <XStack
+        justifyContent="space-between"
+        paddingHorizontal="$4"
+        paddingVertical="$2"
+        alignItems="center"
+        backgroundColor="$gray2"
+      >
+        <XStack alignItems="center" gap="$2">
+          <Calendar size={12} color="#777777" />
+          <Text fontSize={12} color="$gray10" fontWeight="600">
+            {formatDate(item.date, t)}
           </Text>
         </XStack>
+        <Text fontSize={12} color="$gray10">
+          -¥{item.totalAmount.toFixed(2)}
+        </Text>
+      </XStack>
 
       {!collapsed && (
         <>
-          <Separator />
-          <YStack paddingVertical="$2" >
+          <YStack paddingVertical="$2">
             {item.bills.map((bill, index) => (
               <React.Fragment key={bill.id}>
-                <BillListItem item={bill} />
+                <BillListItem item={bill} onDelete={onDelete} />
                 {index < item.bills.length - 1 && (
                   <Separator marginVertical="$2" borderColor="$gray3" />
                 )}
@@ -83,4 +85,4 @@ export const BillDateGroup: React.FC<BillDateGroupProps> = ({ item }) => {
       )}
     </Card>
   );
-}; 
+};

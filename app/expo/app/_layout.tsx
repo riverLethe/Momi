@@ -3,6 +3,7 @@ import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { TamaguiProvider } from "tamagui";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import config from "../tamagui.config";
 import "../global.css";
@@ -45,25 +46,27 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <TamaguiProvider config={config}>
-        <I18nProvider>
-          <AuthProvider>
-            <DataProvider>
-              <ChatProvider>
-                <NotificationProvider>
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                </NotificationProvider>
-              </ChatProvider>
-            </DataProvider>
-          </AuthProvider>
-        </I18nProvider>
-      </TamaguiProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <TamaguiProvider config={config}>
+          <I18nProvider>
+            <AuthProvider>
+              <DataProvider>
+                <ChatProvider>
+                  <NotificationProvider>
+                    <Stack
+                      screenOptions={{
+                        headerShown: false,
+                        animation: "slide_from_right",
+                      }}
+                    />
+                  </NotificationProvider>
+                </ChatProvider>
+              </DataProvider>
+            </AuthProvider>
+          </I18nProvider>
+        </TamaguiProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

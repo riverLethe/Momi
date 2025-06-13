@@ -9,7 +9,7 @@ import {
   Keyboard,
   Alert,
 } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { XStack, Text, View } from "tamagui";
 import { chatAPI, Message, AIResponseType } from "@/utils/api";
 import { saveBill } from "@/utils/bills.utils";
@@ -33,6 +33,10 @@ import { loadChatMessages, saveChatMessages } from "@/utils/chatStorage.utils";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
+import * as Clipboard from "expo-clipboard";
+
+// Utility to persist selected files inside the app sandbox
+import { copyFileToDocumentDir, clearCachedFiles } from "@/utils/file.utils";
 
 // 语音识别与播放
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
@@ -68,6 +72,11 @@ export default function ChatScreen() {
   /** 保存事件订阅，便于结束时移除 */
   const recordingListeners = useRef<any[]>([]);
 
+  /** 处理 Quick Screenshot Deeplink 参数 */
+  const params = useLocalSearchParams();
+  const autoSend = params.autoSend === "1" || params.autoSend === "true";
+  const didProcessQuickAttach = useRef(false);
+
   // 组件挂载时，尝试从本地读取聊天记录
   useEffect(() => {
     (async () => {
@@ -96,6 +105,43 @@ export default function ChatScreen() {
       }
     };
   }, [recordingTimeout]);
+
+  // autoSend 指定，则尝试从剪贴板读取截图
+  useEffect(() => {
+    if (autoSend && !didProcessQuickAttach.current) {
+      (async () => {
+        try {
+          const clip = await Clipboard.getImageAsync({ format: "png" });
+          if (clip && typeof clip.data === "string" && clip.data.length > 0) {
+            const dir = FileSystem.documentDirectory + "chat_images";
+            await FileSystem.makeDirectoryAsync(dir, {
+              intermediates: true,
+            }).catch(() => {});
+            const fileUri = `${dir}/screenshot_${Date.now()}.png`;
+            await FileSystem.writeAsStringAsync(fileUri, clip.data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+
+            const attachment = {
+              id: Date.now().toString(),
+              uri: fileUri,
+              type: "image" as const,
+            };
+            setAttachments([attachment]);
+
+            // 自动发送
+            setTimeout(() => {
+              handleSend();
+            }, 100);
+
+            didProcessQuickAttach.current = true;
+          }
+        } catch (err) {
+          console.warn("Clipboard image read failed", err);
+        }
+      })();
+    }
+  }, [autoSend]);
 
   const handleSend = async () => {
     if (inputText.trim() === "" && attachments.length === 0) return;
@@ -336,27 +382,24 @@ export default function ChatScreen() {
     }
   };
 
+  // When voice recognition has finished, immediately convert the speech to text
+  // and treat it as a normal text message. We no longer depend on the recorded
+  // audio file, so even if the SDK fails to return an audio URI we can still
+  // continue the conversation seamlessly.
   const maybeFinalizeVoiceMessage = () => {
-    if (voiceUriRef.current && voiceTranscriptRef.current) {
+    if (voiceTranscriptRef.current) {
       const transcript = voiceTranscriptRef.current;
-      const uri = voiceUriRef.current;
 
-      // 创建用户消息
-      const userMessage: any = chatAPI.createMessage(
-        transcript,
-        true,
-        "voice",
-        {
-          uri,
-        }
-      );
+      // Create a regular text message from the transcript
+      const userMessage: any = chatAPI.createMessage(transcript, true, "text");
+
       setMessages((prev) => [...prev, userMessage]);
 
-      // 清理
-      voiceUriRef.current = null;
+      // Clean refs to avoid duplicate sends
       voiceTranscriptRef.current = null;
+      voiceUriRef.current = null;
 
-      // 开始调用 AI
+      // Trigger AI response
       setIsThinking(true);
       setCurrentStreamedMessage("");
 
@@ -367,10 +410,13 @@ export default function ChatScreen() {
     }
   };
 
-  const handleStopRecording = async (hasContent?: boolean) => {
-    // hasContent indicates whether we should proceed to finalize voice message
-    const shouldKeepContent = Boolean(hasContent);
-
+  /**
+   * Stop the speech recognition session.
+   * We no longer cancel short recordings (<3s). Even brief utterances should be
+   * transcribed and sent as a message, so we avoid clearing the transcript
+   * refs here.  We only clean up timers / listeners.
+   */
+  const handleStopRecording = async () => {
     setIsRecording(false);
 
     if (recordingTimeout) {
@@ -396,11 +442,12 @@ export default function ChatScreen() {
 
     setRecordingTimer(0);
 
-    // If recording considered canceled / too short, purge any captured data
-    if (!shouldKeepContent) {
-      voiceUriRef.current = null;
-      voiceTranscriptRef.current = null;
-    }
+    // Audio file is no longer needed
+    voiceUriRef.current = null;
+
+    // In case the final result came in before `audioend`, ensure we send it
+    // immediately.
+    maybeFinalizeVoiceMessage();
   };
 
   /** 从相册选择图片 */
@@ -419,9 +466,11 @@ export default function ChatScreen() {
 
     if (!result.canceled && result.assets?.length) {
       const asset = result.assets[0];
+      // Persist a local copy so the image remains even if deleted from gallery
+      const localUri = await copyFileToDocumentDir(asset.uri, "chat_images");
       const attachment = {
         id: Date.now().toString(),
-        uri: asset.uri,
+        uri: localUri,
         width: asset.width,
         height: asset.height,
         type: "image" as const,
@@ -447,9 +496,11 @@ export default function ChatScreen() {
 
     if (!result.canceled && result.assets?.length) {
       const asset = result.assets[0];
+      // Persist a local copy so the image remains even if deleted from gallery
+      const localUri = await copyFileToDocumentDir(asset.uri, "chat_images");
       const attachment = {
         id: Date.now().toString(),
-        uri: asset.uri,
+        uri: localUri,
         width: asset.width,
         height: asset.height,
         type: "image" as const,
@@ -529,6 +580,8 @@ export default function ChatScreen() {
           setMessages([]);
           setCurrentStreamedMessage("");
           setAttachments([]);
+          // Remove cached images so they don't occupy storage after chat is cleared
+          clearCachedFiles("chat_images");
         },
       },
     ]);

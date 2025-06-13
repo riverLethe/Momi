@@ -126,10 +126,7 @@ export const chatAPI = {
   // 构建消息历史
   buildHistory: (messages: Message[]): Content[] => {
     return messages
-      .filter(
-        (msg) =>
-          msg.type !== "voice" && msg.type !== "image" && msg.type !== "file"
-      )
+      .filter((msg) => msg.type === "text")
       .map((msg) => ({
         role: msg.isUser ? "user" : "model",
         parts: [{ text: msg.text }],
