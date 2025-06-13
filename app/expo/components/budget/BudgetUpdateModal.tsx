@@ -258,9 +258,11 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
                 open={isCategorySheetOpen}
                 onOpenChange={setCategorySheetOpen}
                 snapPoints={[60]}
-                dismissOnSnapToBottom
+                dismissOnSnapToBottom={false}
+                dismissOnOverlayPress={true}
               >
                 <Sheet.Overlay />
+                <Sheet.Handle />
                 <Sheet.Frame
                   padding="$4"
                   paddingHorizontal="$3"

@@ -120,7 +120,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
           <Text fontWeight="$8" fontSize="$6">
             ¥{totalValue.toFixed(0)}
           </Text>
-          <Text color="$gray10" fontSize="$2.5" marginTop="$1">
+          <Text color="$gray10" fontSize="$2" marginTop="$1">
             {t("Total Expenses")}
           </Text>
         </View>
@@ -199,9 +199,12 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
         {hasMoreCategories && (
           <Button
             marginTop="$2"
-            size="$3"
+            size="$1"
             variant="outlined"
             onPress={() => setShowAllCategories(!showAllCategories)}
+            color="$gray9"
+            borderWidth={0}
+            pressStyle={{ opacity: 0.8 }}
           >
             {t(showAllCategories ? "Show Less" : "Show More Categories")}
           </Button>

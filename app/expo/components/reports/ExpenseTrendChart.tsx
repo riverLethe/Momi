@@ -47,11 +47,11 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
         alignItems="center"
         marginBottom="$3"
       >
-        <Text fontSize="$3.5" fontWeight="$7" color="$gray12">
+        <Text fontSize="$3" fontWeight="$7" color="$gray12">
           {t("Expense Trends")}
         </Text>
-        <XStack space="$3" alignItems="center">
-          <XStack space="$1" alignItems="center">
+        <XStack gap="$3" alignItems="center">
+          <XStack gap="$1" alignItems="center">
             <View
               style={{
                 width: 10,
@@ -60,11 +60,11 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
                 borderRadius: 1,
               }}
             />
-            <Text fontSize="$2.5" color="$gray10">
+            <Text fontSize="$2" color="$gray10">
               {t("Expenses")}
             </Text>
           </XStack>
-          <XStack space="$1" alignItems="center">
+          <XStack gap="$1" alignItems="center">
             <View
               style={{
                 width: 10,
@@ -75,7 +75,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
                 borderRadius: 1,
               }}
             />
-            <Text fontSize="$2.5" color="$gray10">
+            <Text fontSize="$2" color="$gray10">
               {t("Average")}: ¥{averageSpending.toFixed(0)}
             </Text>
           </XStack>
@@ -104,7 +104,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
               labels: data.map((item) => item.label),
               datasets: [
                 {
-                  data: data.map((item) => item.value),
+                  data: data.map((item) => Number(item.value.toFixed(2))),
                   color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
                   strokeWidth: 2,
                 },
@@ -140,7 +140,9 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
                 stroke: "rgba(230, 235, 245, 1)",
               },
               formatYLabel: (value: string) => {
-                return `¥${value}`;
+                const num = parseFloat(value);
+                const rounded = Math.round(num * 100) / 100;
+                return `¥${rounded}`;
               },
             }}
             bezier
@@ -162,6 +164,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
               if (index >= data.length) return null;
 
               const value = data[index].value;
+              const roundedValue = Math.round(value * 100) / 100;
               const isHigherThanAvg = value > averageSpending;
 
               return (
@@ -180,7 +183,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
                       fontSize: 10,
                     }}
                   >
-                    ¥{value}
+                    ¥{roundedValue}
                   </Text>
                 </View>
               );
@@ -199,7 +202,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
         </Button>
       </XStack>
 
-      <Text fontSize="$2.5" color="$gray10" textAlign="center">
+      <Text fontSize="$2" color="$gray10" textAlign="center">
         {t("Swipe to see more data")}
       </Text>
     </Card>
