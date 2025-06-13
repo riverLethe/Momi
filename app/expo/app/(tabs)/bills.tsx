@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  FlatList,
-  ActivityIndicator,
-  StyleSheet,
-} from "react-native";
+import { FlatList, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { YStack } from "tamagui";
 import { useTranslation } from "react-i18next";
@@ -12,7 +8,10 @@ import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
 import { Bill } from "@/types/bills.types";
-import { FilterWithTotalExpense, CategoryFilterType } from "@/components/bills/FilterWithTotalExpense";
+import {
+  FilterWithTotalExpense,
+  CategoryFilterType,
+} from "@/components/bills/FilterWithTotalExpense";
 import { BillDateGroup } from "@/components/bills/BillDateGroup";
 import { EmptyState } from "@/components/bills/EmptyState";
 import { syncRemoteData } from "@/utils/sync.utils";
@@ -25,11 +24,12 @@ export default function BillsScreen() {
 
   const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
   const [syncingRemote, setSyncingRemote] = useState(false);
-  
+
   // Filter states
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilterType>("all");
+  const [categoryFilter, setCategoryFilter] =
+    useState<CategoryFilterType>("all");
 
   // Sync with remote data if authenticated
   useEffect(() => {
@@ -38,11 +38,11 @@ export default function BillsScreen() {
         try {
           setSyncingRemote(true);
           // 在实际应用中，这里会从远程API获取数据并更新本地存储
-          await syncRemoteData('bills', user.id);
+          await syncRemoteData("bills", user.id);
           // 刷新本地数据
           await refreshData();
         } catch (error) {
-          console.error('Failed to sync remote data:', error);
+          console.error("Failed to sync remote data:", error);
         } finally {
           setSyncingRemote(false);
         }
@@ -55,7 +55,7 @@ export default function BillsScreen() {
   // Apply view mode filter
   useEffect(() => {
     let filtered = [...bills];
-    
+
     // View mode filter (personal/family)
     if (viewMode === "family") {
       if (!isAuthenticated) {
@@ -69,13 +69,13 @@ export default function BillsScreen() {
       // Filter to show only personal bills
       filtered = filtered.filter((bill) => !bill.isFamilyBill);
     }
-    
+
     // Date filter
     if (startDate || endDate) {
-      filtered = filtered.filter(bill => {
+      filtered = filtered.filter((bill) => {
         const billDate = new Date(bill.date);
         billDate.setHours(0, 0, 0, 0);
-        
+
         if (startDate && endDate) {
           const start = new Date(startDate);
           start.setHours(0, 0, 0, 0);
@@ -91,16 +91,16 @@ export default function BillsScreen() {
           end.setHours(23, 59, 59, 999);
           return billDate <= end;
         }
-        
+
         return true;
       });
     }
-    
+
     // Category filter
     if (categoryFilter !== "all") {
-      filtered = filtered.filter(bill => bill.category === categoryFilter);
+      filtered = filtered.filter((bill) => bill.category === categoryFilter);
     }
-    
+
     setFilteredBills(filtered);
   }, [bills, viewMode, isAuthenticated, startDate, endDate, categoryFilter]);
 
@@ -121,11 +121,13 @@ export default function BillsScreen() {
       groups[dateStr].push(bill);
     });
 
-    return Object.entries(groups).map(([date, bills]) => ({
-      date,
-      bills,
-      totalAmount: bills.reduce((sum, bill) => sum + bill.amount, 0),
-    })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return Object.entries(groups)
+      .map(([date, bills]) => ({
+        date,
+        bills,
+        totalAmount: bills.reduce((sum, bill) => sum + bill.amount, 0),
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredBills]);
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
@@ -146,36 +148,40 @@ export default function BillsScreen() {
     <SafeAreaView style={styles.container}>
       <YStack flex={1}>
         {
-          bills.length === 0?<EmptyState />:(<>
-          {/* Filters & Total Expense in one row */}
-        <FilterWithTotalExpense
-          categoryFilter={categoryFilter}
-          onCategoryFilterChange={setCategoryFilter}
-          onDateRangeChange={handleDateRangeChange}
-          totalExpense={totalExpense}
-          startDate={startDate}
-          endDate={endDate}
-        />
-        
-        {/* Bills List */}
-        {isLoading || syncingRemote ? (
-          <YStack flex={1} justifyContent="center" alignItems="center">
-            <ActivityIndicator size="large" color="#3B82F6" />
-          </YStack>
-        ) : (
-          <FlatList
-            data={billGroups}
-            renderItem={renderDateGroup}
-            keyExtractor={(item) => item.date}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-            onRefresh={handleRefresh}
-            refreshing={isLoading}
-          />
-        )}</>)
+          /* When there is no data yet, show loading or empty state */
+          bills.length === 0 ? (
+            isLoading || syncingRemote ? (
+              <YStack flex={1} justifyContent="center" alignItems="center">
+                <ActivityIndicator size="large" color="#3B82F6" />
+              </YStack>
+            ) : (
+              <EmptyState />
+            )
+          ) : (
+            <>
+              {/* Filters & Total Expense in one row */}
+              <FilterWithTotalExpense
+                categoryFilter={categoryFilter}
+                onCategoryFilterChange={setCategoryFilter}
+                onDateRangeChange={handleDateRangeChange}
+                totalExpense={totalExpense}
+                startDate={startDate}
+                endDate={endDate}
+              />
+
+              {/* Bills List */}
+              <FlatList
+                data={billGroups}
+                renderItem={renderDateGroup}
+                keyExtractor={(item) => item.date}
+                contentContainerStyle={styles.listContainer}
+                showsVerticalScrollIndicator={false}
+                onRefresh={handleRefresh}
+                refreshing={isLoading || syncingRemote}
+              />
+            </>
+          )
         }
-        
-        
       </YStack>
     </SafeAreaView>
   );
@@ -183,10 +189,10 @@ export default function BillsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, 
-    backgroundColor: "#f8fafc"
+    flex: 1,
+    backgroundColor: "#f8fafc",
   },
   listContainer: {
-    paddingVertical: 4
-  }
+    paddingVertical: 4,
+  },
 });

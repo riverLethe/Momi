@@ -8,6 +8,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { TouchableOpacity } from "react-native";
 import { Avatar, Text, XStack, YStack } from "tamagui";
+import { useLocale } from "@/i18n/useLocale";
 
 interface BillListItemProps {
   item: Bill;
@@ -15,7 +16,8 @@ interface BillListItemProps {
 
 export const BillListItem: React.FC<BillListItemProps> = ({ item }) => {
   const router = useRouter();
-  
+  const { locale } = useLocale();
+
   const category = getCategoryById(item.category);
   const CategoryIcon = getCategoryIcon(item.category);
   const categoryName = useTranslatedCategoryName(item.category);
@@ -28,8 +30,8 @@ export const BillListItem: React.FC<BillListItemProps> = ({ item }) => {
   };
 
   return (
-    <TouchableOpacity 
-      activeOpacity={0.6} 
+    <TouchableOpacity
+      activeOpacity={0.6}
       onPress={handlePress}
       style={{ paddingVertical: 4, paddingHorizontal: 10 }}
     >
@@ -44,7 +46,10 @@ export const BillListItem: React.FC<BillListItemProps> = ({ item }) => {
               {categoryName}
             </Text>
             <Text fontSize="$2" color="$gray9" lineHeight={16}>
-              {new Date(item.date).toLocaleTimeString(undefined, {
+              {new Date(item.date).toLocaleTimeString(locale, {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
                 hour12: false,
@@ -62,4 +67,4 @@ export const BillListItem: React.FC<BillListItemProps> = ({ item }) => {
       </XStack>
     </TouchableOpacity>
   );
-}; 
+};

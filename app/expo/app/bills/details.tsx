@@ -5,6 +5,7 @@ import {
   Pressable,
   Keyboard,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
@@ -292,147 +293,156 @@ export default function BillDetailsScreen() {
               </Button>
             </XStack>
           </XStack>
-
-          <ScrollView flex={1} contentContainerStyle={{ padding: 16 }}>
-            {/* 金额卡片 */}
-            <Card
-              padding="$5"
-              marginTop="$2"
-              marginBottom="$4"
-              backgroundColor={category.color}
-              elevate
-            >
-              <Text fontSize="$3" fontWeight="$5" color="white" opacity={0.85}>
-                {t("Expense Amount")}
-              </Text>
-              <Pressable onPress={onAmountLongPress} hitSlop={10}>
-                <Text
-                  fontSize="$10"
-                  fontWeight="$8"
-                  color="white"
-                  marginTop="$2"
-                >
-                  ¥{bill.amount.toFixed(2)}
-                </Text>
-              </Pressable>
-              <XStack justifyContent="space-between" marginTop="$4">
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior="padding"
+            keyboardVerticalOffset={60}
+          >
+            <ScrollView flex={1} contentContainerStyle={{ padding: 16 }}>
+              {/* 金额卡片 */}
+              <Card
+                padding="$5"
+                marginTop="$2"
+                marginBottom="$4"
+                backgroundColor={category.color}
+                elevate
+              >
                 <Text
                   fontSize="$3"
                   fontWeight="$5"
                   color="white"
                   opacity={0.85}
                 >
-                  {bill.merchant || t("-")}
+                  {t("Expense Amount")}
                 </Text>
-                <Text
-                  fontSize="$3"
-                  fontWeight="$5"
-                  color="white"
-                  opacity={0.85}
-                >
-                  {new Date(bill.updatedAt).toLocaleString(locale, {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Text>
-              </XStack>
-            </Card>
-
-            {/* 详细信息 */}
-            <Card backgroundColor="white" elevate>
-              <YStack padding="$4" space="$4">
-                <XStack justifyContent="space-between" alignItems="center">
-                  <Text color="$gray10" fontSize="$3">
-                    {t("Category")}
-                  </Text>
-                  <Button
-                    chromeless
-                    padding="$0"
-                    backgroundColor="transparent"
-                    onPress={() => setIsCategorySheetOpen(true)}
-                    disabled={updating}
-                    pressStyle={{
-                      backgroundColor: "transparent",
-                      borderColor: "transparent",
-                      opacity: 0.5,
-                    }}
+                <Pressable onPress={onAmountLongPress} hitSlop={10}>
+                  <Text
+                    fontSize="$10"
+                    fontWeight="$8"
+                    color="white"
+                    marginTop="$2"
                   >
-                    <XStack alignItems="center" space="$2">
-                      <Avatar
-                        circular
-                        size="$3"
-                        backgroundColor={`${category.color}20`}
-                      >
-                        <CategoryIcon size={14} color={category.color} />
-                      </Avatar>
-                      <Text fontSize="$3" fontWeight="$6">
-                        {t(category.name)}
-                      </Text>
-                    </XStack>
-                  </Button>
-                </XStack>
-
-                <Separator />
-
-                <XStack
-                  justifyContent="space-between"
-                  alignItems="center"
-                  gap="$3"
-                >
-                  <Text color="$gray10" fontSize="$3">
-                    {t("Merchant")}
+                    ¥{bill.amount.toFixed(2)}
                   </Text>
-                  {editingMerchant ? (
-                    <XStack f={1} position="absolute" right="$0">
-                      <Input
-                        autoFocus
-                        f={1}
-                        value={merchantText}
-                        onChangeText={setMerchantText}
-                        onBlur={() => {
-                          setEditingMerchant(false);
-                          handleUpdateField("merchant", merchantText);
-                        }}
-                        size="$3"
-                        placeholder={t("Enter merchant name")}
-                        width="$15"
-                      />
-                    </XStack>
-                  ) : (
-                    <Pressable onPress={onMerchantLongPress}>
-                      <Text
-                        fontSize="$3"
-                        fontWeight="$6"
-                        color={!bill.merchant ? "$gray6" : "$gray800"}
-                      >
-                        {bill.merchant || t("No content")}
+                </Pressable>
+                <XStack justifyContent="space-between" marginTop="$4">
+                  <Text
+                    fontSize="$3"
+                    fontWeight="$5"
+                    color="white"
+                    opacity={0.85}
+                  >
+                    {bill.merchant || t("-")}
+                  </Text>
+                  <Text
+                    fontSize="$3"
+                    fontWeight="$5"
+                    color="white"
+                    opacity={0.85}
+                  >
+                    {new Date(bill.updatedAt).toLocaleString(locale, {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                </XStack>
+              </Card>
+
+              {/* 详细信息 */}
+              <Card backgroundColor="white" elevate>
+                <YStack padding="$4" space="$4">
+                  <XStack justifyContent="space-between" alignItems="center">
+                    <Text color="$gray10" fontSize="$3">
+                      {t("Category")}
+                    </Text>
+                    <Button
+                      chromeless
+                      padding="$0"
+                      backgroundColor="transparent"
+                      onPress={() => setIsCategorySheetOpen(true)}
+                      disabled={updating}
+                      pressStyle={{
+                        backgroundColor: "transparent",
+                        borderColor: "transparent",
+                        opacity: 0.5,
+                      }}
+                    >
+                      <XStack alignItems="center" space="$2">
+                        <Avatar
+                          circular
+                          size="$3"
+                          backgroundColor={`${category.color}20`}
+                        >
+                          <CategoryIcon size={14} color={category.color} />
+                        </Avatar>
+                        <Text fontSize="$3" fontWeight="$6">
+                          {t(category.name)}
+                        </Text>
+                      </XStack>
+                    </Button>
+                  </XStack>
+
+                  <Separator />
+
+                  <XStack
+                    justifyContent="space-between"
+                    alignItems="center"
+                    gap="$3"
+                  >
+                    <Text color="$gray10" fontSize="$3">
+                      {t("Merchant")}
+                    </Text>
+                    {editingMerchant ? (
+                      <XStack f={1} position="absolute" right="$0">
+                        <Input
+                          autoFocus
+                          f={1}
+                          value={merchantText}
+                          onChangeText={setMerchantText}
+                          onBlur={() => {
+                            setEditingMerchant(false);
+                            handleUpdateField("merchant", merchantText);
+                          }}
+                          size="$3"
+                          placeholder={t("Enter merchant name")}
+                          width="$15"
+                        />
+                      </XStack>
+                    ) : (
+                      <Pressable onPress={onMerchantLongPress}>
+                        <Text
+                          fontSize="$3"
+                          fontWeight="$6"
+                          color={!bill.merchant ? "$gray6" : "$gray800"}
+                        >
+                          {bill.merchant || t("No content")}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </XStack>
+
+                  <Separator />
+
+                  {/* Record Time (editable) */}
+                  <XStack justifyContent="space-between" alignItems="center">
+                    <Text color="$gray10" fontSize="$3">
+                      {t("Record Time")}
+                    </Text>
+                    <Pressable onPress={onDateLongPress}>
+                      <Text fontSize="$3" fontWeight="$6">
+                        {new Date(bill.date).toLocaleDateString(locale, {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                        })}
                       </Text>
                     </Pressable>
-                  )}
-                </XStack>
+                  </XStack>
 
-                <Separator />
-
-                {/* Record Time (editable) */}
-                <XStack justifyContent="space-between" alignItems="center">
-                  <Text color="$gray10" fontSize="$3">
-                    {t("Record Time")}
-                  </Text>
-                  <Pressable onPress={onDateLongPress}>
-                    <Text fontSize="$3" fontWeight="$6">
-                      {new Date(bill.date).toLocaleDateString(locale, {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                      })}
-                    </Text>
-                  </Pressable>
-                </XStack>
-
-                {/* <Separator />
+                  {/* <Separator />
 
                 <XStack justifyContent="space-between" alignItems="center">
                   <Text color="$gray10" fontSize="$3">
@@ -442,7 +452,7 @@ export default function BillDetailsScreen() {
                     {bill.account || t("Cash")}
                   </Text>
                 </XStack> */}
-                {/* 
+                  {/* 
                 <Separator />
 
                 <XStack justifyContent="space-between" alignItems="center">
@@ -460,39 +470,42 @@ export default function BillDetailsScreen() {
                   </Text>
                 </XStack> */}
 
-                <Separator />
+                  <Separator />
 
-                <YStack space="$2">
-                  <Text color="$gray10" fontSize="$3">
-                    {t("Notes")}
-                  </Text>
-                  {editingNotes ? (
-                    <Input
-                      autoFocus
-                      multiline={false}
-                      value={notesText}
-                      onChangeText={setNotesText}
-                      onBlur={() => {
-                        setEditingNotes(false);
-                        handleUpdateField("notes", notesText);
-                      }}
-                      size="$3"
-                      placeholder={t("Enter notes")}
-                    />
-                  ) : (
-                    <Pressable onPress={onNotesLongPress}>
-                      <Text
-                        fontSize="$3"
-                        color={!bill.notes ? "$gray6" : "$gray800"}
-                      >
-                        {bill.notes || t("No content")}
-                      </Text>
-                    </Pressable>
-                  )}
+                  <YStack space="$2">
+                    <Text color="$gray10" fontSize="$3">
+                      {t("Notes")}
+                    </Text>
+                    {editingNotes ? (
+                      <Input
+                        autoFocus
+                        multiline={false}
+                        value={notesText}
+                        onChangeText={setNotesText}
+                        onBlur={() => {
+                          setEditingNotes(false);
+                          handleUpdateField("notes", notesText);
+                        }}
+                        size="$3"
+                        placeholder={t("Enter notes...")}
+                      />
+                    ) : (
+                      <Pressable onPress={onNotesLongPress}>
+                        <Text
+                          fontSize="$3"
+                          color={!bill.notes ? "$gray6" : "$gray800"}
+                          height="$3"
+                          lineHeight="$6"
+                        >
+                          {bill.notes || t("No content")}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </YStack>
                 </YStack>
-              </YStack>
-            </Card>
-          </ScrollView>
+              </Card>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </YStack>
 
         {/* 类别选择弹出层 */}

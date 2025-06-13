@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   KeyboardAvoidingView,
-  Platform,
   SafeAreaView,
   StatusBar,
   ScrollView,
@@ -548,11 +547,7 @@ export default function ChatScreen() {
         {/* Custom Header */}
         <ChatHeader onAddExpense={handleAddExpense} />
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-        >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           {/* Chat Messages */}
           <View flex={1} backgroundColor="$gray2">
             {messages.length === 0 ? (
