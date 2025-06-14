@@ -42,12 +42,16 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
     <Card
       backgroundColor="white"
       marginHorizontal="$2"
-      marginBottom="$4"
-      padding="$4"
+      marginTop="$4"
+      padding="$0"
     >
-      <YStack space="$4">
-        <XStack justifyContent="space-between" alignItems="center">
-          <XStack space="$2" alignItems="center">
+      <YStack gap="$4">
+        <XStack
+          justifyContent="space-between"
+          alignItems="center"
+          paddingHorizontal="$3"
+        >
+          <XStack gap="$2" alignItems="center">
             <ReceiptText size={24} color="#6366F1" />
             <Text fontSize="$4" fontWeight="$8" color="$gray12">
               {t("Recent Bills")}
@@ -61,7 +65,7 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
               onPress={() => router.push("/bills")}
               paddingLeft="$2"
               paddingRight="$1"
-              space="$1"
+              gap="$1"
               borderWidth={1}
               borderColor="$blue6"
               backgroundColor="$blue2"
@@ -80,18 +84,18 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
               padding="$6"
               alignItems="center"
               justifyContent="center"
-              space="$2"
+              gap="$2"
             >
               <Spinner size="large" color="$blue9" />
               <Text color="$gray9">{t("Loading...")}</Text>
             </YStack>
           ) : displayBills.length > 0 ? (
-            <YStack space="$2">
+            <YStack gap="$2">
               {displayBills.map((bill, index) => (
                 <React.Fragment key={bill.id}>
                   <BillListItem item={bill} />
                   {index < displayBills.length - 1 && (
-                    <Separator marginVertical="$1" />
+                    <Separator marginVertical="$0" borderColor="$gray3" />
                   )}
                 </React.Fragment>
               ))}
@@ -113,7 +117,7 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
                 borderColor="$blue6"
                 flexDirection="row"
                 alignItems="center"
-                space="$2"
+                gap="$2"
               >
                 <MessageSquarePlus size={16} color="#3B82F6" />
                 <Text color="$blue9" fontWeight="$6">

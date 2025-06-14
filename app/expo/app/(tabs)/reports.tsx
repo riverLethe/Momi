@@ -130,13 +130,11 @@ export default function ReportsScreen() {
         {/* Date & Comparison Filters */}
         {bills.length > 0 && (
           <YStack
-            marginHorizontal="$4"
+            marginHorizontal="$2"
             marginTop="$3.5"
             marginBottom="$3.5"
-            backgroundColor="white"
+            backgroundColor="$gray2"
             borderRadius="$4"
-            shadowColor="rgba(0,0,0,0.08)"
-            shadowRadius={6}
             padding="$1"
           >
             <DateFilter

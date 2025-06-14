@@ -59,7 +59,7 @@ export default function ChatScreen() {
   const [speechLang] = useState<string>(
     // expo-localization may return values like "zh-CN" or "en-US".
     // If multiple locales are available, pick the first.
-    Localization.getLocales()[0].languageCode || "en-US"
+    Localization.locale || "en-US"
   );
 
   /** Cache microphone permission so we don't request every time */
@@ -88,6 +88,11 @@ export default function ChatScreen() {
   /** 处理 Quick Screenshot Deeplink 参数 */
   const params = useLocalSearchParams();
   const autoSend = params.autoSend === "1" || params.autoSend === "true";
+  // tmpPath is URL-encoded on the native side; decode and normalise here.
+  const tmpPathRaw =
+    typeof params.tmpPath === "string" ? (params.tmpPath as string) : undefined;
+  const tmpPath = tmpPathRaw ? decodeURIComponent(tmpPathRaw) : undefined;
+
   const didProcessQuickAttach = useRef(false);
 
   // 组件挂载时，尝试从本地读取聊天记录
@@ -119,11 +124,45 @@ export default function ChatScreen() {
     };
   }, [recordingTimeout]);
 
-  // autoSend 指定，则尝试从剪贴板读取截图
+  // 若带有 tmpPath 或 autoSend 参数，则尝试自动附加并发送截图
   useEffect(() => {
-    if (autoSend && !didProcessQuickAttach.current) {
-      (async () => {
-        try {
+    if (didProcessQuickAttach.current) return;
+
+    (async () => {
+      try {
+        if (tmpPath) {
+          // 处理来自 AppIntent 的临时文件路径
+          let sourceUri = tmpPath;
+          if (!sourceUri.startsWith("file://")) {
+            sourceUri = `file://${sourceUri}`;
+          }
+
+          const info = await FileSystem.getInfoAsync(sourceUri);
+          if (!info.exists) {
+            console.warn("tmpPath does not exist", sourceUri);
+            return;
+          }
+
+          // 重用 util 函数统一复制逻辑，避免重复代码
+          const destUri = await copyFileToDocumentDir(sourceUri, "chat_images");
+
+          const attachment = {
+            id: Date.now().toString(),
+            uri: destUri,
+            type: "image" as const,
+          };
+          setAttachments([attachment]);
+
+          if (autoSend) {
+            setTimeout(() => handleSend(), 100);
+          }
+
+          didProcessQuickAttach.current = true;
+          return; // 已处理，无需再尝试剪贴板
+        }
+
+        // Fallback: 旧版本仍从剪贴板读取
+        if (autoSend) {
           const clip = await Clipboard.getImageAsync({ format: "png" });
           if (clip && typeof clip.data === "string" && clip.data.length > 0) {
             const dir = FileSystem.documentDirectory + "chat_images";
@@ -142,19 +181,15 @@ export default function ChatScreen() {
             };
             setAttachments([attachment]);
 
-            // 自动发送
-            setTimeout(() => {
-              handleSend();
-            }, 100);
-
+            setTimeout(() => handleSend(), 100);
             didProcessQuickAttach.current = true;
           }
-        } catch (err) {
-          console.warn("Clipboard image read failed", err);
         }
-      })();
-    }
-  }, [autoSend]);
+      } catch (err) {
+        console.warn("Quick attach failed", err);
+      }
+    })();
+  }, [autoSend, tmpPath]);
 
   // Check microphone permission on mount so we avoid asking every time the user starts recording
   useEffect(() => {
@@ -400,7 +435,6 @@ export default function ChatScreen() {
           }
         }
       );
-
       // 启动识别并持久化音频
       ExpoSpeechRecognitionModule.start({
         lang: speechLang,

@@ -20,41 +20,46 @@ function ensureSwiftFile(projectRoot, swiftCode) {
 const QUICK_INTENT_SWIFT = `import AppIntents
 import UIKit
 
+/// A lightweight intent that simply launches the app's quick-bill screen.
+/// Direct pasteboard access from an App Intent is no longer permitted on recent
+/// iOS versions and was causing a SIGTRAP crash. We therefore avoid using
+/// 'UIPasteboard.general' here and forward any optional screenshot through a
+/// deep-link query parameter that the React Native side can handle instead.
 @available(iOS 16.0, *)
 public struct QuickBillIntent: AppIntent {
     public static let title: LocalizedStringResource = "MomiQ-Quick Add Bills"
     /// Instruct the system to launch the app automatically when the intent runs.
     public static let openAppWhenRun: Bool = true
 
-    /// Optional screenshot passed from the invoking context (e.g. Siri, Shortcuts).
-    /// The parameter name **screenshot** is important because it influences how
-    /// the system attempts to infer and provide the image when the intent is
-    /// triggered from a screenshot-related action.
+    /// Optional screenshot provided by the invoking context (e.g. Siri, Shortcuts).
     @Parameter(title: "Screenshot")
     var screenshot: IntentFile?
 
-    // Explicit public initializer required when struct is public and has
-    // parameters with default synthesis.
     public init() {}
 
     @MainActor
     public func perform() async throws -> some IntentResult {
-        // If a screenshot is supplied, push it into the general pasteboard so that
-        // the React Native side (chat.tsx) can pick it up via Expo Clipboard APIs.
-        if let screenshot = screenshot {
-            let data = screenshot.data
-            if let image = UIImage(data: data) {
-                UIPasteboard.general.image = image
-            } else {
-                // Fallback: write raw PNG data.
-                UIPasteboard.general.setData(data, forPasteboardType: "public.png")
+        var deeplink = "momiq:///chat?autoSend=1"
+
+        // If a screenshot is present, persist it to a temporary location that
+        // the main app can later read and attach. The file path is appended to
+        // the deep-link so the JS side knows where to find it.
+        if let data = screenshot?.data {
+            let tmpURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("png")
+            do {
+                try data.write(to: tmpURL)
+                // URL-encode the path so it can be passed as a query item.
+                let encodedPath = tmpURL.path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                deeplink += "&tmpPath=\(encodedPath)"
+            } catch {
+                // If writing fails, just fall back to opening the chat screen without the image.
+                print("QuickBillIntent: failed to write screenshot –", error.localizedDescription)
             }
         }
 
-        // Deep-link into the chat screen with the autoSend flag so the JS code
-        // attaches the clipboard image and sends the message automatically.
-        if let url = URL(string: "momiq:///chat?autoSend=1") {
-            // Use the async variant to avoid potential App Intents assertions.
+        if let url = URL(string: deeplink) {
             await UIApplication.shared.open(url)
         }
 
