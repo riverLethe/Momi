@@ -12,6 +12,10 @@ interface BillDateGroupProps {
     totalAmount: number;
   };
   onDelete?: (bill: Bill) => void;
+  /** The id of the bill currently showing the swipe actions (global across list) */
+  openBillId: string | null;
+  /** Setter to update the global open bill id */
+  setOpenBillId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const formatDate = (dateStr: string, t: (key: string) => string) => {
@@ -35,6 +39,8 @@ const formatDate = (dateStr: string, t: (key: string) => string) => {
 export const BillDateGroup: React.FC<BillDateGroupProps> = ({
   item,
   onDelete,
+  openBillId,
+  setOpenBillId,
 }) => {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
@@ -57,6 +63,7 @@ export const BillDateGroup: React.FC<BillDateGroupProps> = ({
         paddingVertical="$2"
         alignItems="center"
         backgroundColor="$gray2"
+        onPress={toggleCollapsed}
       >
         <XStack alignItems="center" gap="$2">
           <Calendar size={12} color="#777777" />
@@ -71,10 +78,25 @@ export const BillDateGroup: React.FC<BillDateGroupProps> = ({
 
       {!collapsed && (
         <>
-          <YStack paddingVertical="$2">
+          <YStack paddingVertical="$0">
             {item.bills.map((bill, index) => (
               <React.Fragment key={bill.id}>
-                <BillListItem item={bill} onDelete={onDelete} />
+                <BillListItem
+                  item={bill}
+                  onDelete={onDelete}
+                  isOpen={openBillId === bill.id}
+                  onSwipeOpen={() => setOpenBillId(bill.id)}
+                  onSwipeClose={() => {
+                    // Only clear if it was this bill that closed
+                    setOpenBillId((prev) => (prev === bill.id ? null : prev));
+                  }}
+                  onSwipeStart={() => {
+                    // If another row is open, close it before opening this one
+                    setOpenBillId((prev) =>
+                      prev && prev !== bill.id ? null : prev
+                    );
+                  }}
+                />
                 {index < item.bills.length - 1 && (
                   <Separator marginVertical="$0" borderColor="$gray3" />
                 )}

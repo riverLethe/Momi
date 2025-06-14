@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
   interpolate,
   Extrapolation,
+  runOnJS,
 } from "react-native-reanimated";
 import { Trash2 } from "lucide-react-native";
 
@@ -22,6 +23,14 @@ interface SwipeableRowProps {
   disabled?: boolean;
   /** Width of the right action button */
   rightActionWidth?: number;
+  /** When true the row stays open (action revealed). Controlled via parent */
+  isOpen?: boolean;
+  /** Notifies parent when the row has been swiped open */
+  onSwipeOpen?: () => void;
+  /** Notifies parent when the row has been closed (swiped back) */
+  onSwipeClose?: () => void;
+  /** Notifies parent when the user starts a swipe gesture on this row */
+  onSwipeStart?: () => void;
 }
 
 /**
@@ -34,6 +43,10 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   onDelete,
   disabled = false,
   rightActionWidth = 60,
+  isOpen = false,
+  onSwipeOpen,
+  onSwipeClose,
+  onSwipeStart,
 }) => {
   const translateX = useSharedValue(0);
   const threshold = rightActionWidth;
@@ -44,7 +57,16 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10]) // start only when translationX < -10 or > 10
     .failOffsetY([-10, 10]) // cancel if the user is primarily scrolling vertically
+    .onTouchesDown(() => {
+      if (disabled || !onDelete) return;
+      if (onSwipeStart) {
+        runOnJS(onSwipeStart)();
+      }
+    })
     .onStart(() => {
+      if (onSwipeStart) {
+        runOnJS(onSwipeStart)();
+      }
       startX.value = translateX.value; // remember where gesture began
     })
     .onUpdate((event) => {
@@ -63,8 +85,20 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
       const shouldOpen = translateX.value < -threshold / 2;
       translateX.value = withTiming(shouldOpen ? -threshold : 0, {
-        duration: 200,
+        duration: 150,
       });
+
+      // Notify parent about state change
+      if (shouldOpen) {
+        if (onSwipeOpen) {
+          // Call on the JS thread
+          runOnJS(onSwipeOpen)();
+        }
+      } else {
+        if (onSwipeClose) {
+          runOnJS(onSwipeClose)();
+        }
+      }
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -82,6 +116,17 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     return { width };
   });
 
+  // React to external isOpen prop changes
+  React.useEffect(() => {
+    if (disabled || !onDelete) return;
+
+    if (isOpen) {
+      translateX.value = withTiming(-threshold, { duration: 150 });
+    } else {
+      translateX.value = withTiming(0, { duration: 150 });
+    }
+  }, [isOpen]);
+
   return (
     <View style={styles.container}>
       {/* Right delete action */}
@@ -89,7 +134,15 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         <Animated.View style={[styles.rightAction, rightActionAnimatedStyle]}>
           <RectButton
             enabled={!disabled}
-            style={styles.rightActionBtn}
+            style={
+              (styles.rightActionBtn,
+              {
+                width: "100%",
+                height: "100%",
+                alignItems: "center",
+                justifyContent: "center",
+              })
+            }
             onPress={onDelete}
           >
             <Trash2 size={20} color="#FFFFFF" />

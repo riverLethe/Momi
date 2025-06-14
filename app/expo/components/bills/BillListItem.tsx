@@ -21,12 +21,24 @@ interface BillListItemProps {
    * Callback fired when the user confirms the deletion of the bill.
    */
   onDelete?: (bill: Bill) => void;
+  /** Whether the swipeable row is currently open */
+  isOpen?: boolean;
+  /** Callback when the row has been opened */
+  onSwipeOpen?: () => void;
+  /** Callback when the row has been closed */
+  onSwipeClose?: () => void;
+  /** Callback when swipe gesture starts */
+  onSwipeStart?: () => void;
 }
 
 export const BillListItem: React.FC<BillListItemProps> = ({
   item,
   disabled = false,
   onDelete,
+  isOpen = false,
+  onSwipeOpen,
+  onSwipeClose,
+  onSwipeStart,
 }) => {
   const router = useRouter();
   const { locale } = useLocale();
@@ -36,6 +48,7 @@ export const BillListItem: React.FC<BillListItemProps> = ({
   const categoryName = useTranslatedCategoryName(item.category);
 
   const handlePress = () => {
+    onSwipeClose?.();
     router.push({
       pathname: "/bills/details",
       params: { id: item.id },
@@ -46,13 +59,17 @@ export const BillListItem: React.FC<BillListItemProps> = ({
     <SwipeableRow
       disabled={disabled}
       onDelete={onDelete ? () => onDelete(item) : undefined}
+      isOpen={isOpen}
+      onSwipeOpen={onSwipeOpen}
+      onSwipeClose={onSwipeClose}
+      onSwipeStart={onSwipeStart}
     >
       <TouchableOpacity
         activeOpacity={1}
         onPress={handlePress}
         disabled={disabled}
         style={{
-          paddingVertical: 4,
+          paddingVertical: 8,
           paddingHorizontal: 16,
           opacity: disabled ? 0.4 : 1,
           backgroundColor: "white",

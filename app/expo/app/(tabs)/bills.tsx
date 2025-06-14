@@ -27,6 +27,9 @@ export default function BillsScreen() {
   const [syncingRemote, setSyncingRemote] = useState(false);
   const { confirmDeleteBill } = useBillActions();
 
+  /** Track global open bill id for swipe actions */
+  const [openBillId, setOpenBillId] = useState<string | null>(null);
+
   // Filter states
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -148,7 +151,12 @@ export default function BillsScreen() {
   };
 
   const renderDateGroup = ({ item }: { item: (typeof billGroups)[0] }) => (
-    <BillDateGroup item={item} onDelete={handleDeleteBill} />
+    <BillDateGroup
+      item={item}
+      onDelete={handleDeleteBill}
+      openBillId={openBillId}
+      setOpenBillId={setOpenBillId}
+    />
   );
 
   // Handle refresh (pull-to-refresh)

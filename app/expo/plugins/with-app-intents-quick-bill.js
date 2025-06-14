@@ -21,8 +21,10 @@ const QUICK_INTENT_SWIFT = `import AppIntents
 import UIKit
 
 @available(iOS 16.0, *)
-struct QuickBillIntent: AppIntent {
-    static var title: LocalizedStringResource = "MomiQ-Quick Add Bills"
+public struct QuickBillIntent: AppIntent {
+    public static let title: LocalizedStringResource = "MomiQ-Quick Add Bills"
+    /// Instruct the system to launch the app automatically when the intent runs.
+    public static let openAppWhenRun: Bool = true
 
     /// Optional screenshot passed from the invoking context (e.g. Siri, Shortcuts).
     /// The parameter name **screenshot** is important because it influences how
@@ -31,8 +33,12 @@ struct QuickBillIntent: AppIntent {
     @Parameter(title: "Screenshot")
     var screenshot: IntentFile?
 
+    // Explicit public initializer required when struct is public and has
+    // parameters with default synthesis.
+    public init() {}
+
     @MainActor
-    func perform() async throws -> some IntentResult {
+    public func perform() async throws -> some IntentResult {
         // If a screenshot is supplied, push it into the general pasteboard so that
         // the React Native side (chat.tsx) can pick it up via Expo Clipboard APIs.
         if let screenshot = screenshot {
@@ -48,7 +54,8 @@ struct QuickBillIntent: AppIntent {
         // Deep-link into the chat screen with the autoSend flag so the JS code
         // attaches the clipboard image and sends the message automatically.
         if let url = URL(string: "momiq:///chat?autoSend=1") {
-            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            // Use the async variant to avoid potential App Intents assertions.
+            await UIApplication.shared.open(url)
         }
 
         return .result(dialog: "Opening quick expense…")
