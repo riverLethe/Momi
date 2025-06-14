@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { YStack, Text } from "tamagui";
+import { YStack, Text, Separator } from "tamagui";
 
 // Providers and Stores
 import { useViewStore } from "@/stores/viewStore";
@@ -40,9 +40,7 @@ export default function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
   const {
     bills,
-    upcomingBills,
     transactions,
-    recentTransactions,
     isLoading: isDataLoading,
     refreshData,
   } = useData();
@@ -372,11 +370,6 @@ export default function HomeScreen() {
     router.push("/reports?tab=budget");
   };
 
-  // Handle viewing bill details
-  const handleViewBill = (bill: Bill) => {
-    router.push("/bills");
-  };
-
   // Handle viewing category details
   const handleCategoryPress = (categoryId: string) => {
     router.push(`/reports?category=${categoryId}`);
@@ -407,7 +400,7 @@ export default function HomeScreen() {
 
   return (
     <>
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
         <YStack flex={1}>
           {/* Content */}
           <ScrollView
@@ -434,6 +427,7 @@ export default function HomeScreen() {
               onEditBudgetPress={() => setBudgetModalOpen(true)}
               isPersonalView={viewMode === "personal"}
             />
+            <Separator marginVertical="$2" borderColor="$gray3" />
 
             {/* Recent Bills List */}
             <RecentBillsList

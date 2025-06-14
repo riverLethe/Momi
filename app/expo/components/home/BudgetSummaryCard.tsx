@@ -176,13 +176,9 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
     <>
       <Card
         backgroundColor="white"
-        borderRadius="$6"
-        marginHorizontal="$4"
+        marginHorizontal="$2"
         marginBottom="$4"
         padding="$4"
-        elevate
-        shadowColor="rgba(0,0,0,0.08)"
-        shadowRadius={8}
       >
         <YStack space="$4">
           {/* Header with status */}

@@ -1,13 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { 
-  Card, 
-  Circle, 
-  XStack, 
-  YStack, 
-  Text, 
-  Button
-} from "tamagui";
+import { Card, Circle, XStack, YStack, Text, Button } from "tamagui";
 import { useRouter } from "expo-router";
 import { FinancialHealthScore as HealthScoreType } from "@/types/reports.types";
 
@@ -15,28 +8,21 @@ interface FinancialHealthScoreProps {
   healthScore: HealthScoreType;
 }
 
-const FinancialHealthScore: React.FC<FinancialHealthScoreProps> = ({ 
-  healthScore 
+const FinancialHealthScore: React.FC<FinancialHealthScoreProps> = ({
+  healthScore,
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
 
   return (
-    <Card 
-      padding="$4" 
-      borderRadius="$4" 
-      backgroundColor="white" 
-      elevate
-      shadowColor="rgba(0,0,0,0.08)"
-      shadowRadius={4}
-    >
+    <Card padding="$2" borderRadius="$4" backgroundColor="white">
       <Text fontSize="$3.5" fontWeight="$7" marginBottom="$3" color="$gray12">
         {t("Financial Health Score")}
       </Text>
-      
+
       <YStack alignItems="center" marginBottom="$3">
-        <Circle 
-          size="$9" 
+        <Circle
+          size="$9"
           backgroundColor="$blue1"
           borderWidth={8}
           borderColor="$blue9"
@@ -49,18 +35,33 @@ const FinancialHealthScore: React.FC<FinancialHealthScoreProps> = ({
           {t(healthScore.status)}
         </Text>
       </YStack>
-      
+
       <YStack space="$2">
-        {healthScore.categories.map((category: { name: any | string | string[]; color: any; value: any | string | string[]; }, index: any) => (
-          <XStack key={index} justifyContent="space-between" alignItems="center">
-            <Text fontSize="$3" color="$gray11">{t(category.name)}</Text>
-            <Text fontWeight="$6" fontSize="$3" color={category.color}>
-              {t(category.value)}
-            </Text>
-          </XStack>
-        ))}
+        {healthScore.categories.map(
+          (
+            category: {
+              name: any | string | string[];
+              color: any;
+              value: any | string | string[];
+            },
+            index: any
+          ) => (
+            <XStack
+              key={index}
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Text fontSize="$3" color="$gray11">
+                {t(category.name)}
+              </Text>
+              <Text fontWeight="$6" fontSize="$3" color={category.color}>
+                {t(category.value)}
+              </Text>
+            </XStack>
+          )
+        )}
       </YStack>
-      
+
       <Button
         backgroundColor="$blue9"
         color="white"
@@ -78,4 +79,4 @@ const FinancialHealthScore: React.FC<FinancialHealthScoreProps> = ({
   );
 };
 
-export default FinancialHealthScore; 
+export default FinancialHealthScore;

@@ -1,11 +1,15 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
-import { ChevronRight, ReceiptText, MessageSquarePlus } from "lucide-react-native";
-import { 
-  Card, 
-  Text, 
-  XStack, 
+import {
+  ChevronRight,
+  ReceiptText,
+  MessageSquarePlus,
+} from "lucide-react-native";
+import {
+  Card,
+  Text,
+  XStack,
   YStack,
   Button,
   AnimatePresence,
@@ -31,36 +35,25 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
-  
+
   const displayBills = bills.slice(0, maxItems);
-  
+
   return (
     <Card
       backgroundColor="white"
-      borderRadius="$6"
-      marginHorizontal="$4"
+      marginHorizontal="$2"
       marginBottom="$4"
       padding="$4"
-      elevate
-      shadowColor="rgba(0,0,0,0.08)"
-      shadowRadius={8}
     >
       <YStack space="$4">
-        <XStack 
-          justifyContent="space-between" 
-          alignItems="center"
-        >
+        <XStack justifyContent="space-between" alignItems="center">
           <XStack space="$2" alignItems="center">
             <ReceiptText size={24} color="#6366F1" />
-            <Text 
-              fontSize="$4" 
-              fontWeight="$8" 
-              color="$gray12"
-            >
+            <Text fontSize="$4" fontWeight="$8" color="$gray12">
               {t("Recent Bills")}
             </Text>
           </XStack>
-          
+
           {bills.length > 0 && (
             <Button
               size="$2"
@@ -73,7 +66,9 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
               borderColor="$blue6"
               backgroundColor="$blue2"
             >
-              <Text fontSize="$2.5" color="$blue9">{t("View All")}</Text>
+              <Text fontSize="$2.5" color="$blue9">
+                {t("View All")}
+              </Text>
               <ChevronRight size={12} />
             </Button>
           )}
@@ -81,7 +76,12 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
 
         <AnimatePresence>
           {isLoading ? (
-            <YStack padding="$6" alignItems="center" justifyContent="center" space="$2">
+            <YStack
+              padding="$6"
+              alignItems="center"
+              justifyContent="center"
+              space="$2"
+            >
               <Spinner size="large" color="$blue9" />
               <Text color="$gray9">{t("Loading...")}</Text>
             </YStack>
@@ -98,7 +98,9 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
             </YStack>
           ) : (
             <YStack padding="$6" alignItems="center" justifyContent="center">
-              <Text color="$gray9" fontSize="$3" textAlign="center">{t("No recent bills")}</Text>
+              <Text color="$gray9" fontSize="$3" textAlign="center">
+                {t("No recent bills")}
+              </Text>
               <Button
                 marginTop="$3"
                 onPress={() => router.push("/chat")}
@@ -114,7 +116,9 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
                 space="$2"
               >
                 <MessageSquarePlus size={16} color="#3B82F6" />
-                <Text color="$blue9" fontWeight="$6">{t("Add Your First Bill")}</Text>
+                <Text color="$blue9" fontWeight="$6">
+                  {t("Add Your First Bill")}
+                </Text>
               </Button>
             </YStack>
           )}
@@ -124,4 +128,4 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
   );
 };
 
-export default RecentBillsList; 
+export default RecentBillsList;

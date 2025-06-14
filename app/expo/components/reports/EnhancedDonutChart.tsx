@@ -129,11 +129,10 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
       {/* Legend */}
       <Card
         width="100%"
-        padding="$3.5"
+        padding="$2"
         borderRadius="$4"
         marginTop="$3"
         backgroundColor="white"
-        elevate
       >
         {displayedCategories.map((item) => {
           // 直接从当前显示的类别中获取同比数据

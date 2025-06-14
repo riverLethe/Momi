@@ -32,14 +32,10 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
 
   return (
     <Card
-      padding="$4"
+      padding="$2"
       borderRadius="$4"
       backgroundColor="white"
       marginBottom="$4"
-      shadowColor="rgba(0,0,0,0.05)"
-      shadowRadius={2}
-      shadowOffset={{ width: 0, height: 1 }}
-      elevation={1}
     >
       {/* Chart title and legend */}
       <XStack

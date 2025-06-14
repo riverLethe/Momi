@@ -31,14 +31,10 @@ const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
 
   return (
     <Card
-      padding="$4"
+      padding="$2"
       borderRadius="$4"
       backgroundColor="white"
       marginBottom="$4"
-      shadowColor="rgba(0,0,0,0.05)"
-      shadowRadius={2}
-      shadowOffset={{ width: 0, height: 1 }}
-      elevation={1}
     >
       <Text fontSize="$3.5" fontWeight="$7" marginBottom="$3" color="$gray12">
         {t("Financial Insights")}
