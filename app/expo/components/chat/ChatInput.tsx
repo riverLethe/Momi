@@ -170,6 +170,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 paddingHorizontal: isRecording ? 0 : 16,
               }}
               android_disableSound
+              delayLongPress={100}
               onPress={onToggleInputMode}
               onLongPress={onStartRecording}
               onPressOut={onStopRecording}

@@ -17,6 +17,7 @@ import { updateUserPreferences } from "@/utils/userPreferences.utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
 import uuid from "react-native-uuid";
+import * as Localization from "expo-localization";
 
 // Import components
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -53,6 +54,17 @@ export default function ChatScreen() {
   const [isThinking, setIsThinking] = useState(false);
   const [currentStreamedMessage, setCurrentStreamedMessage] = useState("");
   const [attachments, setAttachments] = useState<any[]>([]);
+
+  /** Speech recognition language (derived from device locale) */
+  const [speechLang] = useState<string>(
+    // expo-localization may return values like "zh-CN" or "en-US".
+    // If multiple locales are available, pick the first.
+    Localization.getLocales()[0].languageCode || "en-US"
+  );
+
+  /** Cache microphone permission so we don't request every time */
+  const [micPermissionGranted, setMicPermissionGranted] =
+    useState<boolean>(false);
 
   // Handle max recording duration timeout (e.g., 60 s)
   const [recordingTimeout, setRecordingTimeout] =
@@ -143,6 +155,21 @@ export default function ChatScreen() {
       })();
     }
   }, [autoSend]);
+
+  // Check microphone permission on mount so we avoid asking every time the user starts recording
+  useEffect(() => {
+    (async () => {
+      try {
+        if (ExpoSpeechRecognitionModule.getPermissionsAsync) {
+          const current =
+            await ExpoSpeechRecognitionModule.getPermissionsAsync();
+          setMicPermissionGranted(!!current?.granted);
+        }
+      } catch (err) {
+        console.warn("Failed to get speech permission status", err);
+      }
+    })();
+  }, []);
 
   const handleSend = async () => {
     if (inputText.trim() === "" && attachments.length === 0) return;
@@ -327,11 +354,15 @@ export default function ChatScreen() {
 
   const handleStartRecording = async () => {
     try {
-      // 请求权限
-      const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      if (!perm.granted) {
-        console.warn("Speech permission denied");
-        return;
+      // Ensure we have permission (request if not yet granted)
+      if (!micPermissionGranted) {
+        const perm =
+          await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        if (!perm.granted) {
+          console.warn("Speech permission denied");
+          return;
+        }
+        setMicPermissionGranted(true);
       }
 
       setIsRecording(true);
@@ -372,7 +403,7 @@ export default function ChatScreen() {
 
       // 启动识别并持久化音频
       ExpoSpeechRecognitionModule.start({
-        lang: "en-US",
+        lang: speechLang,
         interimResults: false,
         recordingOptions: {
           persist: true,
