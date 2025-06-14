@@ -1,4 +1,8 @@
-const { withDangerousMod } = require("expo/config-plugins");
+const {
+  withDangerousMod,
+  withEntitlementsPlist,
+  withXcodeProject,
+} = require("expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
 
@@ -43,11 +47,11 @@ struct QuickBillIntent: AppIntent {
 
         // Deep-link into the chat screen with the autoSend flag so the JS code
         // attaches the clipboard image and sends the message automatically.
-        guard let url = URL(string: "momiq:///chat?autoSend=1") else {
-            return .result(value: .none)
+        if let url = URL(string: "momiq:///chat?autoSend=1") {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
         }
 
-        return .result(dialog: "Opening quick expense…", openApp: .init(url: url))
+        return .result(dialog: "Opening quick expense…")
     }
 }
 `;
@@ -61,6 +65,40 @@ const withAppIntentsQuickBill = (config) => {
       return cfg;
     },
   ]);
+
+  config = withEntitlementsPlist(config, (cfg) => {
+    if (cfg.modResults) {
+      cfg.modResults["com.apple.developer.siri"] = true;
+    }
+    return cfg;
+  });
+
+  config = withXcodeProject(config, (cfg) => {
+    const project = cfg.modResults;
+    const targetUuid = project.getFirstTarget().uuid;
+
+    // Path variables
+    const fileName = "QuickBillIntent.swift";
+
+    // 1. Ensure a PBXGroup for our Intents exists (or create it)
+    let groupKey = project.findPBXGroupKey({ name: EXT_NAME });
+    if (!groupKey) {
+      // Create group with physical folder path so Xcode knows where to look
+      groupKey = project.pbxCreateGroup(EXT_NAME, EXT_NAME);
+      // add the new group under the main group so it shows up in Xcode sidebar
+      const mainGroupKey = project.getFirstProject().firstProject.mainGroup;
+      project.addToPbxGroup(groupKey, mainGroupKey);
+    }
+
+    // 2. Avoid duplicates then add the file to the group + build phase
+    const alreadyExists =
+      typeof project.hasFile === "function" && project.hasFile(fileName);
+    if (!alreadyExists) {
+      project.addSourceFile(fileName, { target: targetUuid }, groupKey);
+    }
+
+    return cfg;
+  });
 
   return config;
 };

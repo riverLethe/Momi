@@ -50,12 +50,13 @@ export default function ChatScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTextMode, setIsTextMode] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
-  const [recordingTimer, setRecordingTimer] = useState(0);
-  const [recordingTimeout, setRecordingTimeout] =
-    useState<NodeJS.Timeout | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [currentStreamedMessage, setCurrentStreamedMessage] = useState("");
   const [attachments, setAttachments] = useState<any[]>([]);
+
+  // Handle max recording duration timeout (e.g., 60 s)
+  const [recordingTimeout, setRecordingTimeout] =
+    useState<NodeJS.Timeout | null>(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -334,7 +335,6 @@ export default function ChatScreen() {
       }
 
       setIsRecording(true);
-      setRecordingTimer(0);
 
       // 注册事件监听
       const resultListener = ExpoSpeechRecognitionModule.addListener(
@@ -347,11 +347,24 @@ export default function ChatScreen() {
         }
       );
 
+      // Capture audio URI when recording starts (some platforms may not emit a valid URI in `audioend`)
+      const audioStartListener = ExpoSpeechRecognitionModule.addListener(
+        "audiostart",
+        (event: any) => {
+          if (event.uri) {
+            voiceUriRef.current = event.uri;
+            // Attempt to finalize if transcript already ready
+            maybeFinalizeVoiceMessage();
+          }
+        }
+      );
+
       const audioEndListener = ExpoSpeechRecognitionModule.addListener(
         "audioend",
         (event: any) => {
           if (event.uri) {
             voiceUriRef.current = event.uri;
+            // Attempt to finalize once recording stops
             maybeFinalizeVoiceMessage();
           }
         }
@@ -370,25 +383,36 @@ export default function ChatScreen() {
       const timer = setTimeout(() => handleStopRecording(), 60000);
       setRecordingTimeout(timer as unknown as NodeJS.Timeout);
 
-      // 计时器 UI
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTimer((prev) => prev + 1);
-      }, 1000);
+      // Listen for 'end' event to cleanup listeners safely after final result
+      const endListener = ExpoSpeechRecognitionModule.addListener("end", () => {
+        recordingListeners.current.forEach((l) => l.remove && l.remove());
+        recordingListeners.current = [];
+        if (recordingTimeout) {
+          clearTimeout(recordingTimeout);
+          setRecordingTimeout(null);
+        }
+      });
 
       // 保存监听到 state 方便清理
-      recordingListeners.current = [resultListener, audioEndListener];
+      recordingListeners.current = [
+        resultListener,
+        audioStartListener,
+        audioEndListener,
+        endListener,
+      ];
     } catch (err) {
       console.error("Failed to start speech recognition", err);
     }
   };
 
-  // When voice recognition has finished, immediately convert the speech to text
-  // and treat it as a normal text message. We no longer depend on the recorded
-  // audio file, so even if the SDK fails to return an audio URI we can still
-  // continue the conversation seamlessly.
+  /**
+   * When both transcript and audio URI are available, create a voice message and
+   * send the transcript to the AI. The audio file will be playable inside the
+   * chat via the `MessageBubble` component.
+   */
   const maybeFinalizeVoiceMessage = () => {
     if (voiceTranscriptRef.current) {
-      const transcript = voiceTranscriptRef.current;
+      const transcript = voiceTranscriptRef.current as string;
 
       // Create a regular text message from the transcript
       const userMessage: any = chatAPI.createMessage(transcript, true, "text");
@@ -436,17 +460,10 @@ export default function ChatScreen() {
       recordingIntervalRef.current = null;
     }
 
-    // 移除监听
-    recordingListeners.current.forEach((l) => l.remove && l.remove());
-    recordingListeners.current = [];
+    // 不再立即移除监听，等待 'end' 事件清理
 
-    setRecordingTimer(0);
-
-    // Audio file is no longer needed
-    voiceUriRef.current = null;
-
-    // In case the final result came in before `audioend`, ensure we send it
-    // immediately.
+    // In case the final result came in before `audioend`, ensure we try to
+    // finalize once recording is stopped.
     maybeFinalizeVoiceMessage();
   };
 
@@ -712,7 +729,6 @@ export default function ChatScreen() {
             isTextMode={isTextMode}
             inputText={inputText}
             isRecording={isRecording}
-            recordingTimer={recordingTimer}
             onChangeText={setInputText}
             onSend={handleSend}
             onToggleInputMode={toggleInputMode}

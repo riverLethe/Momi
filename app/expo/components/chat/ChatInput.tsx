@@ -19,7 +19,6 @@ interface ChatInputProps {
   isTextMode: boolean;
   inputText: string;
   isRecording: boolean;
-  recordingTimer: number;
   onChangeText: (text: string) => void;
   onSend: () => void;
   onToggleInputMode: () => void;
@@ -35,7 +34,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   isTextMode,
   inputText,
   isRecording,
-  recordingTimer,
   onChangeText,
   onSend,
   onToggleInputMode,

@@ -76,7 +76,7 @@ export const BillDateGroup: React.FC<BillDateGroupProps> = ({
               <React.Fragment key={bill.id}>
                 <BillListItem item={bill} onDelete={onDelete} />
                 {index < item.bills.length - 1 && (
-                  <Separator marginVertical="$2" borderColor="$gray3" />
+                  <Separator marginVertical="$0" borderColor="$gray3" />
                 )}
               </React.Fragment>
             ))}

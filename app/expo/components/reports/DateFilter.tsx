@@ -1,14 +1,6 @@
 import React from "react";
 import { Calendar, ChevronDown } from "lucide-react-native";
-import { 
-  Button, 
-  XStack,
-  Text,
-  ScrollView,
-  Sheet,
-  YStack,
-  View,
-} from "tamagui";
+import { Button, XStack, Text, ScrollView, Sheet, YStack, View } from "tamagui";
 import { useTranslation } from "react-i18next";
 import { DatePeriodEnum, PeriodSelectorData } from "@/types/reports.types";
 
@@ -29,20 +21,24 @@ export const DateFilter: React.FC<DateFilterProps> = ({
 }) => {
   const { t } = useTranslation();
   const [periodSheetOpen, setPeriodSheetOpen] = React.useState(false);
-  
+
   // Get current selected period selector
-  const selectedSelector = periodSelectors?.find(p => p.id === selectedPeriodId) || periodSelectors?.[0];
-  
+  const selectedSelector =
+    periodSelectors?.find((p) => p.id === selectedPeriodId) ||
+    periodSelectors?.[0];
+
   return (
     <>
       <YStack width="100%">
         {/* Period Type Selector */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <XStack space="$2" padding="$1.5">
+          <XStack gap="$2" padding="$1.5">
             {Object.values(DatePeriodEnum).map((period) => (
               <Button
                 key={period}
-                backgroundColor={selectedPeriod === period ? "$blue9" : "$gray1"}
+                backgroundColor={
+                  selectedPeriod === period ? "$blue9" : "$gray1"
+                }
                 paddingHorizontal="$2"
                 paddingVertical="$2"
                 hoverStyle={{ opacity: 0.9 }}
@@ -50,8 +46,11 @@ export const DateFilter: React.FC<DateFilterProps> = ({
                 onPress={() => onPeriodChange(period)}
                 size="$2"
               >
-                <XStack alignItems="center" space="$2">
-                  <Calendar size={14} color={selectedPeriod === period ? "white" : "#6B7280"} />
+                <XStack alignItems="center" gap="$2">
+                  <Calendar
+                    size={14}
+                    color={selectedPeriod === period ? "white" : "#6B7280"}
+                  />
                   <Text
                     color={selectedPeriod === period ? "white" : "$gray10"}
                     fontWeight="$6"
@@ -62,11 +61,9 @@ export const DateFilter: React.FC<DateFilterProps> = ({
                 </XStack>
               </Button>
             ))}
-
           </XStack>
-
         </ScrollView>
-        
+
         {/* Period Selector Button (if available) */}
         {periodSelectors && periodSelectors.length > 0 && (
           <Button
@@ -80,10 +77,10 @@ export const DateFilter: React.FC<DateFilterProps> = ({
             right="$1"
             top="$1.5"
           >
-            <XStack alignItems="center" space="$2">
+            <XStack alignItems="center" gap="$2">
               <Text fontWeight="$6" fontSize="$2.5" color="$gray11">
-                {selectedPeriod === DatePeriodEnum.WEEK 
-                  ? `${t("Week of")} ${selectedSelector?.label}` 
+                {selectedPeriod === DatePeriodEnum.WEEK
+                  ? `${t("Week of")} ${selectedSelector?.label}`
                   : selectedSelector?.label}
               </Text>
               <ChevronDown size={14} color="#64748B" />
@@ -91,7 +88,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
           </Button>
         )}
       </YStack>
-      
+
       {/* Period Selector Sheet */}
       <Sheet
         modal
@@ -103,18 +100,22 @@ export const DateFilter: React.FC<DateFilterProps> = ({
         <Sheet.Overlay />
         <Sheet.Frame padding="$4">
           <Sheet.Handle />
-          <YStack space="$4">
+          <YStack gap="$4">
             <Text fontSize="$4" fontWeight="$7" textAlign="center">
               {t("Select Period")}
             </Text>
             <View height={300}>
-              <ScrollView>
-                <YStack space="$2" paddingBottom="$4">
+              <Sheet.ScrollView>
+                <YStack gap="$2" paddingBottom="$4">
                   {periodSelectors?.map((period) => (
                     <Button
                       key={period.id}
-                      backgroundColor={period.id === selectedPeriodId ? "$blue2" : "white"}
-                      borderColor={period.id === selectedPeriodId ? "$blue9" : "$gray4"}
+                      backgroundColor={
+                        period.id === selectedPeriodId ? "$blue2" : "white"
+                      }
+                      borderColor={
+                        period.id === selectedPeriodId ? "$blue9" : "$gray4"
+                      }
                       borderWidth={1}
                       paddingVertical="$3"
                       borderRadius="$4"
@@ -123,18 +124,22 @@ export const DateFilter: React.FC<DateFilterProps> = ({
                         setPeriodSheetOpen(false);
                       }}
                     >
-                      <Text 
-                        fontWeight={period.id === selectedPeriodId ? "$7" : "$5"} 
-                        color={period.id === selectedPeriodId ? "$blue9" : "$gray11"}
+                      <Text
+                        fontWeight={
+                          period.id === selectedPeriodId ? "$7" : "$5"
+                        }
+                        color={
+                          period.id === selectedPeriodId ? "$blue9" : "$gray11"
+                        }
                       >
-                        {selectedPeriod === DatePeriodEnum.WEEK 
-                          ? `${t("Week of")} ${period.label}` 
+                        {selectedPeriod === DatePeriodEnum.WEEK
+                          ? `${t("Week of")} ${period.label}`
                           : period.label}
                       </Text>
                     </Button>
                   ))}
                 </YStack>
-              </ScrollView>
+              </Sheet.ScrollView>
             </View>
           </YStack>
         </Sheet.Frame>
@@ -143,4 +148,4 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   );
 };
 
-export default DateFilter; 
+export default DateFilter;
