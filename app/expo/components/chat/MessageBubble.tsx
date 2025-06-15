@@ -187,6 +187,26 @@ const renderMessageContent = (message: Message) => {
       );
     }
 
+    // System error message (recording / other runtime issues)
+    if (message.data.type === "system_error") {
+      return (
+        <Card
+          borderRadius="$4"
+          overflow="hidden"
+          elevation={0.5}
+          backgroundColor="#FEE2E2" // light red
+          padding="$2"
+          width="fit-content"
+          borderColor="#FCA5A5"
+          borderWidth={1}
+        >
+          <Text fontSize={12} lineHeight={16} color="#B91C1C">
+            {message.text}
+          </Text>
+        </Card>
+      );
+    }
+
     // Attachments from combined message
     if (
       Array.isArray(message.data.attachments) &&

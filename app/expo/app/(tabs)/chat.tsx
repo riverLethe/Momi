@@ -55,12 +55,32 @@ export default function ChatScreen() {
   const [currentStreamedMessage, setCurrentStreamedMessage] = useState("");
   const [attachments, setAttachments] = useState<any[]>([]);
 
-  /** Speech recognition language (derived from device locale) */
-  const [speechLang] = useState<string>(
-    // expo-localization may return values like "zh-CN" or "en-US".
-    // If multiple locales are available, pick the first.
-    Localization.locale || "en-US"
-  );
+  /**
+   * Speech recognition language (derived from device locale).
+   * Some devices return extended locale strings (e.g. "zh-Hans-CN"),
+   * which are not recognised by native speech APIs.  Here we coerce the
+   * string into a simple `xx-XX` pattern and provide a safe fallback.
+   */
+  const [speechLang] = useState<string>(() => {
+    const rawLocale = Localization.locale || "en-US";
+
+    // Common language mapping (extend as needed)
+    const langMap: Record<string, string> = {
+      zh: "zh-CN",
+      en: "en-US",
+      ja: "ja-JP",
+      ko: "ko-KR",
+    };
+
+    // If the locale already matches the simple pattern (e.g. en-US), use it.
+    if (/^[a-z]{2}-[A-Z]{2}$/.test(rawLocale)) {
+      return rawLocale;
+    }
+
+    // Otherwise try to map by the primary language sub-tag.
+    const primary = rawLocale.split(/[\-_]/)[0]; // handle zh-Hans-CN, en_US etc.
+    return langMap[primary] || "en-US";
+  });
 
   /** Cache microphone permission so we don't request every time */
   const [micPermissionGranted, setMicPermissionGranted] =
@@ -435,6 +455,30 @@ export default function ChatScreen() {
           }
         }
       );
+
+      // Capture errors for easier debugging
+      const errorListener = ExpoSpeechRecognitionModule.addListener(
+        "error",
+        (event: any) => {
+          console.warn("Speech recognition error", event);
+
+          // Stop recording state so UI updates immediately
+          setIsRecording(false);
+
+          // Show a chat message to let the user know something went wrong
+          const friendlyMessage =
+            event?.error || event?.message || "Unknown recording error";
+          const errorBubble = chatAPI.createMessage(
+            `⚠️  Recording error: ${friendlyMessage}`,
+            false,
+            "text",
+            { type: "system_error" }
+          );
+          setMessages((prev) => [...prev, errorBubble]);
+          setTimeout(() => scrollToBottom(), 50);
+        }
+      );
+
       // 启动识别并持久化音频
       ExpoSpeechRecognitionModule.start({
         lang: speechLang,
@@ -463,6 +507,7 @@ export default function ChatScreen() {
         resultListener,
         audioStartListener,
         audioEndListener,
+        errorListener,
         endListener,
       ];
     } catch (err) {

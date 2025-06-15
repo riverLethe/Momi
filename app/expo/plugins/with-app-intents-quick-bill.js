@@ -18,7 +18,7 @@ function ensureSwiftFile(projectRoot, swiftCode) {
 }
 
 const QUICK_INTENT_SWIFT = `import AppIntents
-import UIKit
+// UIKit deliberately not imported – AppIntent should avoid UI frameworks.
 
 /// A lightweight intent that simply launches the app's quick-bill screen.
 /// Direct pasteboard access from an App Intent is no longer permitted on recent
@@ -28,8 +28,13 @@ import UIKit
 @available(iOS 16.0, *)
 public struct QuickBillIntent: AppIntent {
     public static let title: LocalizedStringResource = "MomiQ-Quick Add Bills"
-    /// Instruct the system to launch the app automatically when the intent runs.
-    public static let openAppWhenRun: Bool = true
+    /// The system should bring the main app to the foreground when this
+    /// intent finishes. Setting this to true works for iOS 16 and also
+    /// continues to launch the app on iOS 17 even though newer APIs allow
+    /// more granular control. Using this property lets us avoid relying on
+    /// the newer .openApp(at:) API that isn't available when building with
+    /// older SDKs.
+    public static var openAppWhenRun: Bool { true }
 
     /// Optional screenshot provided by the invoking context (e.g. Siri, Shortcuts).
     @Parameter(title: "Screenshot")
@@ -60,10 +65,15 @@ public struct QuickBillIntent: AppIntent {
         }
 
         if let url = URL(string: deeplink) {
-            await UIApplication.shared.open(url)
+            // Persist the link in the shared App Group so the main app can pick
+            // it up on launch. On iOS 16 the system opens the app automatically
+            // thanks to openAppWhenRun. On iOS 17 the same behaviour still
+            // works, so we don't need the newer .openApp(at:) result type.
+            let store = UserDefaults(suiteName: "group.com.momiq.shared")
+            store?.set(url.absoluteString, forKey: "pendingDeepLink")
         }
 
-        return .result(dialog: "Opening quick expense…")
+        return .result()
     }
 }
 `;
@@ -81,6 +91,15 @@ const withAppIntentsQuickBill = (config) => {
   config = withEntitlementsPlist(config, (cfg) => {
     if (cfg.modResults) {
       cfg.modResults["com.apple.developer.siri"] = true;
+
+      // Add shared App Group so Intent and main app can communicate on iOS <17
+      const APP_GROUP = "group.com.momiq.shared";
+      const groups =
+        cfg.modResults["com.apple.security.application-groups"] || [];
+      if (!groups.includes(APP_GROUP)) {
+        groups.push(APP_GROUP);
+      }
+      cfg.modResults["com.apple.security.application-groups"] = groups;
     }
     return cfg;
   });
