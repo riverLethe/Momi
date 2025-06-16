@@ -8,25 +8,47 @@ const path = require("path");
 
 const EXT_NAME = "QuickBillIntents";
 const BRIDGE_NAME = "PendingLinkBridge";
+const OBJC_WRAPPER_NAME = "PendingLinkBridgeWrapper";
 
-// Swift bridging module to expose a method that reads & clears the pendingDeepLink
+// Swift class that implements the actual logic. It **does NOT** conform to
+// `RCTBridgeModule`; instead we export it through a lightweight Objective-C
+// wrapper file (generated further down). This avoids having to tweak the
+// global bridging header and therefore works on any fresh machine.
 const BRIDGE_SWIFT = `import Foundation
 import React
+
+// React Native bridge that lets JavaScript read (and clear) the deep link
+// saved by the QuickBill intent. Exposed on the JS side as
+//   NativeModules.PendingLinkBridge
 
 @objc(PendingLinkBridge)
 class PendingLinkBridge: NSObject {
 
-  @objc static func requiresMainQueueSetup() -> Bool { return false }
-
-  /// Reads the pending deep link from the shared App Group then clears it.
+  // Reads the pending deep link from the shared App Group and clears it.
   @objc(consumePendingDeepLink:rejecter:)
-  func consumePendingDeepLink(resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+  func consumePendingDeepLink(_ resolve: RCTPromiseResolveBlock,
+                              rejecter reject: RCTPromiseRejectBlock) {
     let store = UserDefaults(suiteName: "group.com.momiq.shared")
     let url = store?.string(forKey: "pendingDeepLink")
     store?.removeObject(forKey: "pendingDeepLink")
     resolve(url)
   }
 }`;
+
+// Objective-C wrapper that actually registers the Swift class as a RN module.
+// It calls the React macros so JS can see `NativeModules.PendingLinkBridge`.
+const BRIDGE_OBJC = `#import <React/RCTBridgeModule.h>
+#import <React/RCTBridge.h>
+
+// Expose the Swift class PendingLinkBridge to React Native
+
+@interface RCT_EXTERN_MODULE(${BRIDGE_NAME}, NSObject)
+
+// Promise-based method: resolve returns the URL string, reject unused.
+RCT_EXTERN_METHOD(consumePendingDeepLink:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+@end`;
 
 function ensureSwiftFile(projectRoot, swiftCode) {
   const extDir = path.join(projectRoot, EXT_NAME);
@@ -37,13 +59,22 @@ function ensureSwiftFile(projectRoot, swiftCode) {
   fs.writeFileSync(swiftPath, swiftCode, { encoding: "utf8" });
 }
 
-function ensureBridgeFile(projectRoot, swiftCode) {
+function ensureSwiftBridgeFile(projectRoot, swiftCode) {
   const extDir = path.join(projectRoot, EXT_NAME);
   if (!fs.existsSync(extDir)) {
     fs.mkdirSync(extDir, { recursive: true });
   }
   const swiftPath = path.join(extDir, `${BRIDGE_NAME}.swift`);
   fs.writeFileSync(swiftPath, swiftCode, { encoding: "utf8" });
+}
+
+function ensureObjcWrapperFile(projectRoot, objcCode) {
+  const extDir = path.join(projectRoot, EXT_NAME);
+  if (!fs.existsSync(extDir)) {
+    fs.mkdirSync(extDir, { recursive: true });
+  }
+  const objcPath = path.join(extDir, `${OBJC_WRAPPER_NAME}.m`);
+  fs.writeFileSync(objcPath, objcCode, { encoding: "utf8" });
 }
 
 const QUICK_INTENT_SWIFT = `import AppIntents
@@ -55,7 +86,7 @@ const QUICK_INTENT_SWIFT = `import AppIntents
 /// JavaScript side can pick it up on launch.
 @available(iOS 16.0, *)
 public struct QuickBillIntent: AppIntent {
-    public static let title: LocalizedStringResource = "MomiQ-Quick Add Bills"
+    public static let title: LocalizedStringResource = "[MomiQ]Quick Add Bills"
 
     /// Must be a compile-time constant (cannot depend on OS version).
     /// We always let the system bring the main app to foreground; when iOS ≥17 we may additionally
@@ -63,14 +94,18 @@ public struct QuickBillIntent: AppIntent {
     public static var openAppWhenRun: Bool = true
 
     /// Optional screenshot provided by the invoking context (e.g. Siri, Shortcuts).
-    @Parameter(title: "Screenshot")
+    @Parameter(
+        title: "Bill Screenshot",
+        supportedTypeIdentifiers: ["public.image"],
+        inputConnectionBehavior: .connectToPreviousIntentResult
+    )
     var screenshot: IntentFile?
 
     public init() {}
 
     @MainActor
     public func perform() async throws -> some IntentResult {
-        let base = "momiq:///quickbill-debug?autoSend=1"
+        let base = "momiq:///chat?autoSend=1"
         var deeplink = base
 
         // If a screenshot is present, write it to the shared App Group directory so the main app can
@@ -81,7 +116,7 @@ public struct QuickBillIntent: AppIntent {
                 do {
                     try data.write(to: tmpURL)
                     let encoded = tmpURL.path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                    deeplink += "&tmpPath=\(encoded)"
+                    deeplink += "&tmpPath=\\(encoded)"
                 } catch {
                     print("QuickBillIntent: failed to write screenshot –", error.localizedDescription)
                 }
@@ -110,7 +145,8 @@ const withAppIntentsQuickBill = (config) => {
     (cfg) => {
       const iosRoot = cfg.modRequest.platformProjectRoot;
       ensureSwiftFile(iosRoot, QUICK_INTENT_SWIFT);
-      ensureBridgeFile(iosRoot, BRIDGE_SWIFT);
+      ensureSwiftBridgeFile(iosRoot, BRIDGE_SWIFT);
+      ensureObjcWrapperFile(iosRoot, BRIDGE_OBJC);
       return cfg;
     },
   ]);
@@ -138,6 +174,7 @@ const withAppIntentsQuickBill = (config) => {
     // Path variables
     const intentFile = "QuickBillIntent.swift";
     const bridgeFile = `${BRIDGE_NAME}.swift`;
+    const objcWrapperFile = `${OBJC_WRAPPER_NAME}.m`;
 
     // 1. Ensure a PBXGroup for our Intents exists (or create it)
     let groupKey = project.findPBXGroupKey({ name: EXT_NAME });
@@ -159,6 +196,7 @@ const withAppIntentsQuickBill = (config) => {
 
     addFileIfNeeded(intentFile);
     addFileIfNeeded(bridgeFile);
+    addFileIfNeeded(objcWrapperFile);
 
     return cfg;
   });

@@ -45,7 +45,7 @@ const generationConfig = {
   topK: 64,
   maxOutputTokens: 8192,
   responseMimeType: "text/plain",
-  systemInstruction: `You are Momiq, a smart bookkeeping assistant for personal finance. Your job is to convert user messages into FINANCIAL COMMANDS.
+  systemInstruction: `You are MomiQ, a smart bookkeeping assistant for personal finance. Your job is to convert user messages into FINANCIAL COMMANDS.
 
 Rules:
 1. First decide the intent: create_expense • list_expenses • set_budget • markdown (default).

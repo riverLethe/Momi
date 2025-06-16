@@ -247,7 +247,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 borderWidth={0}
                 backgroundColor="transparent"
                 padding="$0"
-                onSubmitEditing={onSend}
+                onSubmitEditing={()=>onSend()}
                 onBlur={() => {
                   if (!inputText) onToggleInputMode();
                 }}

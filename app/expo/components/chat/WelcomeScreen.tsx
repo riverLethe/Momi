@@ -21,7 +21,7 @@ export const WelcomeScreen: React.FC = () => {
         marginBottom="$4"
         textAlign="center"
       >
-        Welcome to Momiq AI Assistant
+        Welcome to MomiQ AI Assistant
       </Text>
       <Text
         fontSize={16}

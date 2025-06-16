@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { TamaguiProvider } from "tamagui";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Linking, NativeModules } from "react-native";
+import { Linking, NativeModules, AppState } from "react-native";
 
 import config from "../tamagui.config";
 import "../global.css";
@@ -42,24 +42,42 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // Once fonts are loaded, attempt to consume any pending deep link (iOS ≤16 fallback)
+  // Consume any pending deep link (iOS ≤16 fallback) whenever the app becomes active.
   useEffect(() => {
     if (!loaded) return;
 
-    const bridge = (NativeModules as any)?.PendingLinkBridge;
-    if (bridge?.consumePendingDeepLink) {
-      bridge
-        .consumePendingDeepLink()
-        .then((url: string | null) => {
-          if (url && typeof url === "string" && url.length > 0) {
-            // Give navigation tree a tick to mount before navigating
-            setTimeout(() => Linking.openURL(url).catch(() => {}), 200);
-          }
-        })
-        .catch((e: any) => {
-          console.warn("Failed to consume pending deep link", e);
-        });
-    }
+    const handlePendingDeepLink = () => {
+      const bridge = (NativeModules as any)?.PendingLinkBridge;
+      if (bridge?.consumePendingDeepLink) {
+        bridge
+          .consumePendingDeepLink()
+          .then((url: string | null) => {
+            if (url && typeof url === "string" && url.length > 0) {
+              // Give navigation tree a tick to mount before navigating
+              setTimeout(() => Linking.openURL(url).catch(() => {}), 200);
+            }
+          })
+          .catch((e: any) => {
+            console.warn("Failed to consume pending deep link", e);
+          });
+      }
+    };
+
+    // Initial check after resources are loaded
+    handlePendingDeepLink();
+
+    // Listen for app returning to foreground to re-check
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        handlePendingDeepLink();
+      }
+    });
+
+    return () => {
+      // For RN < 0.65 compatibility, guard remove existence
+      // @ts-ignore – typings differ across versions
+      subscription?.remove?.();
+    };
   }, [loaded]);
 
   if (!loaded) {

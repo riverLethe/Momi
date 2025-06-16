@@ -158,15 +158,15 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
 
   /* 渲染键盘 */
   const renderKeypad = () => (
-    <XStack p="$2" space="$2">
+    <XStack p="$2" gap="$2">
       {/* 数字区 */}
-      <YStack flex={3} space="$2">
+      <YStack flex={3} gap="$2">
         {[
           ["1", "2", "3"],
           ["4", "5", "6"],
           ["7", "8", "9"],
         ].map((row) => (
-          <XStack key={row.join("-")} space="$2">
+          <XStack key={row.join("-")} gap="$2">
             {row.map((key) => (
               <Button
                 key={key}
@@ -179,7 +179,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
             ))}
           </XStack>
         ))}
-        <XStack space="$2">
+        <XStack gap="$2">
           <Button flex={1} size="$5" onPress={() => handleKeypadPress(".")}>
             <Text fontSize="$6">.</Text>
           </Button>
@@ -195,7 +195,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
         </XStack>
       </YStack>
       {/* 功能区 */}
-      <YStack flex={1} space="$2">
+      <YStack flex={1} gap="$2">
         <Button
           flex={1}
           size="$5"
@@ -208,11 +208,27 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
           icon={<MinusIcon size={24} color="#333" />}
           onPress={() => handleOperatorPress("-")}
         />
+
+    <Button
+          flex={1}
+          size="$5"
+          padding="$0"
+          onPress={
+           ()=>{
+            onOpenChange(false)
+           }
+          }
+        >
+          <Text >
+              {t("Cancel")}
+            </Text>
+        </Button>
         <Button
           flex={1}
           size="$5"
           theme="active"
           backgroundColor="$blue10"
+          padding="$0"
           onPress={
             operator && !shouldResetDisplay ? handleCalculate : handleDone
           }
@@ -234,24 +250,13 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
       modal
       open={open}
       onOpenChange={onOpenChange}
-      snapPoints={[50]}
+      snapPoints={[45]}
       dismissOnSnapToBottom
     >
       <Sheet.Overlay />
       <Sheet.Handle />
       <Sheet.Frame bg="$background" padding="$4">
-        <YStack space="$3">
-          <XStack justifyContent="space-between" alignItems="center">
-            <Paragraph fontSize={18} fontWeight="700">
-              {t("Edit Amount")}
-            </Paragraph>
-            <Button
-              circular
-              size="$3"
-              icon={<CloseIcon size={18} />}
-              onPress={() => onOpenChange(false)}
-            />
-          </XStack>
+        <YStack gap="$3">
           <YStack paddingVertical="$2">
             <Text
               fontSize={getFontSize(displayString())}

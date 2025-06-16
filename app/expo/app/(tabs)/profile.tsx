@@ -24,6 +24,7 @@ import {
   Separator,
 } from "tamagui";
 import { LinearGradient } from "tamagui/linear-gradient";
+import { installQuickScreenshotBillShortcut } from '@/utils/shortcutInstaller';
 
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -288,6 +289,12 @@ borderWidth={0}
               </XStack>
             </Button>
           )}
+
+          <Button
+            onPress={() => installQuickScreenshotBillShortcut()}
+          >
+            Install Quick Screenshot Shortcut
+          </Button>
         </ScrollView>
       </YStack>
     </SafeAreaView>

@@ -157,7 +157,7 @@ export default {
     Chat: "聊天",
     Accounts: "账户",
     Calendar: "日历",
-    "Welcome to Momiq": "欢迎使用Momiq",
+    "Welcome to MomiQ": "欢迎使用 MomiQ",
     "Your personal finance tracker to help you manage expenses and reach your financial goals":
       "您的个人财务追踪工具，帮助您管理支出并实现财务目标",
     "Record your first expense": "记录您的第一笔支出",
@@ -168,7 +168,7 @@ export default {
       "定义预算以追踪您的消费习惯",
     "Available after recording your first expense": "记录第一笔支出后可用",
     "Explore features": "探索功能",
-    "Discover all the features Momiq has to offer": "探索Momiq提供的所有功能",
+    "Discover all the features MomiQ has to offer": "探索 MomiQ 提供的所有功能",
     "Budget Period": "预算周期",
     "Add Your First Bill": "添加您的第一笔账单",
     "Not Set": "未设置",

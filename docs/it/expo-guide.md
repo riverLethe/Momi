@@ -39,7 +39,7 @@ npx expo install expo-constants expo-linking expo-status-bar
 ```json
 {
   "expo": {
-    "name": "Momiq",
+    "name": "MomiQ",
     "slug": "momiq",
     "version": "1.0.0",
     "orientation": "portrait",

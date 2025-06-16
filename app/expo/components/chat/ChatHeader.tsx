@@ -39,7 +39,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           />
         </View>
         <Text fontSize={18} fontWeight="600" color="$gray800">
-          Momiq
+        MomiQ
         </Text>
       </XStack>
       <XStack alignItems="flex-end" gap="$2">

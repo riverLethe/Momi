@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Momiq",
+    "name": "MomiQ",
     "slug": "momiq",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -52,8 +52,8 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Allow Momiq to access your microphone for voice input.",
-          "speechRecognitionPermission": "Allow Momiq to use speech recognition to transcribe your speech."
+          "microphonePermission": "Allow MomiQ to access your microphone for voice input.",
+          "speechRecognitionPermission": "Allow MomiQ to use speech recognition to transcribe your speech."
         }
       ]
     ],

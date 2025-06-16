@@ -111,10 +111,10 @@ export default function SettingsScreen() {
               About
             </Text>
             <Text color="$gray10">
-              Momiq v1.0.0
+            MomiQ v1.0.0
             </Text>
             <Text fontSize="$2" color="$gray8" marginTop="$2">
-              © 2023 Momiq Finance Inc.
+              © 2023 MomiQ Finance Inc.
             </Text>
           </Card>
         </YStack>

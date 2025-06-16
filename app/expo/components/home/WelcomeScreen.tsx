@@ -14,7 +14,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
   return (
     <EmptyStateView
-      title={t("Welcome to Momiq")}
+      title={t("Welcome to MomiQ")}
       description={t("Track bills and reach your financial goals")}
       imageSrc={require("@/assets/images/welcome-home.png")}
       actionText={t("Record your first bill")}

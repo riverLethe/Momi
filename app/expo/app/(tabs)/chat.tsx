@@ -113,7 +113,6 @@ export default function ChatScreen() {
     typeof params.tmpPath === "string" ? (params.tmpPath as string) : undefined;
   const tmpPath = tmpPathRaw ? decodeURIComponent(tmpPathRaw) : undefined;
 
-  const didProcessQuickAttach = useRef(false);
 
   // 组件挂载时，尝试从本地读取聊天记录
   useEffect(() => {
@@ -146,75 +145,45 @@ export default function ChatScreen() {
 
   // 若带有 tmpPath 或 autoSend 参数，则尝试自动附加并发送截图
   useEffect(() => {
-    if (didProcessQuickAttach.current) return;
 
     (async () => {
       try {
-        if (tmpPath) {
-          // 处理来自 AppIntent 的临时文件路径
-          let sourceUri = tmpPath;
-          if (!sourceUri.startsWith("file://")) {
-            sourceUri = `file://${sourceUri}`;
-          }
-
-          const info = await FileSystem.getInfoAsync(sourceUri);
-          if (!info.exists) {
-            console.warn("tmpPath does not exist", sourceUri);
-            showSystemError("Screenshot not found – please try again.");
-            return;
-          }
-
-          // 重用 util 函数统一复制逻辑，避免重复代码
-          const destUri = await copyFileToDocumentDir(
-            sourceUri,
-            "chat_images"
-          ).catch((e) => {
-            console.warn("Copy screenshot error", e);
-            showSystemError("Failed to import screenshot");
-            throw e;
-          });
-
-          const attachment = {
-            id: Date.now().toString(),
-            uri: destUri,
-            type: "image" as const,
-          };
-          setAttachments([attachment]);
-
-          if (autoSend) {
-            setTimeout(() => handleSend(), 100);
-          }
-
-          didProcessQuickAttach.current = true;
-          return; // 已处理，无需再尝试剪贴板
+        if(!tmpPath)return
+        // 处理来自 AppIntent 的临时文件路径
+        let sourceUri = tmpPath;
+        if (!sourceUri.startsWith("file://")) {
+          sourceUri = `file://${sourceUri}`;
         }
 
-        // Fallback: 旧版本仍从剪贴板读取
+        const info = await FileSystem.getInfoAsync(sourceUri);
+        if (!info.exists) {
+          console.warn("tmpPath does not exist", sourceUri);
+          showSystemError("Screenshot not found – please try again.");
+          return;
+        }
+
+        // 重用 util 函数统一复制逻辑，避免重复代码
+        const destUri = await copyFileToDocumentDir(
+          sourceUri,
+          "chat_images"
+        ).catch((e) => {
+          console.warn("Copy screenshot error", e);
+          showSystemError("Failed to import screenshot");
+          throw e;
+        });
+
+        const attachment = {
+          id: Date.now().toString(),
+          uri: destUri,
+          type: "image" as const,
+        };
+        setAttachments([attachment]);
+
         if (autoSend) {
-          const clip = await Clipboard.getImageAsync({ format: "png" });
-          if (clip && typeof clip.data === "string" && clip.data.length > 0) {
-            const dir = FileSystem.documentDirectory + "chat_images";
-            await FileSystem.makeDirectoryAsync(dir, {
-              intermediates: true,
-            }).catch(() => {});
-            const fileUri = `${dir}/screenshot_${Date.now()}.png`;
-            await FileSystem.writeAsStringAsync(fileUri, clip.data, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-
-            const attachment = {
-              id: Date.now().toString(),
-              uri: fileUri,
-              type: "image" as const,
-            };
-            setAttachments([attachment]);
-
-            setTimeout(() => handleSend(), 100);
-            didProcessQuickAttach.current = true;
-          } else {
-            showSystemError("No screenshot found in clipboard");
-          }
+          handleSend([attachment])
         }
+
+
       } catch (err: any) {
         console.warn("Quick attach failed", err);
         showSystemError(
@@ -239,8 +208,9 @@ export default function ChatScreen() {
     })();
   }, []);
 
-  const handleSend = async () => {
-    if (inputText.trim() === "" && attachments.length === 0) return;
+  const handleSend = async (directlySendAttachments?:any[]) => {
+    if (inputText.trim() === "" && attachments.length === 0&&!directlySendAttachments?.length) return;
+    const attachmentsToSend=directlySendAttachments||attachments
 
     setIsTextMode(false);
     Keyboard.dismiss();
@@ -250,7 +220,7 @@ export default function ChatScreen() {
 
     // Prepare attachments payload for API
     const attachmentsPayload: import("@/utils/api").AttachmentPayload[] = [];
-    for (const att of attachments) {
+    for (const att of attachmentsToSend) {
       try {
         const base64 = await FileSystem.readAsStringAsync(att.uri, {
           encoding: FileSystem.EncodingType.Base64,
@@ -272,7 +242,7 @@ export default function ChatScreen() {
 
     // Build user message combining text & attachments (for local UI)
     const combinedMessage = chatAPI.createMessage(inputText, true, "text", {
-      attachments,
+      attachments:attachmentsToSend,
     });
     setMessages((prev) => [...prev, combinedMessage]);
 

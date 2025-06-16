@@ -160,7 +160,7 @@ export default {
     Chat: "Chat",
     Accounts: "Accounts",
     Calendar: "Calendar",
-    "Welcome to Momiq": "Welcome to Momiq",
+    "Welcome to MomiQ": "Welcome to MomiQ",
     "Your personal finance tracker to help you manage expenses and reach your financial goals":
       "Your personal finance tracker to help you manage expenses and reach your financial goals",
     "Record your first expense": "Record your first expense",
@@ -172,8 +172,8 @@ export default {
     "Available after recording your first expense":
       "Available after recording your first expense",
     "Explore features": "Explore features",
-    "Discover all the features Momiq has to offer":
-      "Discover all the features Momiq has to offer",
+    "Discover all the features MomiQ has to offer":
+      "Discover all the features MomiQ has to offer",
     "Budget Period": "Budget Period",
     "Select Period": "Select Period",
     "Add Your First Bill": "Add Your First Bill",
