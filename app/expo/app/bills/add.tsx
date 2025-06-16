@@ -374,6 +374,7 @@ export default function AddBillScreen() {
                     mode="date"
                     display="spinner"
                     onChange={handleDateChange}
+                    maximumDate={new Date()}
                   />
                 </YStack>
               </YStack>
@@ -385,6 +386,7 @@ export default function AddBillScreen() {
               mode="date"
               display="default"
               onChange={handleDateChange}
+              maximumDate={new Date()}
             />
           )}
           <YStack p="$2" bg="white">

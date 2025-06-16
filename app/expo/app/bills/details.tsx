@@ -11,7 +11,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import { ChevronLeft, Trash2 } from "lucide-react-native";
 import {
-  View,
   Text,
   Button,
   XStack,
@@ -92,15 +91,6 @@ export default function BillDetailsScreen() {
       setNotesText(bill.notes || "");
     }
   }, [bill]);
-
-  const handleEditPress = () => {
-    if (bill) {
-      router.push({
-        pathname: "/bills/add",
-        params: { id: bill.id },
-      });
-    }
-  };
 
   const handleDeletePress = () => {
     if (!bill) return;
@@ -213,16 +203,6 @@ export default function BillDetailsScreen() {
             </Text>
 
             <XStack space="$2">
-              {/* <Button
-                size="$3"
-                circular
-                chromeless
-                onPress={handleEditPress}
-                disabled={updating}
-              >
-                <Edit2 size={20} color={updating ? "#CBD5E1" : "#64748B"} />
-              </Button> */}
-
               <Button
                 size="$3"
                 circular

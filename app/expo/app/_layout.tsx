@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { TamaguiProvider } from "tamagui";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Linking, NativeModules } from "react-native";
 
 import config from "../tamagui.config";
 import "../global.css";
@@ -38,6 +39,26 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+  // Once fonts are loaded, attempt to consume any pending deep link (iOS ≤16 fallback)
+  useEffect(() => {
+    if (!loaded) return;
+
+    const bridge = (NativeModules as any)?.PendingLinkBridge;
+    if (bridge?.consumePendingDeepLink) {
+      bridge
+        .consumePendingDeepLink()
+        .then((url: string | null) => {
+          if (url && typeof url === "string" && url.length > 0) {
+            // Give navigation tree a tick to mount before navigating
+            setTimeout(() => Linking.openURL(url).catch(() => {}), 200);
+          }
+        })
+        .catch((e: any) => {
+          console.warn("Failed to consume pending deep link", e);
+        });
     }
   }, [loaded]);
 

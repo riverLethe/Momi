@@ -18,6 +18,11 @@ interface DeleteBillOptions {
 interface UpdateBillFieldOptions {
   onSuccess?: (updatedBill: Bill) => void;
   onError?: (error: unknown) => void;
+  /**
+   * When true, skip the global refreshData call after the bill has been updated.
+   * Useful when you only need the current screen to reflect the change quickly.
+   */
+  ignoreRefresh?: boolean;
 }
 
 /**
@@ -73,7 +78,7 @@ export const useBillActions = () => {
     value: any,
     options: UpdateBillFieldOptions = {}
   ) => {
-    const { onSuccess, onError } = options;
+    const { onSuccess, onError, ignoreRefresh } = options;
     try {
       const prevVal: any = (bill as any)[field];
       if (field === "date") {
@@ -90,8 +95,15 @@ export const useBillActions = () => {
       });
 
       if (updatedBill) {
-        await refreshData();
+        // First update the current screen to provide immediate feedback.
         onSuccess?.(updatedBill as Bill);
+
+        // Optionally refresh the global data store in the background.
+        if (!ignoreRefresh) {
+          refreshData().catch((err) => {
+            console.error("Failed to refresh data after bill update:", err);
+          });
+        }
       } else {
         throw new Error("Failed to update bill");
       }

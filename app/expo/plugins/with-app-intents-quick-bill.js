@@ -7,6 +7,26 @@ const fs = require("fs");
 const path = require("path");
 
 const EXT_NAME = "QuickBillIntents";
+const BRIDGE_NAME = "PendingLinkBridge";
+
+// Swift bridging module to expose a method that reads & clears the pendingDeepLink
+const BRIDGE_SWIFT = `import Foundation
+import React
+
+@objc(PendingLinkBridge)
+class PendingLinkBridge: NSObject {
+
+  @objc static func requiresMainQueueSetup() -> Bool { return false }
+
+  /// Reads the pending deep link from the shared App Group then clears it.
+  @objc(consumePendingDeepLink:rejecter:)
+  func consumePendingDeepLink(resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    let store = UserDefaults(suiteName: "group.com.momiq.shared")
+    let url = store?.string(forKey: "pendingDeepLink")
+    store?.removeObject(forKey: "pendingDeepLink")
+    resolve(url)
+  }
+}`;
 
 function ensureSwiftFile(projectRoot, swiftCode) {
   const extDir = path.join(projectRoot, EXT_NAME);
@@ -17,24 +37,30 @@ function ensureSwiftFile(projectRoot, swiftCode) {
   fs.writeFileSync(swiftPath, swiftCode, { encoding: "utf8" });
 }
 
+function ensureBridgeFile(projectRoot, swiftCode) {
+  const extDir = path.join(projectRoot, EXT_NAME);
+  if (!fs.existsSync(extDir)) {
+    fs.mkdirSync(extDir, { recursive: true });
+  }
+  const swiftPath = path.join(extDir, `${BRIDGE_NAME}.swift`);
+  fs.writeFileSync(swiftPath, swiftCode, { encoding: "utf8" });
+}
+
 const QUICK_INTENT_SWIFT = `import AppIntents
 // UIKit deliberately not imported – AppIntent should avoid UI frameworks.
 
-/// A lightweight intent that simply launches the app's quick-bill screen.
-/// Direct pasteboard access from an App Intent is no longer permitted on recent
-/// iOS versions and was causing a SIGTRAP crash. We therefore avoid using
-/// 'UIPasteboard.general' here and forward any optional screenshot through a
-/// deep-link query parameter that the React Native side can handle instead.
+/// A lightweight intent that simply launches the app's quick-bill screen and forwards an optional
+/// screenshot to the React Native chat view. On iOS 17 we can directly open a deep-link via the new
+/// IntentResult.opening API. For iOS 16 we persist the URL in a shared App Group so that the
+/// JavaScript side can pick it up on launch.
 @available(iOS 16.0, *)
 public struct QuickBillIntent: AppIntent {
     public static let title: LocalizedStringResource = "MomiQ-Quick Add Bills"
-    /// The system should bring the main app to the foreground when this
-    /// intent finishes. Setting this to true works for iOS 16 and also
-    /// continues to launch the app on iOS 17 even though newer APIs allow
-    /// more granular control. Using this property lets us avoid relying on
-    /// the newer .openApp(at:) API that isn't available when building with
-    /// older SDKs.
-    public static var openAppWhenRun: Bool { true }
+
+    /// Must be a compile-time constant (cannot depend on OS version).
+    /// We always let the system bring the main app to foreground; when iOS ≥17 we may additionally
+    /// use the OpensIntent API which supersedes this flag.
+    public static var openAppWhenRun: Bool = true
 
     /// Optional screenshot provided by the invoking context (e.g. Siri, Shortcuts).
     @Parameter(title: "Screenshot")
@@ -44,35 +70,35 @@ public struct QuickBillIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult {
-        var deeplink = "momiq:///chat?autoSend=1"
+        let base = "momiq:///quickbill-debug?autoSend=1"
+        var deeplink = base
 
-        // If a screenshot is present, persist it to a temporary location that
-        // the main app can later read and attach. The file path is appended to
-        // the deep-link so the JS side knows where to find it.
+        // If a screenshot is present, write it to the shared App Group directory so the main app can
+        // access it. The path is appended (URL-encoded) as a query parameter.
         if let data = screenshot?.data {
-            let tmpURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent(UUID().uuidString)
-                .appendingPathExtension("png")
-            do {
-                try data.write(to: tmpURL)
-                // URL-encode the path so it can be passed as a query item.
-                let encodedPath = tmpURL.path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                deeplink += "&tmpPath=\(encodedPath)"
-            } catch {
-                // If writing fails, just fall back to opening the chat screen without the image.
-                print("QuickBillIntent: failed to write screenshot –", error.localizedDescription)
+            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.momiq.shared") {
+                let tmpURL = containerURL.appendingPathComponent(UUID().uuidString).appendingPathExtension("png")
+                do {
+                    try data.write(to: tmpURL)
+                    let encoded = tmpURL.path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    deeplink += "&tmpPath=\(encoded)"
+                } catch {
+                    print("QuickBillIntent: failed to write screenshot –", error.localizedDescription)
+                }
             }
         }
 
-        if let url = URL(string: deeplink) {
-            // Persist the link in the shared App Group so the main app can pick
-            // it up on launch. On iOS 16 the system opens the app automatically
-            // thanks to openAppWhenRun. On iOS 17 the same behaviour still
-            // works, so we don't need the newer .openApp(at:) result type.
-            let store = UserDefaults(suiteName: "group.com.momiq.shared")
-            store?.set(url.absoluteString, forKey: "pendingDeepLink")
+        guard let url = URL(string: deeplink) else {
+            return .result()
         }
 
+#if compiler(>=5.9)
+        // Newer SDKs support .opening, but it's unavailable on this toolchain; fall back to persist.
+#endif
+
+        // Persist the link so the main app can consume it on launch regardless of OS version.
+        let store = UserDefaults(suiteName: "group.com.momiq.shared")
+        store?.set(url.absoluteString, forKey: "pendingDeepLink")
         return .result()
     }
 }
@@ -84,6 +110,7 @@ const withAppIntentsQuickBill = (config) => {
     (cfg) => {
       const iosRoot = cfg.modRequest.platformProjectRoot;
       ensureSwiftFile(iosRoot, QUICK_INTENT_SWIFT);
+      ensureBridgeFile(iosRoot, BRIDGE_SWIFT);
       return cfg;
     },
   ]);
@@ -109,7 +136,8 @@ const withAppIntentsQuickBill = (config) => {
     const targetUuid = project.getFirstTarget().uuid;
 
     // Path variables
-    const fileName = "QuickBillIntent.swift";
+    const intentFile = "QuickBillIntent.swift";
+    const bridgeFile = `${BRIDGE_NAME}.swift`;
 
     // 1. Ensure a PBXGroup for our Intents exists (or create it)
     let groupKey = project.findPBXGroupKey({ name: EXT_NAME });
@@ -121,12 +149,16 @@ const withAppIntentsQuickBill = (config) => {
       project.addToPbxGroup(groupKey, mainGroupKey);
     }
 
-    // 2. Avoid duplicates then add the file to the group + build phase
-    const alreadyExists =
-      typeof project.hasFile === "function" && project.hasFile(fileName);
-    if (!alreadyExists) {
-      project.addSourceFile(fileName, { target: targetUuid }, groupKey);
+    function addFileIfNeeded(file) {
+      const exists =
+        typeof project.hasFile === "function" && project.hasFile(file);
+      if (!exists) {
+        project.addSourceFile(file, { target: targetUuid }, groupKey);
+      }
     }
+
+    addFileIfNeeded(intentFile);
+    addFileIfNeeded(bridgeFile);
 
     return cfg;
   });

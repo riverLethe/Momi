@@ -160,11 +160,19 @@ export default function ChatScreen() {
           const info = await FileSystem.getInfoAsync(sourceUri);
           if (!info.exists) {
             console.warn("tmpPath does not exist", sourceUri);
+            showSystemError("Screenshot not found – please try again.");
             return;
           }
 
           // 重用 util 函数统一复制逻辑，避免重复代码
-          const destUri = await copyFileToDocumentDir(sourceUri, "chat_images");
+          const destUri = await copyFileToDocumentDir(
+            sourceUri,
+            "chat_images"
+          ).catch((e) => {
+            console.warn("Copy screenshot error", e);
+            showSystemError("Failed to import screenshot");
+            throw e;
+          });
 
           const attachment = {
             id: Date.now().toString(),
@@ -203,10 +211,15 @@ export default function ChatScreen() {
 
             setTimeout(() => handleSend(), 100);
             didProcessQuickAttach.current = true;
+          } else {
+            showSystemError("No screenshot found in clipboard");
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn("Quick attach failed", err);
+        showSystemError(
+          `Quick attach failed: ${err?.message || "Unknown error"}`
+        );
       }
     })();
   }, [autoSend, tmpPath]);
@@ -249,8 +262,11 @@ export default function ChatScreen() {
           data: base64,
           name: att.name,
         });
-      } catch (e) {
+      } catch (e: any) {
         console.warn("Failed to read attachment", e);
+        showSystemError(
+          `Failed to read attachment: ${e?.message || "unknown error"}`
+        );
       }
     }
 
@@ -712,6 +728,16 @@ export default function ChatScreen() {
         },
       },
     ]);
+  };
+
+  /** Helper to display a user-visible error bubble */
+  const showSystemError = (text: string) => {
+    const errMsg = chatAPI.createMessage(`⚠️  ${text}`, false, "text", {
+      type: "system_error",
+    });
+    setMessages((prev) => [...prev, errMsg]);
+    // Ensure it becomes visible
+    setTimeout(() => scrollToBottom(), 50);
   };
 
   return (

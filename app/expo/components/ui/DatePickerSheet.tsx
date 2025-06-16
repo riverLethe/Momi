@@ -99,6 +99,7 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
               }
             }}
             style={{ alignSelf: "center" }}
+            maximumDate={new Date()}
           />
         </YStack>
       </Sheet.Frame>
