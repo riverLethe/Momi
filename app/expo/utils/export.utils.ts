@@ -18,9 +18,13 @@ const billsToCsv = (
   endDate: Date,
   currency: string
 ): string => {
+  /**
+   * Ensure value is CSV-safe and replace empty values with “/”.
+   */
   const sanitize = (value: string | number | undefined | null): string => {
-    if (value === undefined || value === null) return '';
+    if (value === undefined || value === null) return '/';
     const str = String(value);
+    if (str.trim() === '') return '/';
     // Wrap text fields that may contain commas or quotes
     if (str.includes(',') || str.includes('"')) {
       return '"' + str.replace(/"/g, '""') + '"';
@@ -28,46 +32,67 @@ const billsToCsv = (
     return str;
   };
 
-  const periodLine = [
+  /** Metadata section */
+  const titleLine: string[] = ['MomiQ Expense Bill Details'];
+
+  const periodLine: string[] = [
     'Period',
     `${startDate.toISOString()} - ${endDate.toISOString()}`,
   ];
 
-  const exportedAtLine = ['Exported At', new Date().toISOString()];
+  const exportTimeLine: string[] = ['Export Time', new Date().toISOString()];
+
+  const totalRecordsLine: string[] = ['Total', `${bills.length} records`];
 
   const totalExpense = bills.reduce((sum, b) => sum + (b.amount || 0), 0);
-  const summaryLine = [
-    'Summary',
-    `${bills.length} transactions, Total Expense ${new Intl.NumberFormat('en-US', {
+  const totalExpenseLine: string[] = [
+    'Total Expense',
+    new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
-    }).format(totalExpense)}`,
+    }).format(totalExpense),
   ];
 
-  // Empty line to separate metadata from table
+  // Empty line to separate metadata from details section
   const emptyLine: string[] = [''];
 
-  // Header for details table
-  const tableHeader = ['Date', 'Category', 'Merchant', 'Amount', 'Notes'];
+  /** Details section header */
+  const detailsTitleLine: string[] = ['MomiQ Transaction Bill Details List'];
 
+  const tableHeader: string[] = [
+    'Created Time',
+    'Transaction Time',
+    'Category',
+    'Merchant',
+    'Type', // Expense only
+    'Amount',
+    'Notes',
+  ];
+
+  /** Build table rows */
   const tableRows = bills.map((b) => [
+    sanitize(new Date(b.createdAt).toISOString()),
     sanitize(new Date(b.date).toISOString()),
     sanitize(b.category),
     sanitize(b.merchant ?? ''),
+    'Expense', // Only expense records are exported for now
     sanitize(
       new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency,
       }).format(b.amount)
     ),
-    sanitize(b.notes ?? '')
+    sanitize(b.notes ?? ''),
   ]);
 
   const allLines: string[][] = [
+    titleLine,
     periodLine,
-    exportedAtLine,
-    summaryLine,
+    exportTimeLine,
+    totalRecordsLine,
+    totalExpenseLine,
     emptyLine,
+    detailsTitleLine,
     tableHeader,
     ...tableRows,
   ];
@@ -99,7 +124,12 @@ export const exportBillsAsCsv = async (
 
     // Fetch user currency preference (default to USD if not found)
     const { currency } = await getUserPreferences();
-    const csvContent = billsToCsv(filtered, startDate!, endDate!, currency || 'USD');
+
+    // Determine period range – use provided dates or fallback to earliest/latest bill dates
+    const periodStart = startDate ?? new Date(Math.min(...filtered.map((b) => new Date(b.date).getTime())));
+    const periodEnd = endDate ?? new Date(Math.max(...filtered.map((b) => new Date(b.date).getTime())));
+
+    const csvContent = billsToCsv(filtered, periodStart, periodEnd, currency || 'USD');
     const fileName = `bills_${Date.now()}.csv`;
     const fileUri = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory}${fileName}`;
 

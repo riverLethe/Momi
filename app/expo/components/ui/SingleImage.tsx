@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { Image } from "react-native";
+import {
+  Image,
+  Pressable,
+  Modal,
+  View,
+  TouchableWithoutFeedback,
+} from "react-native";
 import { YStack, Text } from "tamagui";
 
 interface SingleImageProps {
@@ -15,8 +21,11 @@ interface SingleImageProps {
  */
 export const SingleImage: React.FC<SingleImageProps> = ({ uri, small }) => {
   const [error, setError] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+
   const size = small ? 30 : 50;
 
+  // If image failed to load, render placeholder
   if (error) {
     return (
       <YStack
@@ -35,11 +44,40 @@ export const SingleImage: React.FC<SingleImageProps> = ({ uri, small }) => {
   }
 
   return (
-    <Image
-      source={{ uri }}
-      style={{ width: size, height: size, borderRadius: 5 }}
-      resizeMode="cover"
-      onError={() => setError(true)}
-    />
+    <>
+      <Pressable onPress={() => setPreviewVisible(true)}>
+        <Image
+          source={{ uri }}
+          style={{ width: size, height: size, borderRadius: 5 }}
+          resizeMode="cover"
+          onError={() => setError(true)}
+        />
+      </Pressable>
+
+      {/* Full-screen preview */}
+      <Modal
+        visible={previewVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setPreviewVisible(false)}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.9)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Image
+              source={{ uri }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="contain"
+            />
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </>
   );
 };
