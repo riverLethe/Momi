@@ -40,9 +40,9 @@ const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
         {t("Financial Insights")}
       </Text>
 
-      <YStack space="$3.5">
+      <YStack gap="$3.5">
         {insights.map((insight, index) => (
-          <XStack key={index} space="$3" alignItems="center">
+          <XStack key={index} gap="$3" alignItems="center">
             <Circle
               size="$3.5"
               backgroundColor={
@@ -55,7 +55,7 @@ const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
             >
               {getIcon(insight.type)}
             </Circle>
-            <YStack flex={1}>
+            <YStack flex={1} gap="$2">
               <Text fontSize="$3" fontWeight="$6" color="$gray12">
                 {t(insight.title)}
               </Text>

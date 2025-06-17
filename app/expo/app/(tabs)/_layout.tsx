@@ -1,17 +1,18 @@
 import { Tabs } from "expo-router";
-import { 
-  Home, 
-  CreditCard, 
-  User, 
+import {
+  Home,
+  CreditCard,
+  User,
   Plus,
   ChartNoAxesCombinedIcon,
 } from "lucide-react-native";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-
+  const { t } = useTranslation();
   return (
     <Tabs
       screenOptions={({ route }) => ({
@@ -39,20 +40,20 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color, focused }) => 
-            focused ? 
-              <Home size={22} color="#000" fill={color} /> : 
+          title: t("Home"),
+          tabBarIcon: ({ color, focused }) =>
+            focused ?
+              <Home size={22} color="#000" fill={color} /> :
               <Home size={22} color={color} />
         }}
       />
       <Tabs.Screen
         name="bills"
         options={{
-          title: "Bills",
-          tabBarIcon: ({ color, focused }) => 
-            focused ? 
-              <CreditCard size={22} color="#000" fill={color} /> : 
+          title: t("Bills"),
+          tabBarIcon: ({ color, focused }) =>
+            focused ?
+              <CreditCard size={22} color="#000" fill={color} /> :
               <CreditCard size={22} color={color} />
         }}
       />
@@ -60,7 +61,7 @@ export default function TabsLayout() {
         name="chat"
         options={{
           title: "",
-          tabBarIcon: ({ color ,focused}) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={{
               width: 60,
               height: 60,
@@ -70,7 +71,7 @@ export default function TabsLayout() {
               justifyContent: "center",
               marginBottom: -25,
               borderWidth: 5,
-              borderColor: focused?"#000":"#ddd",
+              borderColor: focused ? "#000" : "#ddd",
             }}>
               <Plus size={24} color="white" />
             </View>
@@ -80,18 +81,18 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="reports"
         options={{
-          title: "Reports",
-          tabBarIcon: ({ color }) => 
-             <ChartNoAxesCombinedIcon size={22} color={color} />
+          title: t("Reports"),
+          tabBarIcon: ({ color }) =>
+            <ChartNoAxesCombinedIcon size={22} color={color} />
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ color, focused }) => 
-            focused ? 
-              <User size={22} color="#000"  fill={color} /> : 
+          title: t("Profile"),
+          tabBarIcon: ({ color, focused }) =>
+            focused ?
+              <User size={22} color="#000" fill={color} /> :
               <User size={22} color={color} />
         }}
       />

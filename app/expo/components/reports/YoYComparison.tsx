@@ -1,21 +1,22 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
-import { 
-  Card, 
-  XStack, 
-  YStack, 
-  Text, 
-  Button, 
+import {
+  Card,
+  XStack,
+  YStack,
+  Text,
+  Button,
   View,
-  Separator 
+  Separator
 } from "tamagui";
-import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  ArrowRight 
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  ArrowRight
 } from "lucide-react-native";
 import { TopSpendingCategory } from "@/types/reports.types";
+import { formatCurrency } from "@/utils/format";
 
 interface YoYComparisonProps {
   topCategories: TopSpendingCategory[];
@@ -30,10 +31,10 @@ const YoYComparison: React.FC<YoYComparisonProps> = ({ topCategories }) => {
   }
 
   return (
-    <Card 
-      padding="$4" 
-      borderRadius="$4" 
-      backgroundColor="white" 
+    <Card
+      padding="$4"
+      borderRadius="$4"
+      backgroundColor="white"
       marginBottom="$4"
       shadowColor="rgba(0,0,0,0.05)"
       shadowRadius={2}
@@ -43,14 +44,14 @@ const YoYComparison: React.FC<YoYComparisonProps> = ({ topCategories }) => {
       <Text fontSize="$3.5" fontWeight="$7" marginBottom="$3" color="$gray12">
         {t("Top Spending Categories")}
       </Text>
-      
+
       <YStack space="$3">
         {topCategories.map((category, index) => {
           // Determine change indicator
           const hasChange = category.changePercentage !== undefined;
           const isIncrease = hasChange && (category.changePercentage! > 0);
           const isDecrease = hasChange && (category.changePercentage! < 0);
-          
+
           return (
             <YStack key={index}>
               <XStack justifyContent="space-between" alignItems="center">
@@ -66,10 +67,10 @@ const YoYComparison: React.FC<YoYComparisonProps> = ({ topCategories }) => {
                   <Text fontWeight="$6" fontSize="$3">{t(category.category)}</Text>
                 </XStack>
                 <Text fontWeight="$7" fontSize="$3">
-                  ¥{category.amount.toFixed(0)}
+                  {formatCurrency(category.amount)}
                 </Text>
               </XStack>
-              
+
               {hasChange && (
                 <XStack marginTop="$1" marginLeft="$5" space="$1" alignItems="center">
                   {isIncrease ? (
@@ -93,9 +94,9 @@ const YoYComparison: React.FC<YoYComparisonProps> = ({ topCategories }) => {
                   )}
                 </XStack>
               )}
-              
+
               <XStack marginTop="$2" marginBottom="$2">
-                <View 
+                <View
                   style={{
                     height: 8,
                     backgroundColor: category.color,
@@ -104,7 +105,7 @@ const YoYComparison: React.FC<YoYComparisonProps> = ({ topCategories }) => {
                   }}
                 />
               </XStack>
-              
+
               {index < topCategories.length - 1 && (
                 <Separator marginVertical="$1.5" />
               )}
@@ -112,7 +113,7 @@ const YoYComparison: React.FC<YoYComparisonProps> = ({ topCategories }) => {
           );
         })}
       </YStack>
-      
+
       <Button
         marginTop="$3"
         backgroundColor="$gray1"

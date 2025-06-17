@@ -212,5 +212,113 @@ export default {
       "添加支出后，您可以设置预算来追踪您的消费",
     "Get Started": "开始使用",
     "View More Report": "查看更多报告",
+
+    // Settings Screen translations
+    "App Settings": "应用设置",
+    Display: "显示",
+    "Dark Mode": "深色模式",
+    Language: "语言",
+    "Select language": "选择语言",
+    English: "英语",
+    中文: "中文",
+    Español: "西班牙语",
+
+    // Profile Screen additions
+    "Family Spaces": "家庭空间",
+    "My Budgets": "我的预算",
+    "Export Data": "导出数据",
+    Notifications: "通知",
+    Logout: "退出登录",
+    "Install Quick Screenshot Shortcut": "安装快速截屏记账快捷方式",
+
+    // Login / Auth
+    "Welcome back": "欢迎回来",
+    "Sign in to continue": "登录以继续",
+    Username: "用户名",
+    Password: "密码",
+    "Enter your username": "输入您的用户名",
+    "Enter your password": "输入您的密码",
+    Login: "登录",
+    "Don't have an account?": "还没有账号？",
+    "Sign up": "注册",
+    "Login Failed": "登录失败",
+    "Please check your credentials and try again.": "请检查您的凭证并重试。",
+    "Please enter both username and password": "请输入用户名和密码",
+
+    // New section title
+    Finance: "财务",
+
+    // About section
+    About: "关于",
+
+    // Chat / MessageBubble additions
+    "Voice message": "语音消息",
+    "Total Spending": "总支出",
+    "Total {{count}} transactions": "共 {{count}} 笔交易",
+    file: "文件",
+
+    // Budget, Export, Notification screens
+    "Budget management coming soon": "预算管理即将上线",
+    "Date Range": "日期范围",
+    "No range selected": "未选择范围",
+    "Export Options": "导出选项",
+    "Checking bills...": "检查账单中...",
+    "No bills available for export.": "所选范围内没有可导出的账单。",
+    "Too Large Range": "范围过大",
+    "You can only export up to 3 months of bills at once.":
+      "一次最多导出3个月的账单。",
+    "Select Range": "选择范围",
+    "Export as CSV": "导出为 CSV",
+    "Invalid Range": "无效范围",
+    "End date cannot be later than today.": "结束日期不能晚于今天。",
+    "Please select a start and end date first.": "请先选择开始和结束日期。",
+
+    // Notification Screen
+    "Notification Settings": "通知设置",
+    "Push Notifications": "推送通知",
+    "Alert Types": "提醒类型",
+    "Bill Reminders": "账单提醒",
+    "Budget Alerts": "预算提醒",
+    "Family Updates": "家庭动态",
+    "Weekly Reports": "每周报告",
+    "Notification Delivery": "通知发送",
+    "We'll only send you notifications during daytime hours (8:00 AM - 10:00 PM) based on your device's time zone.":
+      "我们只会在白天（8:00 - 22:00）根据您的时区发送通知。",
+    "View All Notifications": "查看全部通知",
+    Test: "测试",
+    "Read All": "全部已读",
+    "Clear All": "清空全部",
+    NEW: "新",
+    'No notifications yet. Tap the "Test" button to create a sample notification.':
+      '暂无通知。点击"测试"按钮创建示例通知。',
+    "Choose a format to export your financial data": "选择导出财务数据的格式",
+    "Export failed": "导出失败",
+    "Failed to export data. Please try again.": "导出账单失败，请重试。",
+    "Loading your financial data...": "正在加载您的财务数据...",
+    "Financial health details coming soon": "财务健康详情即将上线",
+    "View detailed reports to better understand your spending patterns":
+      "查看详细报表以更好地了解您的消费模式",
+    "No content": "暂无内容",
+    "Set Budgets": "设置预算",
+    "Ignore Categories": "忽略类别",
+    None: "无",
+    Selected: "已选择",
+    "Invalid amount": "无效金额",
+    "Monthly budget should be at least 4× weekly budget":
+      "月预算至少应为周预算的4倍",
+    "Yearly budget should be at least 12× monthly budget":
+      "年预算至少应为月预算的12倍",
+    Done: "完成",
+    "All Time": "全部时间",
+    "All Categories": "全部类型",
+    "No Data": "暂无数据",
+    "Start adding your expenses to see insights": "开始添加您的支出以查看洞察",
+    "Start adding family expenses to see insights":
+      "开始添加家庭支出以查看洞察",
+    "Budget Overview": "预算概览",
+
+    week: "周",
+    month: "月",
+    year: "年",
   },
 };

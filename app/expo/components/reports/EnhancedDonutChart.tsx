@@ -5,6 +5,7 @@ import { View, Text, Card, Button, XStack, YStack } from "tamagui";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react-native";
 import Svg, { Circle as SvgCircle, Path } from "react-native-svg";
 import { CategoryData, TopSpendingCategory } from "@/types/reports.types";
+import { formatCurrency } from "@/utils/format";
 
 interface EnhancedDonutChartProps {
   data: CategoryData[];
@@ -118,7 +119,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
           }}
         >
           <Text fontWeight="$8" fontSize="$6">
-            ¥{totalValue.toFixed(0)}
+            {formatCurrency(totalValue)}
           </Text>
           <Text color="$gray10" fontSize="$2" marginTop="$1">
             {t("Total Expenses")}
@@ -184,7 +185,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
                 </XStack>
                 <XStack alignItems="baseline" space="$1">
                   <Text fontWeight="$7" fontSize="$3">
-                    ¥{item.value.toFixed(0)}
+                    {formatCurrency(item.value)}
                   </Text>
                   <Text color="$gray10" fontSize="$2">
                     ({((item.value / totalValue) * 100).toFixed(1)}%)

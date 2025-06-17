@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Card, Text, XStack, YStack, Separator } from "tamagui";
 import { BillListItem } from "./BillListItem";
 import { useTranslation } from "react-i18next";
+import { formatCurrency } from "@/utils/format";
 
 interface BillDateGroupProps {
   item: {
@@ -72,7 +73,7 @@ export const BillDateGroup: React.FC<BillDateGroupProps> = ({
           </Text>
         </XStack>
         <Text fontSize={12} color="$gray10">
-          -¥{item.totalAmount.toFixed(2)}
+          -{formatCurrency(item.totalAmount)}
         </Text>
       </XStack>
 

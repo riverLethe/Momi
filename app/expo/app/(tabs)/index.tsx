@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { YStack, Text, Separator } from "tamagui";
 
 // Providers and Stores
@@ -41,6 +42,7 @@ type FilterMode = "all" | "include" | "exclude";
 export default function HomeScreen() {
   const router = useRouter();
   const { viewMode } = useViewStore();
+  const { t } = useTranslation();
   const { isAuthenticated, user } = useAuth();
   const {
     bills,
@@ -416,7 +418,7 @@ export default function HomeScreen() {
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
           <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={{ marginTop: 16 }}>Loading your financial data...</Text>
+          <Text style={{ marginTop: 16 }}>{t("Loading your financial data...")}</Text>
         </View>
       </SafeAreaView>
     );

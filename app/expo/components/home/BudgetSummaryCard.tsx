@@ -19,6 +19,7 @@ import {
   EditIcon,
   DollarSign,
 } from "lucide-react-native";
+import { formatCurrency } from "@/utils/format";
 
 // 预算状态类型
 export type BudgetStatusType = "good" | "warning" | "danger" | "none";
@@ -75,7 +76,6 @@ interface BudgetSummaryCardProps {
   onManageBudgetPress?: () => void;
   onEditBudgetPress?: () => void;
   isLoading?: boolean;
-  currency?: string;
 }
 
 // Get status info
@@ -160,7 +160,6 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   onManageBudgetPress,
   onEditBudgetPress,
   isLoading = false,
-  currency = "¥",
 }) => {
   const { t } = useTranslation();
   const statusInfo = getBudgetStatusInfo(budgetStatus.status);
@@ -195,11 +194,6 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
 
   // Check if we have actual spending data
   const hasSpendingData = budgetStatus.spent > 0 || categories.length > 0;
-
-  // Format currency amount
-  const formatCurrency = (amount: number) => {
-    return `${currency}${amount.toLocaleString()}`;
-  };
 
   // Format budget display
   const formatBudget = (amount: number | null) => {

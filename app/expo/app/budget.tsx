@@ -3,9 +3,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { Button, H2, Text, View, XStack, YStack } from "tamagui";
+import { useTranslation } from "react-i18next";
 
 export default function BudgetScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
@@ -17,11 +19,11 @@ export default function BudgetScreen() {
             icon={<ArrowLeft size={24} color="#000" />}
             onPress={() => router.back()}
           />
-          <H2 marginLeft="$2">My Budgets</H2>
+          <H2 marginLeft="$2">{t("My Budgets")}</H2>
         </XStack>
 
         <View flex={1} justifyContent="center" alignItems="center">
-          <Text fontSize="$6" color="$gray9">Budget management coming soon</Text>
+          <Text fontSize="$6" color="$gray9">{t("Budget management coming soon")}</Text>
         </View>
       </YStack>
     </SafeAreaView>

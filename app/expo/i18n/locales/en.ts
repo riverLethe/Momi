@@ -216,5 +216,82 @@ export default {
     "Get Started": "Get Started",
     Health: "Health",
     Travel: "Travel",
+
+    // Chat / MessageBubble additions
+    "Voice message": "Voice message",
+    "Total Spending": "Total Spending",
+    "Total {{count}} transactions": "Total {{count}} transactions",
+    file: "file",
+
+    // Budget, Export, Notification screens
+    "Budget management coming soon": "Budget management coming soon",
+    "Export Data": "Export Data",
+    "Date Range": "Date Range",
+    "No range selected": "No range selected",
+    "Export Options": "Export Options",
+    "Checking bills...": "Checking bills...",
+    "No bills available for export.": "No bills available for export.",
+    "Too Large Range": "Too Large Range",
+    "You can only export up to 3 months of bills at once.":
+      "You can only export up to 3 months of bills at once.",
+    "Select Range": "Select Range",
+    "Export as CSV": "Export as CSV",
+    "Invalid Range": "Invalid Range",
+    "End date cannot be later than today.":
+      "End date cannot be later than today.",
+    "Export failed": "Export failed",
+    "Failed to export data. Please try again.":
+      "Failed to export data. Please try again.",
+
+    // Notification Screen
+    "Notification Settings": "Notification Settings",
+    "Push Notifications": "Push Notifications",
+    "Alert Types": "Alert Types",
+    "Bill Reminders": "Bill Reminders",
+    "Budget Alerts": "Budget Alerts",
+    "Family Updates": "Family Updates",
+    "Weekly Reports": "Weekly Reports",
+    "Notification Delivery": "Notification Delivery",
+    "We'll only send you notifications during daytime hours (8:00 AM - 10:00 PM) based on your device's time zone.":
+      "We'll only send you notifications during daytime hours (8:00 AM - 10:00 PM) based on your device's time zone.",
+    "View All Notifications": "View All Notifications",
+    Test: "Test",
+    "Read All": "Read All",
+    "Clear All": "Clear All",
+    NEW: "NEW",
+    'No notifications yet. Tap the "Test" button to create a sample notification.':
+      'No notifications yet. Tap the "Test" button to create a sample notification.',
+    "Choose a format to export your financial data":
+      "Choose a format to export your financial data",
+    "Please select a start and end date first.":
+      "Please select a start and end date first.",
+    "Loading your financial data...": "Loading your financial data...",
+    "Financial health details coming soon":
+      "Financial health details coming soon",
+    "View detailed reports to better understand your spending patterns":
+      "View detailed reports to better understand your spending patterns",
+    "View More Report": "View More Report",
+    "No content": "No content",
+    "Set Budgets": "Set Budgets",
+    "Ignore Categories": "Ignore Categories",
+    None: "None",
+    Selected: "Selected",
+    "Invalid amount": "Invalid amount",
+    "Monthly budget should be at least 4× weekly budget":
+      "Monthly budget should be at least 4× weekly budget",
+    "Yearly budget should be at least 12× monthly budget":
+      "Yearly budget should be at least 12× monthly budget",
+    Done: "Done",
+    "All Time": "All Time",
+    "All Categories": "All Categories",
+    "No Data": "No Data",
+    "Start adding your expenses to see insights":
+      "Start adding your expenses to see insights",
+    "Start adding family expenses to see insights":
+      "Start adding family expenses to see insights",
+    "Budget Overview": "Budget Overview",
+    week: "week",
+    month: "month",
+    year: "year",
   },
 };

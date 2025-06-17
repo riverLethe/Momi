@@ -15,6 +15,8 @@ import {
 import { ChevronDown, Check } from "lucide-react-native";
 import { EXPENSE_CATEGORIES, getCategoryIcon } from "@/constants/categories";
 import { Budgets, BudgetPeriod, BudgetDetail } from "@/utils/budget.utils";
+import { formatCurrency } from "@/utils/format";
+import CategorySelectSheet from "../ui/CategorySelectSheet";
 
 // Category filter mode
 type FilterMode = "all" | "include" | "exclude";
@@ -26,9 +28,6 @@ interface BudgetUpdateModalProps {
   budgets: Budgets;
   /** 保存回调：返回新的预算对象 */
   onSave: (next: Budgets) => Promise<void>;
-  /** 已有类别过滤（用于初始化） */
-  initialCategories?: string[];
-  currency?: string;
   defaultPeriod?: BudgetPeriod;
 }
 
@@ -37,8 +36,6 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
   onOpenChange,
   budgets,
   onSave,
-  initialCategories = [],
-  currency = "¥",
   defaultPeriod = "weekly",
 }) => {
   const { t } = useTranslation();
@@ -167,35 +164,18 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
       <Sheet.Overlay />
       <Sheet.Handle />
       <Sheet.Frame padding="$4" paddingHorizontal="$3" paddingBottom="$6">
-        <YStack flex={1}>
-          <Sheet.ScrollView showsVerticalScrollIndicator={false} flex={1}>
-            <YStack gap="$2" paddingBottom="$6">
-              {EXPENSE_CATEGORIES.map((cat) => {
-                const CategoryIcon = getCategoryIcon(cat.id);
-                const selected = form[selectedPeriod].ignoredCategories.includes(cat.id);
-                return (
-                  <Button
-                    key={cat.id}
-                    backgroundColor={selected ? cat.lightColor : "white"}
-                    paddingHorizontal="$2"
-                    justifyContent="flex-start"
-                    onPress={() => toggleCategory(cat.id)}
-                  >
-                    <XStack alignItems="center" gap="$2">
-                      <Avatar circular size="$2" backgroundColor={`${cat.color}20`}>
-                        <CategoryIcon size={16} color={cat.color} />
-                      </Avatar>
-                      <Text fontSize="$3" color="$gray11" flex={1}>
-                        {t(cat.name)}
-                      </Text>
-                      {selected && <Check size={16} color={cat.color} />}
-                    </XStack>
-                  </Button>
-                );
-              })}
-            </YStack>
-          </Sheet.ScrollView>
-        </YStack>
+        <CategorySelectSheet
+          isOpen={isCategorySheetOpen}
+          setIsOpen={setCategorySheetOpen}
+          multiSelect
+          selectedCategories={form[selectedPeriod].ignoredCategories}
+          onCategoriesChange={(categories) => {
+            setForm((prev) => ({
+              ...prev,
+              [selectedPeriod]: { ...prev[selectedPeriod], ignoredCategories: categories },
+            }));
+          }}
+        />
       </Sheet.Frame>
     </Sheet>
   );
@@ -213,7 +193,7 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
       <Input
         id={`${period}-amount`}
         size="$3"
-        placeholder={`${currency}0`}
+        placeholder={formatCurrency(0).replace(/0+([.,]0+)?/, "0")}
         keyboardType="numeric"
         value={value}
         onChangeText={setValue}

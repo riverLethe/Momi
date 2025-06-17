@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Card, Paragraph, Text, XStack } from "tamagui";
+import { formatCurrency } from "@/utils/format";
 
 interface TotalExpenseCardProps {
   totalExpense: number;
@@ -24,7 +25,7 @@ export const TotalExpenseCard: React.FC<TotalExpenseCardProps> = ({
           {t("Total Expense")}
         </Paragraph>
         <Text fontSize={20} fontWeight="700" color="$red10">
-          ¥{totalExpense.toFixed(2)}
+          {formatCurrency(totalExpense)}
         </Text>
       </XStack>
     </Card>

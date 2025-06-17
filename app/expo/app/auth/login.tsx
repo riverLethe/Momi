@@ -19,19 +19,21 @@ import {
   Input,
   Form,
 } from "tamagui";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/providers/AuthProvider";
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, isLoading } = useAuth();
+  const { t } = useTranslation();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert("Error", "Please enter both username and password");
+      Alert.alert(t("Error"), t("Please enter both username and password"));
       return;
     }
 
@@ -39,10 +41,7 @@ export default function LoginScreen() {
     if (success) {
       router.back();
     } else {
-      Alert.alert(
-        "Login Failed",
-        "Please check your credentials and try again."
-      );
+      Alert.alert(t("Login Failed"), t("Please check your credentials and try again."));
     }
   };
 
@@ -63,15 +62,15 @@ export default function LoginScreen() {
             <ArrowLeft size={24} color="#1F2937" />
           </Button>
 
-          <H1 marginBottom="$2">Welcome back</H1>
+          <H1 marginBottom="$2">{t("Welcome back")}</H1>
           <Paragraph color="$gray10" marginBottom="$8">
-            Sign in to continue
+            {t("Sign in to continue")}
           </Paragraph>
 
           <YStack space="$4">
             <YStack>
               <Text color="$gray11" marginBottom="$1">
-                Username
+                {t("Username")}
               </Text>
               <Input
                 backgroundColor="$background"
@@ -79,7 +78,7 @@ export default function LoginScreen() {
                 borderRadius="$4"
                 borderWidth={1}
                 borderColor="$gray4"
-                placeholder="Enter your username"
+                placeholder={t("Enter your username")}
                 autoCapitalize="none"
                 value={username}
                 onChangeText={setUsername}
@@ -88,7 +87,7 @@ export default function LoginScreen() {
 
             <YStack>
               <Text color="$gray11" marginBottom="$1">
-                Password
+                {t("Password")}
               </Text>
               <Input
                 backgroundColor="$background"
@@ -96,7 +95,7 @@ export default function LoginScreen() {
                 borderRadius="$4"
                 borderWidth={1}
                 borderColor="$gray4"
-                placeholder="Enter your password"
+                placeholder={t("Enter your password")}
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
@@ -116,19 +115,19 @@ export default function LoginScreen() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text color="white" fontWeight="$6" fontSize="$5">
-                Login
+                {t("Login")}
               </Text>
             )}
           </Button>
 
           <XStack marginTop="$8" justifyContent="center" alignItems="center">
-            <Text color="$gray10">Don't have an account? </Text>
+            <Text color="$gray10">{t("Don't have an account?")} </Text>
             <Button
               chromeless
               onPress={() => router.push("/auth/register" as any)}
             >
               <Text color="$blue9" fontWeight="$6">
-                Sign up
+                {t("Sign up")}
               </Text>
             </Button>
           </XStack>

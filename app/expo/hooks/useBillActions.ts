@@ -83,9 +83,11 @@ export const useBillActions = () => {
       const prevVal: any = (bill as any)[field];
       if (field === "date") {
         if (new Date(prevVal).getTime() === new Date(value).getTime()) {
+          onSuccess?.(bill as Bill);
           return;
         }
       } else if (prevVal === value) {
+        onSuccess?.(bill as Bill);
         return;
       }
 

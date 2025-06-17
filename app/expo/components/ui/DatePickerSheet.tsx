@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Platform } from "react-native";
 import { Sheet, YStack, XStack, Button, Paragraph } from "tamagui";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { X as CloseIcon, Check as CheckIcon } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 export interface DatePickerSheetProps {
@@ -16,6 +15,7 @@ export interface DatePickerSheetProps {
   title?: string;
   /** 选择模式，默认为 "date" */
   mode?: "date" | "time" | "datetime";
+  onlyContent?: boolean;
 }
 
 /**
@@ -33,6 +33,7 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
   onConfirm,
   title,
   mode = "date",
+  onlyContent = false,
 }) => {
   const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
@@ -54,7 +55,40 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
     onOpenChange(false);
   };
 
-  return (
+  const renderContent = () => (
+    <YStack gap="$3">
+      <XStack justifyContent="space-between" alignItems="center">
+        <Paragraph fontSize={18} fontWeight="700">
+          {title || t("Select Date")}
+        </Paragraph>
+
+        <Button
+          theme="active"
+          backgroundColor="$blue10"
+          onPress={handleConfirm}
+          size="$3"
+        >
+          <Paragraph color="white" fontWeight="700">
+            {t("Save")}
+          </Paragraph>
+        </Button>
+      </XStack>
+
+      <DateTimePicker
+        value={selectedDate}
+        mode={mode}
+        display={Platform.OS === "ios" ? "spinner" : "default"}
+        onChange={(_, date) => {
+          if (date) {
+            setSelectedDate(date);
+          }
+        }}
+        style={{ alignSelf: "center" }}
+        maximumDate={new Date()}
+      />
+    </YStack>
+  );
+  return onlyContent ? renderContent() : (
     <Sheet
       modal
       open={open}
@@ -65,43 +99,7 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
       <Sheet.Overlay />
       <Sheet.Handle />
       <Sheet.Frame bg="$background" padding="$4">
-        <YStack space="$3">
-          <XStack justifyContent="space-between" alignItems="center">
-            <Paragraph fontSize={18} fontWeight="700">
-              {title || t("Select Date")}
-            </Paragraph>
-            {/* <Button
-              circular
-              size="$3"
-              icon={<CloseIcon size={18} />}
-              onPress={() => onOpenChange(false)}
-            /> */}
-
-            <Button
-              theme="active"
-              backgroundColor="$blue10"
-              onPress={handleConfirm}
-              size="$3"
-            >
-              <Paragraph color="white" fontWeight="700">
-                {t("Save")}
-              </Paragraph>
-            </Button>
-          </XStack>
-
-          <DateTimePicker
-            value={selectedDate}
-            mode={mode}
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={(_, date) => {
-              if (date) {
-                setSelectedDate(date);
-              }
-            }}
-            style={{ alignSelf: "center" }}
-            maximumDate={new Date()}
-          />
-        </YStack>
+        {renderContent()}
       </Sheet.Frame>
     </Sheet>
   );

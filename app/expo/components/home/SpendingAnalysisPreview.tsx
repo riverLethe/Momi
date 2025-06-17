@@ -2,18 +2,19 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
-import { 
-  Card, 
-  Text, 
-  XStack, 
+import {
+  Card,
+  Text,
+  XStack,
   YStack,
-  H5, 
+  H5,
   H6,
   Button,
   Circle,
 } from "tamagui";
 
 import { getCategoryIcon } from "@/constants/categories";
+import { formatCurrency } from "@/utils/format";
 
 interface CategorySpending {
   id: string;
@@ -28,23 +29,17 @@ interface CategorySpending {
 interface SpendingAnalysisPreviewProps {
   topCategories: CategorySpending[];
   period: "weekly" | "monthly" | "yearly";
-  currency?: string;
   isPersonalView?: boolean;
 }
 
 export const SpendingAnalysisPreview: React.FC<SpendingAnalysisPreviewProps> = ({
   topCategories,
   period,
-  currency = "¥",
   isPersonalView = true,
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
-  
-  const formatCurrency = (amount: number): string => {
-    return `${currency}${amount.toLocaleString()}`;
-  };
-  
+
   return (
     <YStack marginTop="$4" marginHorizontal="$4" marginBottom="$8">
       <XStack justifyContent="space-between" alignItems="center" marginBottom="$2">
@@ -63,9 +58,9 @@ export const SpendingAnalysisPreview: React.FC<SpendingAnalysisPreviewProps> = (
         </Button>
       </XStack>
 
-      <Card 
-        padding="$4" 
-        bordered 
+      <Card
+        padding="$4"
+        bordered
         borderRadius="$4"
         elevate
         animation="bouncy"
@@ -80,7 +75,7 @@ export const SpendingAnalysisPreview: React.FC<SpendingAnalysisPreviewProps> = (
             {t("This")} {t(period === "weekly" ? "Week" : period === "monthly" ? "Month" : "Year")}
           </Text>
         </XStack>
-        
+
         {topCategories.length > 0 ? (
           <XStack justifyContent="space-around" flexWrap="wrap">
             {topCategories.map((category) => {

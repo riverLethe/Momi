@@ -2,6 +2,7 @@ import React from "react";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import {
   Home,
   CreditCard,
@@ -30,6 +31,7 @@ import { ProfileSection } from "@/components/profile/ProfileSection";
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
+  const { t } = useTranslation();
 
   const handleFamilySpacePress = () => {
     if (!isAuthenticated) {
@@ -63,7 +65,7 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Family Space Section */}
-          <ProfileSection title="Family">
+          <ProfileSection title={t("Family")}>
             <Button
               chromeless
               justifyContent="flex-start"
@@ -78,7 +80,7 @@ export default function ProfileScreen() {
                   <Circle size="$3" backgroundColor="$blue4">
                     <Home size={22} color="#3B82F6" />
                   </Circle>
-                  <Text fontWeight="$6" fontSize="$3">Family Spaces</Text>
+                  <Text fontWeight="$6" fontSize="$3">{t("Family Spaces")}</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
@@ -86,7 +88,7 @@ export default function ProfileScreen() {
           </ProfileSection>
 
           {/* Personal Finance Section */}
-          <ProfileSection title="Finance">
+          <ProfileSection title={t("Finance")}>
             <Button
               chromeless
               justifyContent="flex-start"
@@ -101,7 +103,7 @@ export default function ProfileScreen() {
                   <Circle size="$3" backgroundColor="$green4">
                     <CreditCard size={22} color="#10B981" />
                   </Circle>
-                  <Text fontWeight="$6" fontSize="$3">My Budgets</Text>
+                  <Text fontWeight="$6" fontSize="$3">{t("My Budgets")}</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
@@ -123,7 +125,7 @@ export default function ProfileScreen() {
                   <Circle size="$3" backgroundColor="$purple4">
                     <FileText size={22} color="#8B5CF6" />
                   </Circle>
-                  <Text fontWeight="$6" fontSize="$3">Export Data</Text>
+                  <Text fontWeight="$6" fontSize="$3">{t("Export Data")}</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
@@ -131,7 +133,7 @@ export default function ProfileScreen() {
           </ProfileSection>
 
           {/* Settings Section */}
-          <ProfileSection title="Settings">
+          <ProfileSection title={t("Settings")}>
             <Button
               chromeless
               justifyContent="flex-start"
@@ -146,7 +148,7 @@ export default function ProfileScreen() {
                   <Circle size="$3" backgroundColor="$gray4">
                     <Settings size={22} color="#6B7280" />
                   </Circle>
-                  <Text fontWeight="$6" fontSize="$3">App Settings</Text>
+                  <Text fontWeight="$6" fontSize="$3">{t("App Settings")}</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
@@ -168,7 +170,7 @@ export default function ProfileScreen() {
                   <Circle size="$3" backgroundColor="$yellow4">
                     <Bell size={22} color="#F59E0B" />
                   </Circle>
-                  <Text fontWeight="$6" fontSize="$3">Notifications</Text>
+                  <Text fontWeight="$6" fontSize="$3">{t("Notifications")}</Text>
                 </XStack>
                 <ChevronRight size={20} color="#9CA3AF" />
               </XStack>
@@ -193,15 +195,13 @@ export default function ProfileScreen() {
             >
               <XStack alignItems="center" space="$2">
                 <LogOut size={20} color="#EF4444" />
-                <Text fontWeight="$6" color="#EF4444" fontSize="$3">Logout</Text>
+                <Text fontWeight="$6" color="#EF4444" fontSize="$3">{t("Logout")}</Text>
               </XStack>
             </Button>
           )}
 
-          <Button
-            onPress={() => installQuickScreenshotBillShortcut()}
-          >
-            Install Quick Screenshot Shortcut
+          <Button onPress={() => installQuickScreenshotBillShortcut()}>
+            {t("Install Quick Screenshot Shortcut")}
           </Button>
         </ScrollView>
       </YStack>

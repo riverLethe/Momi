@@ -8,9 +8,11 @@ import { getBills } from "@/utils/bills.utils";
 import { Alert } from "react-native";
 import { DateRangeSheet } from "@/components/ui/DateRangeSheet";
 import { addMonths, isAfter } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 export default function ExportDataScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [rangeSheetOpen, setRangeSheetOpen] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -57,23 +59,23 @@ export default function ExportDataScreen() {
     try {
       // Validate range & bills existence
       if (!startDate || !endDate) {
-        Alert.alert("Select Range", "Please select a start and end date first.");
+        Alert.alert(t("Select Range"), t("Please select a start and end date first."));
         return;
       }
 
       if (!hasBillsInRange) {
-        Alert.alert("No Bills", "There are no bills in the selected range.");
+        Alert.alert(t("No Bills"), t("No bills available for export."));
         return;
       }
 
       if (isAfter(endDate, today)) {
-        Alert.alert("Invalid Range", "End date cannot be later than today.");
+        Alert.alert(t("Invalid Range"), t("End date cannot be later than today."));
         return;
       }
 
       const maxEnd = addMonths(startDate, 3);
       if (isAfter(endDate, maxEnd)) {
-        Alert.alert("Too Large Range", "You can only export up to 3 months of bills at once.");
+        Alert.alert(t("Too Large Range"), t("You can only export up to 3 months of bills at once."));
         return;
       }
 
@@ -83,7 +85,7 @@ export default function ExportDataScreen() {
       }
     } catch (err) {
       console.error(err);
-      Alert.alert("Export failed", "We couldn't export your bills. Please try again.");
+      Alert.alert(t("Export failed"), t("Failed to export data. Please try again."));
     }
   };
 
@@ -97,14 +99,14 @@ export default function ExportDataScreen() {
             icon={<ArrowLeft size={24} color="#000" />}
             onPress={() => router.back()}
           />
-          <H2 marginLeft="$2">Export Data</H2>
+          <H2 marginLeft="$2">{t("Export Data")}</H2>
         </XStack>
 
         <YStack space="$4" marginTop="$4">
           {/* Date Range Picker */}
           <Card padding="$4" elevate>
             <Text fontSize="$5" fontWeight="$6" marginBottom="$2">
-              Date Range
+              {t("Date Range")}
             </Text>
             {startDate && endDate ? (
               <Text marginBottom="$3">
@@ -112,26 +114,26 @@ export default function ExportDataScreen() {
               </Text>
             ) : (
               <Text marginBottom="$3" color="$gray10">
-                No range selected
+                {t("No range selected")}
               </Text>
             )}
             <Button onPress={() => setRangeSheetOpen(true)} theme="blue">
-              Select Range
+              {t("Select Range")}
             </Button>
           </Card>
 
           <Card padding="$4" elevate>
             <Text fontSize="$5" fontWeight="$6" marginBottom="$2">
-              Export Options
+              {t("Export Options")}
             </Text>
             <Text color="$gray10" marginBottom="$4">
-              Choose a format to export your financial data
+              {t("Choose a format to export your financial data")}
             </Text>
 
             {loadingBills ? (
-              <Text color="$gray10">Checking bills...</Text>
+              <Text color="$gray10">{t("Checking bills...")}</Text>
             ) : !hasBillsInRange ? (
-              <Text color="$red10">No bills available for export.</Text>
+              <Text color="$red10">{t("No bills available for export.")}</Text>
             ) : null}
 
             <YStack space="$3">
@@ -141,7 +143,7 @@ export default function ExportDataScreen() {
                 onPress={handleExport}
                 disabled={!hasBillsInRange}
               >
-                <Text color="white" fontWeight="$6">Export as CSV</Text>
+                <Text color="white" fontWeight="$6">{t("Export as CSV")}</Text>
               </Button>
             </YStack>
           </Card>

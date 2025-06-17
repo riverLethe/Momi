@@ -14,11 +14,15 @@ import {
   Adapt,
   Sheet,
 } from "tamagui";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/providers/I18nProvider";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState("en");
+
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLanguage();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
@@ -30,23 +34,23 @@ export default function SettingsScreen() {
             icon={<ArrowLeft size={24} color="#000" />}
             onPress={() => router.back()}
           />
-          <H2 marginLeft="$2">App Settings</H2>
+          <H2 marginLeft="$2">{t("App Settings")}</H2>
         </XStack>
 
-        <YStack space="$4">
+        <YStack gap="$4">
           <Card padding="$4" elevate>
             <Text fontSize="$5" fontWeight="$6" marginBottom="$4">
-              Display
+              {t("Display")}
             </Text>
 
             <XStack alignItems="center" justifyContent="space-between" marginBottom="$4">
-              <XStack alignItems="center" space="$2">
+              <XStack alignItems="center" gap="$2">
                 {darkMode ? (
                   <Moon size={24} color="#6B7280" />
                 ) : (
                   <Sun size={24} color="#F59E0B" />
                 )}
-                <Text fontSize="$4">Dark Mode</Text>
+                <Text fontSize="$4">{t("Dark Mode")}</Text>
               </XStack>
               <Switch
                 size="$2"
@@ -58,21 +62,21 @@ export default function SettingsScreen() {
 
           <Card padding="$4" elevate>
             <Text fontSize="$5" fontWeight="$6" marginBottom="$4">
-              Language
+              {t("Language")}
             </Text>
 
             <XStack alignItems="center" justifyContent="space-between">
-              <XStack alignItems="center" space="$2">
+              <XStack alignItems="center" gap="$2">
                 <Globe size={24} color="#3B82F6" />
-                <Text fontSize="$4">Language</Text>
+                <Text fontSize="$4">{t("Language")}</Text>
               </XStack>
               
               <Select value={language} onValueChange={setLanguage}>
                 <Select.Trigger width={120}>
-                  <Select.Value placeholder="Select language">
-                    {language === "en" ? "English" : 
-                     language === "zh" ? "中文" : 
-                     language === "es" ? "Español" : "English"}
+                  <Select.Value placeholder={t("Select language")}>
+                    {language === "en" ? t("English") : 
+                     language === "zh" ? t("中文") : 
+                     language === "es" ? t("Español") : t("English")}
                   </Select.Value>
                 </Select.Trigger>
                 <Adapt platform="touch">
@@ -90,13 +94,13 @@ export default function SettingsScreen() {
                   <Select.Viewport>
                     <Select.Group>
                       <Select.Item index={0} value="en">
-                        <Select.ItemText>English</Select.ItemText>
+                        <Select.ItemText>{t("English")}</Select.ItemText>
                       </Select.Item>
                       <Select.Item index={1} value="zh">
-                        <Select.ItemText>中文</Select.ItemText>
+                        <Select.ItemText>{t("中文")}</Select.ItemText>
                       </Select.Item>
                       <Select.Item index={2} value="es">
-                        <Select.ItemText>Español</Select.ItemText>
+                        <Select.ItemText>{t("Español")}</Select.ItemText>
                       </Select.Item>
                     </Select.Group>
                   </Select.Viewport>
@@ -108,7 +112,7 @@ export default function SettingsScreen() {
 
           <Card padding="$4" elevate>
             <Text fontSize="$5" fontWeight="$6" marginBottom="$2">
-              About
+              {t("About")}
             </Text>
             <Text color="$gray10">
             MomiQ v1.0.0

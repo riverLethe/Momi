@@ -20,6 +20,7 @@ import {
   ScrollView,
   Avatar,
   Input,
+  Sheet,
 } from "tamagui";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +32,7 @@ import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
 import AmountInputSheet from "@/components/ui/AmountInputSheet";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
 import { useBillActions } from "@/hooks/useBillActions";
+import { formatCurrency } from "@/utils/format";
 
 export default function BillDetailsScreen() {
   const router = useRouter();
@@ -39,23 +41,21 @@ export default function BillDetailsScreen() {
   const { t } = useTranslation();
   const { locale } = useLocale();
 
-  const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
+  const [activeSheet, setActiveSheet] = useState<
+    "date" | "category" | "amount" | null
+  >(null);
   const [bill, setBill] = useState<Bill | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [isAmountSheetOpen, setIsAmountSheetOpen] = useState(false);
   const [editingMerchant, setEditingMerchant] = useState(false);
   const [merchantText, setMerchantText] = useState("");
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState("");
-  const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
   const { confirmDeleteBill, updateBillField } = useBillActions();
 
   // long-press handlers
-  const onAmountLongPress = () => setIsAmountSheetOpen(true);
   const onMerchantLongPress = () => setEditingMerchant(true);
   const onNotesLongPress = () => setEditingNotes(true);
-  const onDateLongPress = () => setIsDateSheetOpen(true);
 
   // 从本地存储加载账单详情
   useEffect(() => {
@@ -202,7 +202,7 @@ export default function BillDetailsScreen() {
               {t("Bill Details")}
             </Text>
 
-            <XStack space="$2">
+            <XStack gap="$2">
               <Button
                 size="$3"
                 circular
@@ -236,16 +236,31 @@ export default function BillDetailsScreen() {
                 >
                   {t("Expense Amount")}
                 </Text>
-                <Pressable onPress={onAmountLongPress} hitSlop={10}>
+                <Button
+                  chromeless
+                  padding="$0"
+                  backgroundColor="transparent"
+                  onPress={() => setActiveSheet("amount")}
+                  disabled={updating}
+                  pressStyle={{
+                    backgroundColor: "transparent",
+                    borderColor: "transparent",
+                    opacity: 0.5,
+                  }}
+                  hitSlop={10}
+                  justifyContent="flex-start"
+                  height="auto"
+
+                >
                   <Text
                     fontSize="$10"
                     fontWeight="$8"
                     color="white"
                     marginTop="$2"
                   >
-                    ¥{bill.amount.toFixed(2)}
+                    {formatCurrency(bill.amount)}
                   </Text>
-                </Pressable>
+                </Button>
                 <XStack justifyContent="space-between" marginTop="$4">
                   <Text
                     fontSize="$3"
@@ -274,7 +289,7 @@ export default function BillDetailsScreen() {
 
               {/* 详细信息 */}
               <Card backgroundColor="white" elevate>
-                <YStack padding="$4" space="$4">
+                <YStack padding="$4" gap="$4">
                   <XStack justifyContent="space-between" alignItems="center">
                     <Text color="$gray10" fontSize="$3">
                       {t("Category")}
@@ -283,7 +298,7 @@ export default function BillDetailsScreen() {
                       chromeless
                       padding="$0"
                       backgroundColor="transparent"
-                      onPress={() => setIsCategorySheetOpen(true)}
+                      onPress={() => setActiveSheet("category")}
                       disabled={updating}
                       pressStyle={{
                         backgroundColor: "transparent",
@@ -291,7 +306,7 @@ export default function BillDetailsScreen() {
                         opacity: 0.5,
                       }}
                     >
-                      <XStack alignItems="center" space="$2">
+                      <XStack alignItems="center" gap="$2">
                         <Avatar
                           circular
                           size="$3"
@@ -312,6 +327,7 @@ export default function BillDetailsScreen() {
                     justifyContent="space-between"
                     alignItems="center"
                     gap="$3"
+                    height="$1"
                   >
                     <Text color="$gray10" fontSize="$3">
                       {t("Merchant")}
@@ -352,48 +368,29 @@ export default function BillDetailsScreen() {
                     <Text color="$gray10" fontSize="$3">
                       {t("Record Time")}
                     </Text>
-                    <Pressable onPress={onDateLongPress}>
-                      <Text fontSize="$3" fontWeight="$6">
+                    <Button
+                      chromeless
+                      padding="$0"
+                      backgroundColor="transparent"
+                      onPress={() => setActiveSheet("date")}
+                      disabled={updating}
+                      pressStyle={{
+                        backgroundColor: "transparent",
+                        borderColor: "transparent",
+                        opacity: 0.5,
+                      }}
+                    > <Text fontSize="$3" fontWeight="$6">
                         {new Date(bill.date).toLocaleDateString(locale, {
                           year: "numeric",
                           month: "2-digit",
                           day: "2-digit",
                         })}
-                      </Text>
-                    </Pressable>
+                      </Text></Button>
                   </XStack>
-
-                  {/* <Separator />
-
-                <XStack justifyContent="space-between" alignItems="center">
-                  <Text color="$gray10" fontSize="$3">
-                    {t("Payment Method")}
-                  </Text>
-                  <Text fontSize="$3" fontWeight="$6">
-                    {bill.account || t("Cash")}
-                  </Text>
-                </XStack> */}
-                  {/* 
-                <Separator />
-
-                <XStack justifyContent="space-between" alignItems="center">
-                  <Text color="$gray10" fontSize="$3">
-                    {t("Update Time")}
-                  </Text>
-                  <Text fontSize="$3" fontWeight="$6">
-                    {new Date(bill.updatedAt).toLocaleString(locale, {
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                </XStack> */}
 
                   <Separator />
 
-                  <YStack space="$2">
+                  <YStack gap="$2">
                     <Text color="$gray10" fontSize="$3">
                       {t("Notes")}
                     </Text>
@@ -429,30 +426,63 @@ export default function BillDetailsScreen() {
           </KeyboardAvoidingView>
         </YStack>
 
-        {/* 类别选择弹出层 */}
-        <CategorySelectSheet
-          isOpen={isCategorySheetOpen}
-          setIsOpen={setIsCategorySheetOpen}
-          selectedCategory={bill.category}
-          onCategoryChange={handleCategoryChange}
-          showAllOption={false}
-        />
-
-        {/* 金额输入弹出层 */}
-        <AmountInputSheet
-          open={isAmountSheetOpen}
-          onOpenChange={setIsAmountSheetOpen}
-          initialAmount={bill.amount}
-          onSubmit={(val) => handleUpdateField("amount", val)}
-        />
-
-        {/* 日期选择底部弹窗 */}
-        <DatePickerSheet
-          open={isDateSheetOpen}
-          onOpenChange={setIsDateSheetOpen}
-          initialDate={new Date(bill.date)}
-          onConfirm={(date) => handleUpdateField("date", date)}
-        />
+        {/* 通用底部弹窗 */}
+        <Sheet
+          key={activeSheet}
+          modal
+          open={activeSheet !== null}
+          onOpenChange={(open: boolean) => {
+            if (!open) setActiveSheet(null);
+          }}
+          snapPoints={
+            activeSheet === "date"
+              ? [40]
+              : activeSheet === "amount"
+                ? [45]
+                : [50]
+          }
+          dismissOnSnapToBottom
+        >
+          <Sheet.Overlay />
+          <Sheet.Handle />
+          <Sheet.Frame
+            padding="$4"
+          >
+            {activeSheet === "date" && (
+              <DatePickerSheet
+                open
+                onOpenChange={(open: boolean) => {
+                  if (!open) setActiveSheet(null);
+                }}
+                initialDate={new Date(bill.date)}
+                onConfirm={(date) => handleUpdateField("date", date)}
+                onlyContent
+              />
+            )}
+            {activeSheet === "category" && (
+              <CategorySelectSheet
+                isOpen
+                setIsOpen={(open: boolean) => {
+                  if (!open) setActiveSheet(null);
+                }}
+                selectedCategory={bill.category}
+                onCategoryChange={handleCategoryChange}
+                onlyContent
+              />
+            )}
+            {activeSheet === "amount" && (
+              <AmountInputSheet
+                open
+                onOpenChange={(open: boolean) => {
+                  if (!open) setActiveSheet(null);
+                }}
+                initialAmount={bill.amount}
+                onSubmit={(val) => handleUpdateField("amount", val)}
+                onlyContent
+              />
+            )}
+          </Sheet.Frame>
+        </Sheet>
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );

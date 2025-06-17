@@ -3,6 +3,7 @@ import { LinearGradient } from 'tamagui/linear-gradient';
 import { Button, Text, XStack, YStack, Avatar } from 'tamagui';
 import { UserCircle } from 'lucide-react-native';
 import { User } from '@/types/user.types';
+import { useTranslation } from 'react-i18next';
 
 interface ProfileHeaderProps {
   user: User | null;
@@ -15,6 +16,7 @@ interface ProfileHeaderProps {
  */
 export const ProfileHeader: React.FC<ProfileHeaderProps> = React.memo(
   ({ user, isAuthenticated, onLoginPress }) => {
+    const { t } = useTranslation();
     return (
       <LinearGradient
         colors={["$blue9", "$blue8"]}
@@ -44,7 +46,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = React.memo(
 
           <YStack>
             <Text fontSize="$5" fontWeight="$7" color="white">
-              {isAuthenticated ? user?.name : 'Guest'}
+              {isAuthenticated ? user?.name : t('Guest')}
             </Text>
             {isAuthenticated ? (
               <Text color="rgba(255,255,255,0.8)" fontSize="$3">
@@ -57,7 +59,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = React.memo(
                 backgroundColor="white"
                 onPress={onLoginPress}
               >
-                <Text color="$blue9">Login</Text>
+                <Text color="$blue9">{t('Login')}</Text>
               </Button>
             )}
           </YStack>

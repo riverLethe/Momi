@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
-// import { Platform } from "react-native";
-import { Sheet, YStack, XStack, Button, Text, Paragraph } from "tamagui";
+import { Sheet, YStack, XStack, Button, Text } from "tamagui";
 import {
   Delete as DeleteIcon,
   Plus as PlusIcon,
   Minus as MinusIcon,
   Equal as EqualIcon,
-  X as CloseIcon,
 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
@@ -15,6 +13,7 @@ interface AmountInputSheetProps {
   onOpenChange: (open: boolean) => void;
   initialAmount?: number;
   onSubmit: (amount: number) => void;
+  onlyContent?: boolean;
 }
 
 /**
@@ -29,6 +28,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
   onOpenChange,
   initialAmount = 0,
   onSubmit,
+  onlyContent = false,
 }) => {
   const { t } = useTranslation();
 
@@ -209,19 +209,15 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
           onPress={() => handleOperatorPress("-")}
         />
 
-    <Button
+        <Button
           flex={1}
           size="$5"
           padding="$0"
-          onPress={
-           ()=>{
-            onOpenChange(false)
-           }
-          }
+          onPress={() => {
+            onOpenChange(false);
+          }}
         >
-          <Text >
-              {t("Cancel")}
-            </Text>
+          <Text>{t("Cancel")}</Text>
         </Button>
         <Button
           flex={1}
@@ -244,8 +240,24 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
       </YStack>
     </XStack>
   );
+  const renderContent = () => (
+    <YStack gap="$3">
+      <YStack paddingVertical="$2">
+        <Text
+          fontSize={getFontSize(displayString())}
+          fontWeight="700"
+          textAlign="right"
+        >
+          {displayString()}
+        </Text>
+      </YStack>
+      {renderKeypad()}
+    </YStack>
+  );
 
-  return (
+  return onlyContent ? (
+    renderContent()
+  ) : (
     <Sheet
       modal
       open={open}
@@ -256,18 +268,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
       <Sheet.Overlay />
       <Sheet.Handle />
       <Sheet.Frame bg="$background" padding="$4">
-        <YStack gap="$3">
-          <YStack paddingVertical="$2">
-            <Text
-              fontSize={getFontSize(displayString())}
-              fontWeight="700"
-              textAlign="right"
-            >
-              {displayString()}
-            </Text>
-          </YStack>
-          {renderKeypad()}
-        </YStack>
+        {renderContent()}
       </Sheet.Frame>
     </Sheet>
   );

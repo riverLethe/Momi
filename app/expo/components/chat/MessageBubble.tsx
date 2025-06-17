@@ -7,6 +7,7 @@ import { Pressable } from "react-native";
 import { Audio } from "expo-av";
 import { Play, File as FileIcon } from "lucide-react-native";
 import { SingleImage } from "@/components/ui/SingleImage";
+import i18n from "@/i18n";
 
 interface MessageBubbleProps {
   message: Message;
@@ -72,7 +73,7 @@ const renderMessageContent = (message: Message) => {
           <Play size={20} color="#3B82F6" />
         </Pressable>
         <Text fontSize={14} color="$gray800">
-          {message.text || "Voice message"}
+          {message.text || i18n.t("Voice message")}
         </Text>
       </XStack>
     );
@@ -146,10 +147,10 @@ const renderMessageContent = (message: Message) => {
               color="$gray800"
               marginBottom="$1"
             >
-              Total Spending: {totalAmount.toFixed(2)}
+              {i18n.t("Total Spending")}: {totalAmount.toFixed(2)}
             </Text>
             <Text fontSize={14} color="$gray500" marginBottom="$2">
-              Total {count} transactions
+              {i18n.t("Total {{count}} transactions", { count })}
             </Text>
             {Object.entries(categorySummary).map(
               ([category, amount], index) => (
@@ -247,7 +248,7 @@ const renderMessageContent = (message: Message) => {
                       numberOfLines={1}
                       style={{ flexShrink: 1, textAlign: "center" }}
                     >
-                      {att.name || "file"}
+                      {att.name || i18n.t("file")}
                     </Text>
                   </YStack>
                 );

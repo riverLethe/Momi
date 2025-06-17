@@ -69,7 +69,7 @@ const FinancialHealthScore: React.FC<FinancialHealthScoreProps> = ({
         marginTop="$3"
         hoverStyle={{ opacity: 0.9 }}
         pressStyle={{ opacity: 0.8 }}
-        onPress={() => alert("Financial health details coming soon")}
+        onPress={() => alert(t("Financial health details coming soon"))}
       >
         <Text color="white" fontWeight="$6">
           {t("Improve Your Score")}

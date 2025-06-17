@@ -23,14 +23,12 @@ import { BillListItem } from "@/components/bills/BillListItem";
 interface RecentBillsListProps {
   bills: Bill[];
   isLoading?: boolean;
-  currency?: string;
   maxItems?: number;
 }
 
 export const RecentBillsList: React.FC<RecentBillsListProps> = ({
   bills,
   isLoading = false,
-  currency = "¥",
   maxItems = 4,
 }) => {
   const { t } = useTranslation();

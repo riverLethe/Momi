@@ -5,6 +5,7 @@ import { Card, XStack, Text, Button, View } from "tamagui";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { LineChart } from "react-native-chart-kit";
 import { TrendData } from "@/types/reports.types";
+import { formatCurrency } from "@/utils/format";
 
 interface ExpenseTrendChartProps {
   data: TrendData[];
@@ -72,7 +73,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
               }}
             />
             <Text fontSize="$2" color="$gray10">
-              {t("Average")}: ¥{averageSpending.toFixed(0)}
+              {t("Average")}: {formatCurrency(averageSpending)}
             </Text>
           </XStack>
         </XStack>
@@ -138,7 +139,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
               formatYLabel: (value: string) => {
                 const num = parseFloat(value);
                 const rounded = Math.round(num * 100) / 100;
-                return `¥${rounded}`;
+                return formatCurrency(rounded);
               },
             }}
             bezier
@@ -179,7 +180,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
                       fontSize: 10,
                     }}
                   >
-                    ¥{roundedValue}
+                    {formatCurrency(roundedValue)}
                   </Text>
                 </View>
               );

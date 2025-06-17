@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Calendar, Filter } from "lucide-react-native";
 import { Button, XStack, YStack, Text } from "tamagui";
 import { useTranslation } from "react-i18next";
+import { formatCurrency } from "@/utils/format";
 
 import { useTranslatedCategoryName } from "@/constants/categories";
 import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
@@ -116,17 +117,15 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
       >
         <XStack alignItems="flex-start">
           <Text fontSize="$2.5" color="$gray9">
-            {t("Total: ¥{{totalExpense}}", {
-              totalExpense: totalExpense.toFixed(2),
-            })}
+            {t("Total")}: {formatCurrency(totalExpense)}
           </Text>
         </XStack>
-        <XStack space="$2" alignItems="center">
+        <XStack gap="$2" alignItems="center">
           <Button
             size="$2"
             icon={<Calendar size={12} color="#777777" />}
             onPress={() => setIsDateSheetOpen(true)}
-            space="$1.5"
+            gap="$1.5"
           >
             <Text fontSize="$2.5" color="$gray11">
               {getDateRangeLabel()}
@@ -137,7 +136,7 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
             size="$2"
             icon={<Filter size={12} color="#777777" />}
             onPress={() => setIsCategorySheetOpen(true)}
-            space="$1.5"
+            gap="$1.5"
           >
             <SelectedCategoryName />
           </Button>
@@ -147,12 +146,9 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
       <CategorySelectSheet
         isOpen={isCategorySheetOpen}
         setIsOpen={setIsCategorySheetOpen}
-        selectedCategory=""
         multiSelect
         selectedCategories={categoryFilter}
         onCategoriesChange={onCategoryFilterChange}
-        onCategoryChange={() => {}}
-        showAllOption={false}
       />
 
       <DateRangeSheet

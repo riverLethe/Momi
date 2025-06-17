@@ -10,6 +10,7 @@ import { TouchableOpacity } from "react-native";
 import { Avatar, Text, XStack, YStack } from "tamagui";
 import { useLocale } from "@/i18n/useLocale";
 import { SwipeableRow } from "../ui/SwipeableRow";
+import { formatCurrency } from "@/utils/format";
 
 interface BillListItemProps {
   item: Bill;
@@ -105,7 +106,7 @@ export const BillListItem: React.FC<BillListItemProps> = ({
               fontWeight="500"
               color={disabled ? "$gray9" : "$red10"}
             >
-              -¥{item.amount.toFixed(2)}
+              -{formatCurrency(item.amount)}
             </Text>
           </YStack>
         </XStack>
