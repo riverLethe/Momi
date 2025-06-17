@@ -146,7 +146,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
           return (
             <YStack key={item.label} paddingVertical="$1.5">
               <XStack alignItems="center" justifyContent="space-between">
-                <XStack alignItems="center" space="$2">
+                <XStack alignItems="center" gap="$2">
                   <View
                     style={{
                       width: 12,
@@ -160,7 +160,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
                   </Text>
 
                   {hasChange && (
-                    <XStack space="$1" alignItems="center">
+                    <XStack gap="$1" alignItems="center">
                       {isIncrease ? (
                         <>
                           <ArrowUpRight size={10} color="#EF4444" />
@@ -183,7 +183,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
                     </XStack>
                   )}
                 </XStack>
-                <XStack alignItems="baseline" space="$1">
+                <XStack alignItems="baseline" gap="$1">
                   <Text fontWeight="$7" fontSize="$3">
                     {formatCurrency(item.value)}
                   </Text>

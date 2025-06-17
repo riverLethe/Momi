@@ -112,30 +112,6 @@ const getBudgetStatusInfo = (status: BudgetStatusType) => {
   }
 };
 
-// 获取类别状态信息
-const getCategoryStatusInfo = (
-  status: CategoryStatusType,
-  percentage: number
-) => {
-  switch (status) {
-    case "normal":
-      return {
-        color: "#aaaaaa",
-        label: "Normal",
-      };
-    case "exceeding":
-      return {
-        color: "#EF4444",
-        label: `Exceeding by ${percentage}%`,
-      };
-    case "save":
-      return {
-        color: "#10B981",
-        label: `Save ${percentage}%`,
-      };
-  }
-};
-
 // 获取预算周期标签
 const getPeriodLabel = (period: BudgetPeriod, t: (key: string) => string) => {
   switch (period) {
@@ -163,6 +139,34 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const statusInfo = getBudgetStatusInfo(budgetStatus.status);
+
+  // 获取类别状态信息
+  const getCategoryStatusInfo = (
+    status: CategoryStatusType,
+    percentage: number
+  ) => {
+    switch (status) {
+      case "normal":
+        return {
+          color: "#aaaaaa",
+          label: t("Normal"),
+        };
+      case "exceeding":
+        return {
+          color: "#EF4444",
+          label: t(`Exceeding by {{percentage}}%`, {
+            percentage: percentage,
+          }),
+        };
+      case "save":
+        return {
+          color: "#10B981",
+          label: t(`Save {{percentage}}%`, {
+            percentage: percentage,
+          }),
+        };
+    }
+  };
 
   // Period selection – behaves as controlled if `controlledPeriod` is supplied
   const [internalPeriod, setInternalPeriod] = React.useState<BudgetPeriod>(
@@ -408,7 +412,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                                 paddingVertical="$1"
                                 borderRadius="$2"
                               >
-                                {t(catStatus.label)}
+                                {catStatus.label}
                               </Text>
                               <Text fontSize="$3" fontWeight="$5">
                                 {formatCurrency(category.amount)}

@@ -293,5 +293,27 @@ export default {
     week: "week",
     month: "month",
     year: "year",
+
+    // CSV Export
+    "MomiQ Expense Bill Details": "MomiQ Expense Bill Details",
+    Period: "Period",
+    "Export Time": "Export Time",
+    "MomiQ Transaction Bill Details List":
+      "MomiQ Transaction Bill Details List",
+    "Created Time": "Created Time",
+    "Transaction Time": "Transaction Time",
+    Type: "Type",
+    Amount: "Amount",
+    Expense: "Expense",
+    Apply: "Apply",
+    "Select Date": "Select Date",
+    "Enter notes...": "Enter notes...",
+    "Enter merchant name": "Enter merchant name",
+    "Exceeding by {{percentage}}%": "Exceeding by {{percentage}}%",
+    "Save {{percentage}}%": "Save {{percentage}}%",
+    "Clear Chat": "Clear Chat",
+    "Are you sure you want to delete all messages?":
+      "Are you sure you want to delete all messages?",
+    Clear: "Clear",
   },
 };

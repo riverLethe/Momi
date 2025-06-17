@@ -5,6 +5,7 @@ import { Card, Text, XStack, YStack, Separator } from "tamagui";
 import { BillListItem } from "./BillListItem";
 import { useTranslation } from "react-i18next";
 import { formatCurrency } from "@/utils/format";
+import i18n from "@/i18n";
 
 interface BillDateGroupProps {
   item: {
@@ -30,7 +31,15 @@ const formatDate = (dateStr: string, t: (key: string) => string) => {
   } else if (date.toDateString() === yesterday.toDateString()) {
     return t("Yesterday");
   } else {
-    return date.toLocaleDateString(undefined, {
+    // Map i18n language code to locale string for toLocaleDateString
+    const localeMap: Record<string, string> = {
+      en: "en-US",
+      zh: "zh-CN",
+      es: "es-ES",
+    };
+    const localeStr = localeMap[i18n.language] || "en-US";
+
+    return date.toLocaleDateString(localeStr, {
       month: "long",
       day: "numeric",
     });

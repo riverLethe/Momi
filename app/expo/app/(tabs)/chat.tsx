@@ -34,13 +34,13 @@ import { loadChatMessages, saveChatMessages } from "@/utils/chatStorage.utils";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
-import * as Clipboard from "expo-clipboard";
 
 // Utility to persist selected files inside the app sandbox
 import { copyFileToDocumentDir, clearCachedFiles } from "@/utils/file.utils";
 
 // 语音识别与播放
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+import { useTranslation } from "react-i18next";
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -112,7 +112,7 @@ export default function ChatScreen() {
   const tmpPathRaw =
     typeof params.tmpPath === "string" ? (params.tmpPath as string) : undefined;
   const tmpPath = tmpPathRaw ? decodeURIComponent(tmpPathRaw) : undefined;
-
+  const { t } = useTranslation();
 
   // 组件挂载时，尝试从本地读取聊天记录
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function ChatScreen() {
 
     (async () => {
       try {
-        if(!tmpPath)return
+        if (!tmpPath) return
         // 处理来自 AppIntent 的临时文件路径
         let sourceUri = tmpPath;
         if (!sourceUri.startsWith("file://")) {
@@ -208,9 +208,9 @@ export default function ChatScreen() {
     })();
   }, []);
 
-  const handleSend = async (directlySendAttachments?:any[]) => {
-    if (inputText.trim() === "" && attachments.length === 0&&!directlySendAttachments?.length) return;
-    const attachmentsToSend=directlySendAttachments||attachments
+  const handleSend = async (directlySendAttachments?: any[]) => {
+    if (inputText.trim() === "" && attachments.length === 0 && !directlySendAttachments?.length) return;
+    const attachmentsToSend = directlySendAttachments || attachments
 
     setIsTextMode(false);
     Keyboard.dismiss();
@@ -242,7 +242,7 @@ export default function ChatScreen() {
 
     // Build user message combining text & attachments (for local UI)
     const combinedMessage = chatAPI.createMessage(inputText, true, "text", {
-      attachments:attachmentsToSend,
+      attachments: attachmentsToSend,
     });
     setMessages((prev) => [...prev, combinedMessage]);
 
@@ -681,10 +681,10 @@ export default function ChatScreen() {
   const handleClearChat = () => {
     if (messages.length === 0 && currentStreamedMessage === "") return;
 
-    Alert.alert("Clear Chat", "Are you sure you want to delete all messages?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("Clear Chat"), t("Are you sure you want to delete all messages?"), [
+      { text: t("Cancel"), style: "cancel" },
       {
-        text: "Clear",
+        text: t("Clear"),
         style: "destructive",
         onPress: () => {
           setMessages([]);

@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.momiq.app",
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "We use speech recognition to convert your voice to text for quick expense recording.",
-        "NSMicrophoneUsageDescription": "We use the microphone to record your voice for speech recognition features."
+        "NSMicrophoneUsageDescription": "We use the microphone to record your voice for speech recognition features.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

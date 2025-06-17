@@ -31,6 +31,9 @@ import {
 } from "date-fns";
 import { EXPENSE_CATEGORIES } from "@/constants/categories";
 import { getBudgets, BudgetPeriod } from "@/utils/budget.utils";
+import i18n from "@/i18n";
+import { enUS, zhCN, es as esLocale } from "date-fns/locale";
+import { Locale } from "date-fns";
 
 // Mock colors for categories
 const CATEGORY_COLORS = {
@@ -99,19 +102,26 @@ export const generateCategoryData = async (
 
   // 转换为CategoryData数组
   const categoryData: CategoryData[] = Array.from(categoryMap.entries())
-    .map(([category, value]) => ({
-      label: category,
-      value,
-      color: getCategoryColor(category),
-      yearOverYearChange: calculateYearOverYearChange(
-        category,
-        startDate,
-        endDate,
-        viewMode,
-        bills,
-        transactions
-      ),
-    }))
+    .map(([categoryId, value]) => {
+      const categoryInfo = EXPENSE_CATEGORIES.find(
+        (cat) => cat.id === categoryId
+      );
+
+      return {
+        // Use the human-readable name if available, otherwise fall back to the id
+        label: categoryInfo?.name ?? categoryId,
+        value,
+        color: getCategoryColor(categoryId),
+        yearOverYearChange: calculateYearOverYearChange(
+          categoryId,
+          startDate,
+          endDate,
+          viewMode,
+          bills,
+          transactions
+        ),
+      };
+    })
     .sort((a, b) => b.value - a.value); // 按金额降序排序
 
   return categoryData;
@@ -224,6 +234,15 @@ export const generateTrendData = async (
   startDate: Date,
   endDate: Date
 ): Promise<TrendData[]> => {
+  // 获取当前语言并映射到 date-fns locale
+  const language = i18n.language.split("-")[0];
+  const localeMap: Record<string, Locale> = {
+    en: enUS,
+    zh: zhCN,
+    es: esLocale,
+  };
+  const locale = localeMap[language] || enUS;
+
   // 获取账单和交易数据
   const bills = await getBills();
   const transactions = await getTransactions();
@@ -251,7 +270,7 @@ export const generateTrendData = async (
         );
 
         trendData.push({
-          label: format(currentDay, "EEE"),
+          label: format(currentDay, "EEE", { locale }),
           value: dayExpense,
           date: format(currentDay, "yyyy-MM-dd"),
         });
@@ -275,7 +294,7 @@ export const generateTrendData = async (
         );
 
         trendData.push({
-          label: format(currentDay, "d"),
+          label: format(currentDay, "d", { locale }),
           value: dayExpense,
           date: format(currentDay, "yyyy-MM-dd"),
         });
@@ -299,7 +318,7 @@ export const generateTrendData = async (
         );
 
         trendData.push({
-          label: format(currentMonth, "MMM"),
+          label: format(currentMonth, "MMM", { locale }),
           value: monthExpense,
           date: format(currentMonth, "yyyy-MM"),
         });
@@ -696,7 +715,9 @@ export const fetchReportData = async (
     const budgetAmount = budgetDetail?.amount ?? null;
     const spentTotal = categoryData.reduce((sum, c) => sum + c.value, 0);
     const remaining = budgetAmount ? Math.max(0, budgetAmount - spentTotal) : 0;
-    const percentage = budgetAmount ? Math.min((spentTotal / budgetAmount) * 100, 100) : 0;
+    const percentage = budgetAmount
+      ? Math.min((spentTotal / budgetAmount) * 100, 100)
+      : 0;
 
     let budgetStatus: "good" | "warning" | "danger" | "none" = "none";
     if (budgetAmount === null) {

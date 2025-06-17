@@ -22,6 +22,9 @@ import {
 } from "date-fns";
 import { TouchableOpacity } from "react-native";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react-native";
+import { enUS, zhCN, es as esLocale } from "date-fns/locale";
+import type { Locale } from "date-fns";
+import i18n from "@/i18n";
 
 type MarkedDates = {
   [key: string]: {
@@ -159,6 +162,15 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
     return maxDate;
   }, [startDate, endDate, maxDate, maxRangeMonths]);
 
+  // Map i18n language codes to date-fns locales
+  const localeMap: Record<string, Locale> = {
+    en: enUS,
+    zh: zhCN,
+    es: esLocale,
+  };
+
+  const currentLocale = localeMap[i18n.language] || enUS;
+
   const renderYearSelector = () => {
     const currentYear = getYear(visibleDate);
     const startYear = Math.floor(currentYear / 10) * 10;
@@ -240,7 +252,7 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
                 margin="$1.5"
                 width={80}
               >
-                {format(new Date(year, month), "MMM")}
+                {format(new Date(year, month), "MMM", { locale: currentLocale })}
               </Button>
             ))}
           </XStack>
@@ -300,7 +312,7 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
                   >
                     <TouchableOpacity onPress={() => setViewMode("months")}>
                       <Text fontSize="$6" fontWeight="bold">
-                        {format(jsDate, "MMMM yyyy")}
+                        {format(jsDate, "MMMM yyyy", { locale: currentLocale })}
                       </Text>
                     </TouchableOpacity>
                   </XStack>
