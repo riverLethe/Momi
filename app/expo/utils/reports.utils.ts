@@ -30,6 +30,7 @@ import {
   addMonths,
 } from "date-fns";
 import { EXPENSE_CATEGORIES } from "@/constants/categories";
+import { getBudgets, BudgetPeriod } from "@/utils/budget.utils";
 
 // Mock colors for categories
 const CATEGORY_COLORS = {
@@ -683,6 +684,31 @@ export const fetchReportData = async (
     // 生成顶部支出类别
     const topSpendingCategories = generateTopSpendingCategories(categoryData);
 
+    // ---------------- Budget Stats ------------------
+    const budgets = await getBudgets();
+    const periodMap: Record<DatePeriodEnum, BudgetPeriod> = {
+      [DatePeriodEnum.WEEK]: "weekly",
+      [DatePeriodEnum.MONTH]: "monthly",
+      [DatePeriodEnum.YEAR]: "yearly",
+    } as const;
+
+    const budgetDetail = budgets[periodMap[periodType]];
+    const budgetAmount = budgetDetail?.amount ?? null;
+    const spentTotal = categoryData.reduce((sum, c) => sum + c.value, 0);
+    const remaining = budgetAmount ? Math.max(0, budgetAmount - spentTotal) : 0;
+    const percentage = budgetAmount ? Math.min((spentTotal / budgetAmount) * 100, 100) : 0;
+
+    let budgetStatus: "good" | "warning" | "danger" | "none" = "none";
+    if (budgetAmount === null) {
+      budgetStatus = "none";
+    } else if (percentage >= 90) {
+      budgetStatus = "danger";
+    } else if (percentage >= 70) {
+      budgetStatus = "warning";
+    } else {
+      budgetStatus = "good";
+    }
+
     return {
       categoryData,
       trendData,
@@ -693,6 +719,13 @@ export const fetchReportData = async (
       topSpendingCategories,
       viewMode,
       periodType,
+      budget: {
+        amount: budgetAmount,
+        spent: spentTotal,
+        remaining,
+        percentage,
+        status: budgetStatus,
+      },
     };
   } catch (error) {
     console.error("Error generating report data:", error);

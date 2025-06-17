@@ -18,6 +18,7 @@ import {
   setMonth,
   addYears,
   subYears,
+  addMonths,
 } from "date-fns";
 import { TouchableOpacity } from "react-native";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react-native";
@@ -39,6 +40,10 @@ interface DateRangeSheetProps {
   onApply: (startDate: Date | null, endDate: Date | null) => void;
   initialStartDate: Date | null;
   initialEndDate: Date | null;
+  minDate?: Date;
+  maxDate?: Date;
+  /** Maximum selectable span in months from start date */
+  maxRangeMonths?: number;
 }
 
 type ViewMode = "days" | "months" | "years";
@@ -49,6 +54,9 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
   onApply,
   initialStartDate,
   initialEndDate,
+  minDate,
+  maxDate,
+  maxRangeMonths = 3,
 }) => {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -141,6 +149,16 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
 
   const today = new Date();
 
+  // calculate effective max date (cannot select after today or beyond range)
+  const computedMaxDate = useMemo(() => {
+    if (startDate && !endDate) {
+      const rangeCap = addMonths(startDate, maxRangeMonths);
+      const globalMax = maxDate || new Date();
+      return rangeCap < globalMax ? rangeCap : globalMax;
+    }
+    return maxDate;
+  }, [startDate, endDate, maxDate, maxRangeMonths]);
+
   const renderYearSelector = () => {
     const currentYear = getYear(visibleDate);
     const startYear = Math.floor(currentYear / 10) * 10;
@@ -169,7 +187,7 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
             {years.map((year) => (
               <Button
                 key={year}
-                theme={year === getYear(visibleDate) ? "blue" : "gray"}
+                theme={year === getYear(visibleDate) ? ("blue" as any) : ("gray" as any)}
                 onPress={() => {
                   setVisibleDate((d) => setYear(d, year));
                   setViewMode("months");
@@ -214,7 +232,7 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
             {months.map((month) => (
               <Button
                 key={month}
-                theme={month === getMonth(visibleDate) ? "blue" : "gray"}
+                theme={month === getMonth(visibleDate) ? ("blue" as any) : ("gray" as any)}
                 onPress={() => {
                   setVisibleDate((d) => setMonth(d, month));
                   setViewMode("days");
@@ -249,6 +267,8 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
               }
               markingType={"period"}
               markedDates={markedDates}
+              minDate={minDate ? format(minDate, "yyyy-MM-dd") : undefined}
+              maxDate={computedMaxDate ? format(computedMaxDate, "yyyy-MM-dd") : undefined}
               theme={{
                 backgroundColor: theme.background?.val,
                 calendarBackground: theme.background?.val,
@@ -336,7 +356,7 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
             {/* <Button theme="outline" onPress={clearDates}>
               {t("Clear Dates")}
             </Button> */}
-            <Button theme="primary" onPress={applyAndClose}>
+            <Button theme={"blue" as any} onPress={applyAndClose}>
               {t("Apply")}
             </Button>
           </YStack>

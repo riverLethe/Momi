@@ -2,20 +2,21 @@ import React, { useState, useEffect } from "react";
 import { ActivityIndicator, ScrollView, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import { YStack, Text, Separator } from "tamagui";
+import { YStack, Text, Separator, Button } from "tamagui";
 
 // Components
 import DateFilter from "@/components/reports/DateFilter";
 import EnhancedDonutChart from "@/components/reports/EnhancedDonutChart";
 import ExpenseTrendChart from "@/components/reports/ExpenseTrendChart";
-import FinancialInsights from "@/components/reports/FinancialInsights";
-import FinancialHealthScore from "@/components/reports/FinancialHealthScore";
 import EmptyState from "@/components/reports/EmptyState";
+import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
+import BudgetInsightsPanel from "@/components/reports/BudgetInsightsPanel";
 
 // Hooks, Stores & Providers
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
+import { useBudgets } from "@/hooks/useBudgets";
 
 // Types & Utils
 import {
@@ -25,12 +26,15 @@ import {
 } from "@/types/reports.types";
 import { fetchReportData } from "@/utils/reports.utils";
 import { syncRemoteData } from "@/utils/sync.utils";
+import { Budgets, BudgetPeriod } from "@/utils/budget.utils";
 
 export default function ReportsScreen() {
   const { t } = useTranslation();
   const { viewMode } = useViewStore();
   const { isAuthenticated, user } = useAuth();
   const { refreshData, bills, transactions } = useData();
+  const { budgets, saveBudgetForPeriod } = useBudgets();
+  const [isBudgetModalOpen, setBudgetModalOpen] = useState(false);
 
   // State
   const [loading, setLoading] = useState(true);
@@ -121,6 +125,40 @@ export default function ReportsScreen() {
     await loadReportData(); // 重新生成报表
   };
 
+  // Handler to save budgets (reuse from home, simplified)
+  const handleSaveBudgets = async (next: Budgets) => {
+    const pList: BudgetPeriod[] = ["weekly", "monthly", "yearly"];
+    for (const p of pList) {
+      await saveBudgetForPeriod(p, next[p] || {});
+    }
+    setBudgetModalOpen(false);
+
+    // Update local reportData budget section only (avoid full reload)
+    if (reportData) {
+      const map: Record<BudgetPeriod, "weekly" | "monthly" | "yearly"> = {
+        weekly: "weekly",
+        monthly: "monthly",
+        yearly: "yearly",
+      } as const;
+
+      const periodBudgetDetail = next[map[periodType === DatePeriodEnum.WEEK ? "weekly" : periodType === DatePeriodEnum.MONTH ? "monthly" : "yearly"]] as any;
+
+      if (periodBudgetDetail) {
+        const spentTotal = (reportData.categoryData || []).reduce((s, c) => s + c.value, 0);
+        const amount = periodBudgetDetail.amount;
+        const remaining = amount ? Math.max(0, amount - spentTotal) : 0;
+        const percentage = amount ? Math.min((spentTotal / amount) * 100, 100) : 0;
+        let status: "good" | "warning" | "danger" | "none" = "none";
+        if (amount == null) status = "none";
+        else if (percentage >= 90) status = "danger";
+        else if (percentage >= 70) status = "warning";
+        else status = "good";
+
+        setReportData((prev) => prev ? { ...prev, budget: { amount, spent: spentTotal, remaining, percentage, status } } : prev);
+      }
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
       <YStack flex={1}>
@@ -188,26 +226,30 @@ export default function ReportsScreen() {
             </YStack>
             <Separator marginVertical="$2" borderColor="$gray3" />
 
-            {/* Financial Insights */}
-            <YStack paddingTop="$1">
-              <FinancialInsights insights={reportData?.insights || []} />
-            </YStack>
-            <Separator marginVertical="$2" borderColor="$gray3" />
-
-            {/* Financial Health Score */}
-            <YStack paddingTop="$1">
-              <FinancialHealthScore
-                healthScore={
-                  reportData?.healthScore || {
-                    score: 0,
-                    status: "Good",
-                    categories: [],
-                  }
+            {/* Budget Insights Panel */}
+            <BudgetInsightsPanel
+              budget={reportData?.budget}
+              insights={reportData?.insights || []}
+              healthScore={
+                reportData?.healthScore || {
+                  score: 0,
+                  status: "Good",
+                  categories: [],
                 }
-              />
-            </YStack>
+              }
+              onSetBudget={() => setBudgetModalOpen(true)}
+            />
           </ScrollView>
         )}
+
+        {/* Budget Modal */}
+        <BudgetUpdateModal
+          isOpen={isBudgetModalOpen}
+          onOpenChange={setBudgetModalOpen}
+          budgets={budgets}
+          onSave={handleSaveBudgets}
+          defaultPeriod={periodType === DatePeriodEnum.WEEK ? "weekly" : periodType === DatePeriodEnum.MONTH ? "monthly" : "yearly"}
+        />
       </YStack>
     </SafeAreaView>
   );

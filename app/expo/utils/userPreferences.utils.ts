@@ -8,8 +8,6 @@ const DEFAULT_USER_PREFERENCES: UserPreferences = {
   theme: "light",
   notificationsEnabled: true,
   defaultAccount: "main",
-  budgetIncludedCategories: [],
-  budgetExcludedCategories: [],
 };
 
 /**

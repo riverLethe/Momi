@@ -33,6 +33,10 @@ import {
 } from "@/utils/userPreferences.utils";
 import { syncRemoteData } from "@/utils/sync.utils";
 import { UserPreferences } from "@/types/user.types";
+import { useBudgets } from "@/hooks/useBudgets";
+import { Budgets } from "@/utils/budget.utils";
+
+type FilterMode = "all" | "include" | "exclude";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -48,7 +52,10 @@ export default function HomeScreen() {
   // Whether user has bills or transactions
   const [hasBills, setHasBills] = useState(true);
 
-  // Budget period state
+  // Budgets loaded via custom hook
+  const { budgets, saveBudgetForPeriod } = useBudgets();
+
+  // Selected period for UI (default monthly)
   const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>("monthly");
 
   // Budget data
@@ -71,9 +78,6 @@ export default function HomeScreen() {
 
   // Remote data synchronization
   const [syncingRemote, setSyncingRemote] = useState(false);
-
-  // Budget amount
-  const [currentBudget, setCurrentBudget] = useState<number | null>(null);
 
   // Category filter state
   const [includedCategories, setIncludedCategories] = useState<string[]>([]);
@@ -101,27 +105,35 @@ export default function HomeScreen() {
     syncData();
   }, [isAuthenticated, user]);
 
-  // Load user preferences
+  // Load user preferences (category filters etc.)
   useEffect(() => {
     const loadUserPreferences = async () => {
       try {
         const preferences = await getUserPreferences();
 
         if (preferences) {
-          if (preferences.budgetAmount) {
-            setCurrentBudget(preferences.budgetAmount);
-          }
+          // Prefer new per-period filters if present
+          const periodFilters = preferences.budgetFilters?.[budgetPeriod];
+          if (periodFilters) {
+            if (periodFilters.mode === "include") {
+              setIncludedCategories(periodFilters.categories);
+              setExcludedCategories([]);
+            } else if (periodFilters.mode === "exclude") {
+              setExcludedCategories(periodFilters.categories);
+              setIncludedCategories([]);
+            } else {
+              setIncludedCategories([]);
+              setExcludedCategories([]);
+            }
+          } else {
+            // Fallback to legacy global fields
+            if (preferences.budgetIncludedCategories) {
+              setIncludedCategories(preferences.budgetIncludedCategories);
+            }
 
-          if (preferences.budgetPeriod) {
-            setBudgetPeriod(preferences.budgetPeriod as BudgetPeriod);
-          }
-
-          if (preferences.budgetIncludedCategories) {
-            setIncludedCategories(preferences.budgetIncludedCategories);
-          }
-
-          if (preferences.budgetExcludedCategories) {
-            setExcludedCategories(preferences.budgetExcludedCategories);
+            if (preferences.budgetExcludedCategories) {
+              setExcludedCategories(preferences.budgetExcludedCategories);
+            }
           }
         }
       } catch (error) {
@@ -137,7 +149,7 @@ export default function HomeScreen() {
     setHasBills(bills.length > 0 || transactions.length > 0);
   }, [bills, transactions]);
 
-  // Calculate budget status
+  // Calculate budget status (for selected period)
   useEffect(() => {
     // Calculate total expenses
     let totalSpent = 0;
@@ -220,14 +232,20 @@ export default function HomeScreen() {
     // Calculate total expenses (transactions + bills)
     totalSpent = transactionsSpent + billsSpent;
 
-    // Calculate remaining budget
-    const total = currentBudget || 0;
+    // Retrieve budget detail for selected period
+    const periodDetail = budgets[budgetPeriod] || {
+      amount: null,
+      filterMode: "all" as FilterMode,
+      categories: [],
+    };
+
+    const total = periodDetail.amount || 0;
     const remaining = Math.max(0, total - totalSpent);
     const percentage = total > 0 ? Math.round((totalSpent / total) * 100) : 0;
 
     // Determine status
     let status: "good" | "warning" | "danger" | "none" = "none";
-    if (currentBudget === null) {
+    if (periodDetail.amount == null) {
       status = "none";
     } else if (percentage >= 90) {
       status = "danger";
@@ -295,56 +313,75 @@ export default function HomeScreen() {
     transactions,
     bills,
     budgetPeriod,
-    currentBudget,
+    budgets,
     viewMode,
     includedCategories,
     excludedCategories,
   ]);
 
+  // Update category filter state when budgetPeriod changes
+  useEffect(() => {
+    const applyPeriodFilters = () => {
+      const detail = budgets[budgetPeriod];
+      if (!detail) return;
+
+      if (detail.filterMode === "include") {
+        setIncludedCategories(detail.categories);
+        setExcludedCategories([]);
+      } else if (detail.filterMode === "exclude") {
+        setExcludedCategories(detail.categories);
+        setIncludedCategories([]);
+      } else {
+        setIncludedCategories([]);
+        setExcludedCategories([]);
+      }
+    };
+
+    applyPeriodFilters();
+  }, [budgetPeriod, budgets]);
+
   // Handle setting budget
-  const handleSaveBudget = async (
-    amount: number,
-    period: BudgetPeriod,
-    filterMode: "all" | "include" | "exclude",
-    selectedCategories: string[]
-  ) => {
+  const handleSaveBudgets = async (nextBudgets: Budgets) => {
     setIsLoading(true);
     try {
-      // Save to user preferences
-      const newPrefs: Partial<UserPreferences> = {
-        budgetAmount: amount,
-        budgetPeriod: period,
+      // Persist budgets and filters per period
+      const periods: ("weekly" | "monthly" | "yearly")[] = [
+        "weekly",
+        "monthly",
+        "yearly",
+      ];
+
+      // Prepare preferences update object
+      const prefsUpdate: Partial<UserPreferences> = {
+        budgetFilters: {},
       };
 
-      if (filterMode === "include") {
-        newPrefs.budgetIncludedCategories = selectedCategories;
-        newPrefs.budgetExcludedCategories = [];
-      } else if (filterMode === "exclude") {
-        newPrefs.budgetExcludedCategories = selectedCategories;
-        newPrefs.budgetIncludedCategories = [];
-      } else {
-        newPrefs.budgetIncludedCategories = [];
-        newPrefs.budgetExcludedCategories = [];
+      for (const p of periods) {
+        const detailObj = nextBudgets[p] as any;
+        await saveBudgetForPeriod(p, detailObj);
+
+        prefsUpdate.budgetFilters![p] = {
+          mode: detailObj.filterMode,
+          categories: detailObj.categories,
+        };
       }
 
-      await updateUserPreferences(newPrefs);
+      await updateUserPreferences(prefsUpdate);
 
-      // Update state
-      setCurrentBudget(amount);
-      setBudgetPeriod(period);
-
-      if (filterMode === "include") {
-        setIncludedCategories(selectedCategories);
+      // Update local filter state according to current selected period
+      const currentDetail = nextBudgets[budgetPeriod];
+      if (currentDetail?.filterMode === "include") {
+        setIncludedCategories(currentDetail.categories);
         setExcludedCategories([]);
-      } else if (filterMode === "exclude") {
-        setExcludedCategories(selectedCategories);
+      } else if (currentDetail?.filterMode === "exclude") {
+        setExcludedCategories(currentDetail.categories);
         setIncludedCategories([]);
       } else {
         setIncludedCategories([]);
         setExcludedCategories([]);
       }
     } catch (error) {
-      console.error("Failed to save budget:", error);
+      console.error("Failed to save budgets:", error);
     } finally {
       setIsLoading(false);
     }
@@ -360,10 +397,6 @@ export default function HomeScreen() {
     router.push("/chat");
   };
 
-  // Handle adding bill - now redirects to chat
-  const handleAddBill = () => {
-    router.push("/chat");
-  };
 
   // Navigate to dedicated budget management page
   const handleManageBudget = () => {
@@ -420,8 +453,13 @@ export default function HomeScreen() {
               budgetStatus={budgetStatus}
               categories={categories}
               isLoading={isLoading}
+              budgets={{
+                weekly: budgets.weekly?.amount ?? null,
+                monthly: budgets.monthly?.amount ?? null,
+                yearly: budgets.yearly?.amount ?? null,
+              }}
               currentPeriod={budgetPeriod}
-              currentBudget={currentBudget}
+              onPeriodChange={setBudgetPeriod}
               onCategoryPress={handleCategoryPress}
               onManageBudgetPress={handleManageBudget}
               onEditBudgetPress={() => setBudgetModalOpen(true)}
@@ -442,10 +480,9 @@ export default function HomeScreen() {
       <BudgetUpdateModal
         isOpen={isBudgetModalOpen}
         onOpenChange={setBudgetModalOpen}
-        currentPeriod={budgetPeriod}
-        currentBudget={currentBudget}
-        onSaveBudget={handleSaveBudget}
-        initialCategories={excludedCategories}
+        budgets={budgets}
+        onSave={handleSaveBudgets}
+        defaultPeriod={budgetPeriod}
       />
     </>
   );

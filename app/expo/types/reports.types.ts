@@ -61,4 +61,11 @@ export interface ReportData {
   topSpendingCategories?: TopSpendingCategory[];
   viewMode?: "personal" | "family";
   periodType?: DatePeriodEnum;
+  budget?: {
+    amount: number | null;
+    spent: number;
+    remaining: number;
+    percentage: number;
+    status: "good" | "warning" | "danger" | "none";
+  };
 }

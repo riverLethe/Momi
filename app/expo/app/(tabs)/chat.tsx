@@ -13,7 +13,7 @@ import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { XStack, Text, View } from "tamagui";
 import { chatAPI, Message, AIResponseType } from "@/utils/api";
 import { saveBill } from "@/utils/bills.utils";
-import { updateUserPreferences } from "@/utils/userPreferences.utils";
+import { updateBudgets } from "@/utils/budget.utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
 import uuid from "react-native-uuid";
@@ -333,15 +333,12 @@ export default function ChatScreen() {
         );
         setMessages((prev) => [...prev, listMessage]);
       } else if (type === "set_budget" && budget) {
-        // Persist budget to user preferences
+        // Persist budget to dedicated storage
         (async () => {
           try {
-            await updateUserPreferences({
-              budgetAmount: budget.amount,
-              budgetPeriod: budget.period,
-            });
+            await updateBudgets({ [budget.period]: budget.amount });
           } catch (err) {
-            console.error("Failed to update budget preference:", err);
+            console.error("Failed to update budgets:", err);
           }
         })();
 

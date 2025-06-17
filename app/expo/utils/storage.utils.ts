@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   TRANSACTIONS: "momiq_transactions",
   REPORTS: "momiq_reports",
   USER_PREFERENCES: "momiq_user_preferences",
+  BUDGETS: "momiq_budgets",
   AUTH_TOKEN: "momiq_auth_token",
   FAMILY_SPACES: "momiq_family_spaces",
 };

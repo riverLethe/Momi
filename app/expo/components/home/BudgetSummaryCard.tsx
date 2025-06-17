@@ -53,14 +53,26 @@ interface BudgetSummaryCardProps {
   budgetStatus: BudgetStatusInfo;
   categories: CategorySpending[];
   isPersonalView?: boolean;
-  currentPeriod: BudgetPeriod;
-  currentBudget: number | null;
+  /**
+   * Provide budgets for three periods. A value of null/undefined stands for "not set".
+   */
+  budgets: {
+    weekly?: number | null;
+    monthly?: number | null;
+    yearly?: number | null;
+  };
+  /**
+   * Currently selected budget period. If provided together with `onPeriodChange`,
+   * the component will behave as a controlled component. When omitted, the
+   * component will manage the period selection internally (back-compat).
+   */
+  currentPeriod?: BudgetPeriod;
+  /** Optional callback when user selects a different period */
+  onPeriodChange?: (period: BudgetPeriod) => void;
+  /** @deprecated kept for backward compatibility */
+  currentBudget?: number | null;
   onCategoryPress?: (categoryId: string) => void;
   onManageBudgetPress?: () => void;
-  /**
-   * Triggered when the user presses either the "Set Budget" or "Edit" button.
-   * Use this to open the BudgetUpdateModal from the parent component.
-   */
   onEditBudgetPress?: () => void;
   isLoading?: boolean;
   currency?: string;
@@ -140,8 +152,10 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   budgetStatus,
   categories,
   isPersonalView = true,
-  currentPeriod,
-  currentBudget,
+  budgets,
+  currentPeriod: controlledPeriod,
+  onPeriodChange,
+  currentBudget: _deprecatedBudget,
   onCategoryPress,
   onManageBudgetPress,
   onEditBudgetPress,
@@ -150,6 +164,34 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const statusInfo = getBudgetStatusInfo(budgetStatus.status);
+
+  // Period selection – behaves as controlled if `controlledPeriod` is supplied
+  const [internalPeriod, setInternalPeriod] = React.useState<BudgetPeriod>(
+    controlledPeriod ?? "monthly"
+  );
+
+  // Keep internal state in sync with controlled prop (if any)
+  React.useEffect(() => {
+    if (
+      controlledPeriod !== undefined &&
+      controlledPeriod !== internalPeriod
+    ) {
+      setInternalPeriod(controlledPeriod);
+    }
+  }, [controlledPeriod, internalPeriod]);
+
+  // Handle period button press
+  const handleSelectPeriod = (period: BudgetPeriod) => {
+    if (onPeriodChange) {
+      // Controlled – notify parent
+      onPeriodChange(period);
+    } else {
+      // Uncontrolled – manage locally for backward compatibility
+      setInternalPeriod(period);
+    }
+  };
+
+  const periodBudget = budgets[internalPeriod] ?? _deprecatedBudget ?? null;
 
   // Check if we have actual spending data
   const hasSpendingData = budgetStatus.spent > 0 || categories.length > 0;
@@ -180,10 +222,10 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
         marginBottom="$4"
         padding="$4"
       >
-        <YStack space="$4">
+        <YStack gap="$4">
           {/* Header with status */}
           <XStack justifyContent="space-between" alignItems="center">
-            <XStack space="$2" alignItems="center">
+            <XStack gap="$2" alignItems="center">
               <Avatar
                 backgroundColor={statusInfo.backgroundColor}
                 borderWidth={2}
@@ -198,8 +240,23 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
               </Text>
             </XStack>
 
-            <XStack space="$2">
-              {currentBudget && (
+            <XStack gap="$2">
+              {/* Segmented control */}
+              <XStack gap="$1">
+                {(["weekly", "monthly", "yearly"] as BudgetPeriod[]).map((p) => (
+                  <Button
+                    key={p}
+                    onPress={() => handleSelectPeriod(p)}
+                    backgroundColor={internalPeriod === p ? "$blue9" : "$gray2"}
+                    color={internalPeriod === p ? "white" : "$gray11"}
+                    size="$2"
+                    paddingHorizontal="$2"
+                  >
+                    {t(getPeriodLabel(p, t))}
+                  </Button>
+                ))}
+              </XStack>
+              {periodBudget && (
                 <Button
                   size="$2"
                   borderWidth={1}
@@ -220,14 +277,14 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 {t("Loading...")}
               </Text>
             </YStack>
-          ) : currentBudget ? (
-            <YStack space="$3">
+          ) : periodBudget ? (
+            <YStack gap="$3">
               <Text fontSize="$3" fontWeight="$6" color="$gray10">
                 {t("Spending Analysis")}
               </Text>
 
               {/* 进度条 */}
-              <YStack space="$2">
+              <YStack gap="$2">
                 <Progress
                   value={budgetStatus.percentage}
                   backgroundColor="$gray4"
@@ -252,21 +309,21 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                       fontWeight="$7"
                       color={budgetStatus.remaining > 0 ? "$green9" : "$red9"}
                     >
-                      {t("Total")}: {formatBudget(currentBudget)}
+                      {t("Total")}: {formatBudget(periodBudget)}
                     </Text>
                     <Text color="$gray10" fontSize="$3" marginHorizontal="$1">
                       /
                     </Text>
                     <Text fontSize="$3" fontWeight="$6" color="$gray10">
-                      {getPeriodLabel(currentPeriod, t)}
+                      {getPeriodLabel(internalPeriod, t)}
                     </Text>
                   </XStack>
                 </XStack>
               </YStack>
             </YStack>
           ) : (
-            <YStack space="$4" alignItems="center" paddingVertical="$4">
-              <YStack alignItems="center" space="$2">
+            <YStack gap="$4" alignItems="center" paddingVertical="$4">
+              <YStack alignItems="center" gap="$2">
                 <Text fontWeight="$7" fontSize="$4" color="$gray12">
                   {t("No Budget Set")}
                 </Text>
@@ -296,12 +353,12 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
             </YStack>
           )}
 
-          {currentBudget && (
+          {periodBudget && (
             <>
               <Separator marginBottom="$3" />
 
               {/* 类别分析 */}
-              <YStack space="$3">
+              <YStack gap="$3">
                 <Text fontSize="$3" fontWeight="$6" color="$gray11">
                   {t("Category Analysis")}
                 </Text>
@@ -316,7 +373,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                     {t("No spending data available")}
                   </Text>
                 ) : (
-                  <YStack space="$1">
+                  <YStack gap="$1">
                     {categories.map((category) => {
                       const catStatus = getCategoryStatusInfo(
                         category.status,
@@ -333,7 +390,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                             paddingVertical="$2"
                             pressStyle={{ opacity: onCategoryPress ? 0.7 : 1 }}
                           >
-                            <XStack space="$2" alignItems="center">
+                            <XStack gap="$2" alignItems="center">
                               <View
                                 style={{
                                   width: 12,
@@ -348,7 +405,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                               </Text>
                             </XStack>
 
-                            <XStack alignItems="center" space="$2">
+                            <XStack alignItems="center" gap="$2">
                               <Text
                                 fontSize="$2"
                                 color={catStatus.color}
@@ -374,7 +431,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
           )}
 
           {/* Only show "View More Report" button if there's actual spending data */}
-          {hasSpendingData && currentBudget && (
+          {hasSpendingData && periodBudget && (
             <>
               <Button
                 backgroundColor="$blue2"
