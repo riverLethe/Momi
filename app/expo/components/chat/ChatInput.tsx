@@ -1,20 +1,13 @@
 import React from "react";
-import { Pressable, Animated, Easing, ScrollView, Image } from "react-native";
+import { Pressable, Animated, Easing } from "react-native";
 import { XStack, YStack, Text, View, Input } from "tamagui";
 import {
   Camera,
   Plus,
-  X as CloseIcon,
-  File as FileIcon,
 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
-
-interface Attachment {
-  id: string;
-  uri: string;
-  type: "image" | "file";
-  name?: string;
-}
+import { MoreOptions } from "./MoreOptions";
+import { AttachmentPreview, Attachment } from "./AttachmentPreview";
 
 interface ChatInputProps {
   isTextMode: boolean;
@@ -23,10 +16,12 @@ interface ChatInputProps {
   onChangeText: (text: string) => void;
   onSend: () => void;
   onToggleInputMode: () => void;
-  onToggleMoreOptions: () => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
   onImageUpload: () => void;
+  onPickImage: () => void;
+  onTakePhoto: () => void;
+  onFileUpload: () => void;
   attachments: Attachment[];
   onRemoveAttachment: (id: string) => void;
 }
@@ -38,14 +33,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onChangeText,
   onSend,
   onToggleInputMode,
-  onToggleMoreOptions,
   onStartRecording,
   onStopRecording,
   onImageUpload,
+  onPickImage,
+  onTakePhoto,
+  onFileUpload,
   attachments,
   onRemoveAttachment,
 }) => {
   const { t } = useTranslation();
+  const [showMoreOptions, setShowMoreOptions] = React.useState(false);
+
   /* Waveform animation setup */
   const BAR_COUNT = 50;
   const barAnimatedValues = React.useRef(
@@ -89,51 +88,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <YStack>
       {/* Attachment preview */}
-      {attachments.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8 }}
-        >
-          {attachments.map((att) => (
-            <View key={att.id} marginRight={8} position="relative">
-              {att.type === "image" ? (
-                <Image
-                  source={{ uri: att.uri }}
-                  style={{ width: 40, height: 40, borderRadius: 5 }}
-                />
-              ) : (
-                <YStack
-                  width={40}
-                  height={40}
-                  borderRadius={5}
-                  backgroundColor="#E5E7EB"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <FileIcon size={28} color="#6B7280" />
-                </YStack>
-              )}
-              {/* Remove button */}
-              <Pressable
-                onPress={() => onRemoveAttachment(att.id)}
-                style={{ position: "absolute", top: -6, right: -6 }}
-              >
-                <View
-                  width={15}
-                  height={15}
-                  borderRadius={10}
-                  backgroundColor="rgba(0,0,0,0.6)"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <CloseIcon size={12} color="#fff" />
-                </View>
-              </Pressable>
-            </View>
-          ))}
-        </ScrollView>
-      )}
+      <AttachmentPreview
+        attachments={attachments}
+        onRemove={onRemoveAttachment}
+      />
       <View
         borderTopWidth={1}
         borderTopColor="$gray4"
@@ -259,7 +217,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           {/* Plus icon hidden during recording */}
           {!isRecording && (
-            <Pressable onPress={onToggleMoreOptions}>
+            <Pressable onPress={() => setShowMoreOptions(true)}>
               <View
                 width={40}
                 height={40}
@@ -273,6 +231,24 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           )}
         </XStack>
       </View>
+
+      {/* More options modal */}
+      {showMoreOptions && (
+        <MoreOptions
+          onPickImage={() => {
+            setShowMoreOptions(false);
+            onPickImage();
+          }}
+          onTakePhoto={() => {
+            setShowMoreOptions(false);
+            onTakePhoto();
+          }}
+          onFileUpload={() => {
+            setShowMoreOptions(false);
+            onFileUpload();
+          }}
+        />
+      )}
     </YStack>
   );
 };

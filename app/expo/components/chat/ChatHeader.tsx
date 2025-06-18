@@ -1,7 +1,7 @@
 import React from "react";
-import { Image, TouchableOpacity } from "react-native";
+import { Image } from "react-native";
 import { XStack, Text, View, Button } from "tamagui";
-import { BrushCleaningIcon, PlusCircle, PlusIcon } from "lucide-react-native";
+import { BrushCleaningIcon, PlusIcon } from "lucide-react-native";
 
 interface ChatHeaderProps {
   onAddExpense: () => void;
@@ -39,7 +39,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           />
         </View>
         <Text fontSize={18} fontWeight="600" color="$gray800">
-        MomiQ
+          MomiQ
         </Text>
       </XStack>
       <XStack alignItems="flex-end" gap="$2">

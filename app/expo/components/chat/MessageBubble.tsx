@@ -35,14 +35,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         shadowOffset={{ width: 0, height: 1 }}
       >
         {renderMessageContent(message)}
-        {/* <Text
-          fontSize={12}
-          marginTop="$1"
-          color={message.isUser ? "rgba(255, 255, 255, 0.7)" : "$gray400"}
-          alignSelf={message.isUser ? "flex-end" : "flex-start"}
-        >
-          {formatTime(message.timestamp)}
-        </Text> */}
       </YStack>
     </XStack>
   );

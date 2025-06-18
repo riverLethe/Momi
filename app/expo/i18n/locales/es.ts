@@ -144,5 +144,15 @@ export default {
     Gallery: "Galería",
     Camera: "Cámara",
     File: "Archivo",
+    "Media library permission denied":
+      "Permiso de biblioteca de medios denegado",
+    "Camera permission denied": "Permiso de cámara denegado",
+    "Failed to take photo": "Error al tomar foto",
+    "Failed to select file": "Error al seleccionar archivo",
+    "Failed to pick image": "Error al seleccionar imagen",
+    "Microphone permission denied": "Permiso de micrófono denegado",
+    "Failed to start recording": "Error al iniciar grabación",
+    "Unknown error": "Error desconocido",
+    "⚠️  Recording error: {{error}}": "⚠️  Error de grabación: {{error}}",
   },
 };
