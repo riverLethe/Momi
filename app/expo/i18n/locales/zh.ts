@@ -388,5 +388,18 @@ export default {
       "与去年相比，您已减少{{category}}支出{{percentage}}%",
     "Good Progress": "进展良好",
     Poor: "差",
+    "Track bills and reach your financial goals": "跟踪账单并实现财务目标",
+    "Record your first bill": "记录您的第一笔账单",
+    "Use our AI chat to easily log your bills":
+      "使用我们的AI聊天轻松记录您的账单",
+    "Try adjusting filters or record your first bill":
+      "尝试调整筛选条件或记录您的第一笔账单",
+    "No Bills Found": "暂无账单",
+    "Please sign in to view family bills": "请登录以查看家庭账单",
+    "Start tracking your bills to see reports": "开始跟踪您的账单以查看报表",
+    "Welcome to MomiQ AI Assistant": "欢迎使用 MomiQ AI 助手",
+    "I can help you track expenses, manage your budget, and provide financial insights.":
+      "我可以帮助您跟踪支出、管理预算并提供财务洞察。",
+    "Hold the mic button and speak to start": "按住麦克风按钮并开始说话",
   },
 };

@@ -1,8 +1,10 @@
 import React from 'react';
 import { Image } from 'react-native';
 import { YStack, Text } from 'tamagui';
+import { useTranslation } from 'react-i18next';
 
 export const WelcomeScreen: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <YStack
       flex={1}
@@ -21,7 +23,7 @@ export const WelcomeScreen: React.FC = () => {
         marginBottom="$4"
         textAlign="center"
       >
-        Welcome to MomiQ AI Assistant
+        {t("Welcome to MomiQ AI Assistant")}
       </Text>
       <Text
         fontSize={16}
@@ -30,8 +32,7 @@ export const WelcomeScreen: React.FC = () => {
         marginBottom="$8"
         lineHeight={24}
       >
-        I can help you track expenses, manage your budget, and provide financial
-        insights.
+        {t("I can help you track expenses, manage your budget, and provide financial insights.")}
       </Text>
       <Text
         fontSize={10}
@@ -39,7 +40,7 @@ export const WelcomeScreen: React.FC = () => {
         textAlign="center"
         fontStyle="italic"
       >
-        Hold the mic button and speak to start
+        {t("Hold the mic button and speak to start")}
       </Text>
     </YStack>
   );

@@ -257,17 +257,15 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                   </Button>
                 ))}
               </XStack>
-              {periodBudget && (
-                <Button
-                  size="$2"
-                  borderWidth={1}
-                  paddingHorizontal="$2"
-                  pressStyle={{ opacity: 0.8 }}
-                  onPress={onEditBudgetPress}
-                >
-                  <EditIcon size={16} />
-                </Button>
-              )}
+              <Button
+                size="$2"
+                borderWidth={1}
+                paddingHorizontal="$2"
+                pressStyle={{ opacity: 0.8 }}
+                onPress={onEditBudgetPress}
+              >
+                <EditIcon size={16} />
+              </Button>
             </XStack>
           </XStack>
 
@@ -340,17 +338,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 </Text>
               </YStack>
 
-              <Button
-                size="$3"
-                backgroundColor="$blue9"
-                color="white"
-                paddingHorizontal="$4"
-                marginTop="$2"
-                pressStyle={{ opacity: 0.8 }}
-                onPress={onEditBudgetPress}
-              >
-                {t("Set Budget")}
-              </Button>
+
             </YStack>
           )}
 

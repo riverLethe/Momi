@@ -124,5 +124,22 @@ export default {
     Good: "Bueno",
     Fair: "Regular",
     Poor: "Deficiente",
+    "Track bills and reach your financial goals":
+      "Rastrear facturas y alcanzar tus objetivos financieros",
+    "Record your first bill": "Registra tu primera factura",
+    "Use our AI chat to easily log your bills":
+      "Utiliza nuestro chat de IA para registrar tus facturas fácilmente",
+    "Try adjusting filters or record your first bill":
+      "Intenta ajustar filtros o registra tu primera factura",
+    "No Bills Found": "No se encontraron facturas",
+    "Please sign in to view family bills":
+      "Inicia sesión para ver facturas familiares",
+    "Start tracking your bills to see reports":
+      "Comienza a rastrear tus facturas para ver informes",
+    "Welcome to MomiQ AI Assistant": "Bienvenido a MomiQ AI Asistente",
+    "I can help you track expenses, manage your budget, and provide financial insights.":
+      "Puedo ayudarte a rastrear tus gastos, gestionar tu presupuesto y proporcionar información financiera.",
+    "Hold the mic button and speak to start":
+      "Mantén presionado el botón de micrófono y habla para empezar",
   },
 };

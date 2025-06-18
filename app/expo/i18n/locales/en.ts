@@ -370,5 +370,22 @@ export default {
       "You've reduced {{category}} expenses by {{percentage}}% compared to last year",
     "Good Progress": "Good Progress",
     Poor: "Poor",
+    "Track bills and reach your financial goals":
+      "Track bills and reach your financial goals",
+    "Record your first bill": "Record your first bill",
+    "Use our AI chat to easily log your bills":
+      "Use our AI chat to easily log your bills",
+    "Try adjusting filters or record your first bill":
+      "Try adjusting filters or record your first bill",
+    "No Bills Found": "No Bills Found",
+    "Please sign in to view family bills":
+      "Please sign in to view family bills",
+    "Start tracking your bills to see reports":
+      "Start tracking your bills to see reports",
+    "Welcome to MomiQ AI Assistant": "Welcome to MomiQ AI Assistant",
+    "I can help you track expenses, manage your budget, and provide financial insights.":
+      "I can help you track expenses, manage your budget, and provide financial insights.",
+    "Hold the mic button and speak to start":
+      "Hold the mic button and speak to start",
   },
 };
