@@ -339,5 +339,20 @@ export default {
     Pets: "Pets",
     Subscriptions: "Subscriptions",
     Taxes: "Taxes",
+    "Send a message or hold to talk...": "Send a message or hold to talk...",
+    "Enter text or send directly...": "Enter text or send directly...",
+    "Send a message...": "Send a message...",
+    "Release to send, slide up to cancel":
+      "Release to send, slide up to cancel",
+    "Failed to send message. Please try again.":
+      "Failed to send message. Please try again.",
+    "Failed to load messages. Please try again.":
+      "Failed to load messages. Please try again.",
+    "Failed to clear chat history. Please try again.":
+      "Failed to clear chat history. Please try again.",
+    "useChat must be used within a ChatProvider":
+      "useChat must be used within a ChatProvider",
+    "Sorry, an error occurred: {{error}}":
+      "Sorry, an error occurred: {{error}}",
   },
 };

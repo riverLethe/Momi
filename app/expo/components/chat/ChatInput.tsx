@@ -7,6 +7,7 @@ import {
   X as CloseIcon,
   File as FileIcon,
 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface Attachment {
   id: string;
@@ -44,6 +45,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   attachments,
   onRemoveAttachment,
 }) => {
+  const { t } = useTranslation();
   /* Waveform animation setup */
   const BAR_COUNT = 50;
   const barAnimatedValues = React.useRef(
@@ -178,7 +180,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               {isRecording ? (
                 <YStack flex={1} justifyContent="center" alignItems="center">
                   <Text color="$gray9" fontSize={10} marginBottom="$2">
-                    Release to send, slide up to cancel
+                    {t("Release to send, slide up to cancel")}
                   </Text>
                   <View
                     width="90%"
@@ -213,7 +215,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 </YStack>
               ) : (
                 <Text fontSize={14} color="$gray9">
-                  Send a message or hold to talk...
+                  {t("Send a message or hold to talk...")}
                 </Text>
               )}
             </Pressable>
@@ -237,8 +239,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 autoFocus
                 placeholder={
                   attachments.length > 0
-                    ? "Enter text or send directly..."
-                    : "Send a message..."
+                    ? t("Enter text or send directly...")
+                    : t("Send a message...")
                 }
                 value={inputText}
                 onChangeText={onChangeText}
@@ -247,7 +249,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 borderWidth={0}
                 backgroundColor="transparent"
                 padding="$0"
-                onSubmitEditing={()=>onSend()}
+                onSubmitEditing={() => onSend()}
                 onBlur={() => {
                   if (!inputText) onToggleInputMode();
                 }}

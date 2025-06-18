@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ChatMessage, chatService } from '@/utils/chat.utils';
 import { useAuth } from './AuthProvider';
+import { useTranslation } from 'react-i18next';
 
 // 聊天上下文类型
 interface ChatContextType {
@@ -24,6 +25,7 @@ interface ChatProviderProps {
  * 聊天上下文提供者
  */
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -34,12 +36,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const loadedMessages = await chatService.getMessages();
       setMessages(loadedMessages);
     } catch (error) {
       console.error('Failed to load messages:', error);
-      setError('Failed to load messages. Please try again.');
+      setError(t('Failed to load messages. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -58,15 +60,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
           name: 'You',
         },
       };
-      
+
       // 发送消息到服务
       await chatService.sendMessage(userMessage as ChatMessage);
-      
+
       // 刷新消息列表
       await loadMessages();
     } catch (error) {
       console.error('Failed to send message:', error);
-      setError('Failed to send message. Please try again.');
+      setError(t('Failed to send message. Please try again.'));
     }
   };
 
@@ -78,7 +80,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       setMessages([]);
     } catch (error) {
       console.error('Failed to clear messages:', error);
-      setError('Failed to clear chat history. Please try again.');
+      setError(t('Failed to clear chat history. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -118,10 +120,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
  */
 export const useChat = (): ChatContextType => {
   const context = useContext(ChatContext);
-  
+  const { t } = useTranslation();
   if (context === undefined) {
-    throw new Error('useChat must be used within a ChatProvider');
+    throw new Error(t('useChat must be used within a ChatProvider'));
   }
-  
+
   return context;
 }; 

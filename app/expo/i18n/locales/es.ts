@@ -91,5 +91,20 @@ export default {
     Taxes: "Impuestos",
     Travel: "Viajes",
     Health: "Salud",
+    "Send a message or hold to talk...":
+      "Envía un mensaje o mantén presionado para hablar...",
+    "Enter text or send directly...": "Escribe texto o envía directamente...",
+    "Send a message...": "Enviar mensaje...",
+    "Release to send, slide up to cancel":
+      "Suelta para enviar, desliza hacia arriba para cancelar",
+    "Failed to send message. Please try again.":
+      "Error al enviar mensaje. Por favor, inténtelo de nuevo.",
+    "Failed to load messages. Please try again.":
+      "Error al cargar mensajes. Por favor, inténtelo de nuevo.",
+    "Failed to clear chat history. Please try again.":
+      "Error al limpiar el historial de chat. Por favor, inténtelo de nuevo.",
+    "useChat must be used within a ChatProvider":
+      "useChat debe usarse dentro de un ChatProvider",
+    "Sorry, an error occurred: {{error}}": "Se produjo un error: {{error}}",
   },
 };

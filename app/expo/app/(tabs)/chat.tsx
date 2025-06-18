@@ -388,7 +388,7 @@ export default function ChatScreen() {
     } else if (response.type === "error") {
       // Handle error
       const errorMessage = chatAPI.createMessage(
-        `Sorry, an error occurred: ${response.error}`,
+        t("Sorry, an error occurred: {{error}}", { error: response.error }),
         false
       );
       setMessages((prev) => [...prev, errorMessage]);

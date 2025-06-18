@@ -361,5 +361,16 @@ export default {
     Taxes: "税",
     Travel: "旅行",
     Health: "健康",
+    "Send a message or hold to talk...": "发送消息或长按说话...",
+    "Enter text or send directly...": "输入文字或直接发送...",
+    "Send a message...": "发送消息...",
+    "Release to send, slide up to cancel": "松开发送，上滑取消",
+    "Failed to send message. Please try again.": "发送消息失败，请重试。",
+    "Failed to load messages. Please try again.": "加载消息失败，请重试。",
+    "Failed to clear chat history. Please try again.":
+      "清空聊天历史失败，请重试。",
+    "useChat must be used within a ChatProvider":
+      "必须在 ChatProvider 中使用 useChat",
+    "Sorry, an error occurred: {{error}}": "发生错误: {{error}}",
   },
 };
