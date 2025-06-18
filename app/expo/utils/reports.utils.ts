@@ -7,7 +7,7 @@ import {
   TopSpendingCategory,
   TrendData,
 } from "@/types/reports.types";
-import { generatePeriodSelectors, getTrendLabels } from "./date.utils";
+import { generatePeriodSelectors } from "./date.utils";
 import { getBills } from "./bills.utils";
 import { getTransactions } from "./transactions.utils";
 import { Bill } from "@/types/bills.types";
@@ -23,9 +23,7 @@ import {
   startOfMonth,
   startOfWeek,
   startOfYear,
-  subMonths,
   subWeeks,
-  subYears,
   addDays,
   addMonths,
 } from "date-fns";
@@ -34,21 +32,6 @@ import { getBudgets, BudgetPeriod } from "@/utils/budget.utils";
 import i18n from "@/i18n";
 import { enUS, zhCN, es as esLocale } from "date-fns/locale";
 import { Locale } from "date-fns";
-
-// Mock colors for categories
-const CATEGORY_COLORS = {
-  Food: "#3B82F6",
-  Transport: "#10B981",
-  Shopping: "#EC4899",
-  Entertainment: "#F59E0B",
-  Utilities: "#8B5CF6",
-  Health: "#06B6D4",
-  Education: "#6366F1",
-  Gifts: "#F43F5E",
-  Communication: "#14B8A6",
-  Housing: "#6D28D9",
-  Other: "#94A3B8",
-};
 
 // 根据类别ID获取类别颜色
 const getCategoryColor = (categoryId: string): string => {
@@ -380,11 +363,11 @@ export const generateInsights = async (
     return [
       {
         id: "1",
-        title: "No Data",
+        title: i18n.t("No Data"),
         description:
           viewMode === "personal"
-            ? "Start adding your expenses to see insights"
-            : "Start adding family expenses to see insights",
+            ? i18n.t("Start adding your expenses to see insights")
+            : i18n.t("Start adding family expenses to see insights"),
         type: "neutral",
       },
     ];
@@ -398,11 +381,15 @@ export const generateInsights = async (
   if (highestCategory) {
     insights.push({
       id: "1",
-      title: "Spending Pattern",
+      title: i18n.t("Spending Pattern"),
       description:
         viewMode === "personal"
-          ? `Your highest expense is in ${highestCategory.label} category`
-          : `Family's highest expense is in ${highestCategory.label} category`,
+          ? i18n.t("Your highest expense is in {{category}} category", {
+              category: i18n.t(highestCategory.label),
+            })
+          : i18n.t("Family's highest expense is in {{category}} category", {
+              category: i18n.t(highestCategory.label),
+            }),
       type: "neutral",
     });
 
@@ -413,12 +400,18 @@ export const generateInsights = async (
     ) {
       insights.push({
         id: "2",
-        title: "Savings Potential",
-        description: `You could save ¥${Math.round(highestCategory.value * 0.15)} on ${highestCategory.label} by ${
-          highestCategory.label === "Food"
-            ? "cooking more at home"
-            : "comparing prices before buying"
-        }`,
+        title: i18n.t("Savings Potential"),
+        description: i18n.t(
+          "You could save ¥{{amount}} on {{category}} by {{suggestion}}",
+          {
+            amount: Math.round(highestCategory.value * 0.15),
+            category: i18n.t(highestCategory.label),
+            suggestion:
+              highestCategory.label === "Food"
+                ? i18n.t("cooking more at home")
+                : i18n.t("comparing prices before buying"),
+          }
+        ),
         type: "positive",
       });
     }
@@ -432,8 +425,14 @@ export const generateInsights = async (
   if (increasedCategories.length > 0) {
     insights.push({
       id: "3",
-      title: "Budget Alert",
-      description: `${increasedCategories[0].label} expenses increased by ${increasedCategories[0].yearOverYearChange || 0}% compared to last year`,
+      title: i18n.t("Budget Alert"),
+      description: i18n.t(
+        "{{category}} expenses increased by {{percentage}}% compared to last year",
+        {
+          category: i18n.t(increasedCategories[0].label),
+          percentage: increasedCategories[0].yearOverYearChange || 0,
+        }
+      ),
       type: "negative",
     });
   }
@@ -446,8 +445,14 @@ export const generateInsights = async (
   if (decreasedCategories.length > 0) {
     insights.push({
       id: "4",
-      title: "Good Progress",
-      description: `You've reduced ${decreasedCategories[0].label} expenses by ${Math.abs(decreasedCategories[0].yearOverYearChange || 0)}% compared to last year`,
+      title: i18n.t("Good Progress"),
+      description: i18n.t(
+        "You've reduced {{category}} expenses by {{percentage}}% compared to last year",
+        {
+          category: i18n.t(decreasedCategories[0].label),
+          percentage: Math.abs(decreasedCategories[0].yearOverYearChange || 0),
+        }
+      ),
       type: "positive",
     });
   }
@@ -468,17 +473,17 @@ export const generateHealthScore = async (
       status: "Fair",
       categories: [
         {
-          name: "Spending Discipline",
+          name: i18n.t("Spending Discipline"),
           score: 50,
           color: "#3B82F6",
         },
         {
-          name: "Budget Adherence",
+          name: i18n.t("Budget Adherence"),
           score: 50,
           color: "#10B981",
         },
         {
-          name: "Savings Rate",
+          name: i18n.t("Savings Rate"),
           score: 50,
           color: "#3B82F6",
         },
@@ -563,17 +568,17 @@ export const generateHealthScore = async (
     status,
     categories: [
       {
-        name: "Spending Discipline",
+        name: i18n.t("Spending Discipline"),
         score: Math.round(spendingDisciplineScore),
         color: "#3B82F6",
       },
       {
-        name: "Budget Adherence",
+        name: i18n.t("Budget Adherence"),
         score: Math.round(budgetAdherenceScore),
         color: totalScore >= 70 ? "#10B981" : "#F59E0B",
       },
       {
-        name: "Savings Rate",
+        name: i18n.t("Savings Rate"),
         score: Math.round(savingsRateScore),
         color: "#3B82F6",
       },

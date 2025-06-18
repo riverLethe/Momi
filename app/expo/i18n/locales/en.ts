@@ -328,7 +328,7 @@ export default {
     "{{count}} expenses created": "{{count}} expenses created",
     "Expense created": "Expense created",
     "⚠️  {{text}}": "⚠️  {{text}}",
-    Thinking: "Thinking...",
+    "Thinking...": "Thinking...",
     English: "English",
     中文: "中文",
     Español: "Español",
@@ -354,5 +354,21 @@ export default {
       "useChat must be used within a ChatProvider",
     "Sorry, an error occurred: {{error}}":
       "Sorry, an error occurred: {{error}}",
+    "Set up your budget to track your spending against your financial goals":
+      "Set up your budget to track your spending against your financial goals",
+    "Your highest expense is in {{category}} category":
+      "Your highest expense is in {{category}} category",
+    "Family's highest expense is in {{category}} category":
+      "Family's highest expense is in {{category}} category",
+    "You could save ¥{{amount}} on {{category}} by {{suggestion}}":
+      "You could save ¥{{amount}} on {{category}} by {{suggestion}}",
+    "cooking more at home": "cooking more at home",
+    "comparing prices before buying": "comparing prices before buying",
+    "{{category}} expenses increased by {{percentage}}% compared to last year":
+      "{{category}} expenses increased by {{percentage}}% compared to last year",
+    "You've reduced {{category}} expenses by {{percentage}}% compared to last year":
+      "You've reduced {{category}} expenses by {{percentage}}% compared to last year",
+    "Good Progress": "Good Progress",
+    Poor: "Poor",
   },
 };

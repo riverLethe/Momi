@@ -352,7 +352,7 @@ export default {
     "{{count}} expenses created": "{{count}} 支出已创建",
     "Expense created": "支出已创建",
     "⚠️  {{text}}": "⚠️  {{text}}",
-    Thinking: "思考中...",
+    "Thinking...": "思考中...",
     Groceries: "杂货",
     Insurance: "保险",
     "Personal Care": "个人护理",
@@ -372,5 +372,21 @@ export default {
     "useChat must be used within a ChatProvider":
       "必须在 ChatProvider 中使用 useChat",
     "Sorry, an error occurred: {{error}}": "发生错误: {{error}}",
+    "Set up your budget to track your spending against your financial goals":
+      "设置预算以跟踪您的支出与财务目标",
+    "Your highest expense is in {{category}} category":
+      "您的最高支出类别是{{category}}",
+    "Family's highest expense is in {{category}} category":
+      "家庭最高支出类别是{{category}}",
+    "You could save ¥{{amount}} on {{category}} by {{suggestion}}":
+      "您可以通过{{suggestion}}在{{category}}上节省¥{{amount}}",
+    "cooking more at home": "在家多做饭",
+    "comparing prices before buying": "购买前比较价格",
+    "{{category}} expenses increased by {{percentage}}% compared to last year":
+      "与去年相比，{{category}}支出增加了{{percentage}}%",
+    "You've reduced {{category}} expenses by {{percentage}}% compared to last year":
+      "与去年相比，您已减少{{category}}支出{{percentage}}%",
+    "Good Progress": "进展良好",
+    Poor: "差",
   },
 };

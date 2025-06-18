@@ -82,7 +82,7 @@ export default {
     "{{count}} expenses created": "{{count}} gastos creados",
     "Expense created": "Gasto creado",
     "⚠️  {{text}}": "⚠️  {{text}}",
-    Thinking: "Pensando...",
+    "Thinking...": "Pensando...",
     Groceries: "Compras",
     Insurance: "Seguros",
     "Personal Care": "Cuidado Personal",
@@ -106,5 +106,23 @@ export default {
     "useChat must be used within a ChatProvider":
       "useChat debe usarse dentro de un ChatProvider",
     "Sorry, an error occurred: {{error}}": "Se produjo un error: {{error}}",
+    "Set up your budget to track your spending against your financial goals":
+      "Configura tu presupuesto para rastrear tus gastos contra tus objetivos financieros",
+    "Your highest expense is in {{category}} category":
+      "Su gasto más alto está en la categoría {{category}}",
+    "Family's highest expense is in {{category}} category":
+      "El gasto más alto de la familia está en la categoría {{category}}",
+    "You could save ¥{{amount}} on {{category}} by {{suggestion}}":
+      "Podría ahorrar ¥{{amount}} en {{category}} al {{suggestion}}",
+    "cooking more at home": "cocinar más en casa",
+    "comparing prices before buying": "comparar precios antes de comprar",
+    "{{category}} expenses increased by {{percentage}}% compared to last year":
+      "Los gastos de {{category}} aumentaron un {{percentage}}% en comparación con el año pasado",
+    "You've reduced {{category}} expenses by {{percentage}}% compared to last year":
+      "Ha reducido los gastos de {{category}} en un {{percentage}}% en comparación con el año pasado",
+    "Good Progress": "Buen progreso",
+    Good: "Bueno",
+    Fair: "Regular",
+    Poor: "Deficiente",
   },
 };
