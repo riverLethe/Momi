@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import {
@@ -34,7 +34,17 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
   const { t } = useTranslation();
   const router = useRouter();
 
-  const displayBills = bills.slice(0, maxItems);
+  // Sort bills by date (most recent first) and then take the first `maxItems` items
+  const displayBills = useMemo(() => {
+    return [...bills]
+      .sort((a, b) => {
+        // Ensure we compare using timestamps to avoid potential type issues
+        const timeA = new Date(a.date).getTime();
+        const timeB = new Date(b.date).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, maxItems);
+  }, [bills, maxItems]);
 
   return (
     <Card
@@ -61,14 +71,12 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
               size="$2"
               color="$blue9"
               onPress={() => router.push("/bills")}
-              paddingLeft="$2"
-              paddingRight="$1"
-              gap="$1"
+              paddingHorizontal="$2"
               borderWidth={1}
               borderColor="$blue6"
               backgroundColor="$blue2"
             >
-              <Text fontSize="$2.5" color="$blue9">
+              <Text color="$blue9" fontSize="$2">
                 {t("View All")}
               </Text>
               <ChevronRight size={12} />
