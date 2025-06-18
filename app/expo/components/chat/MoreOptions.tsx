@@ -2,6 +2,7 @@ import React from "react";
 import { XStack, YStack, Text, Circle } from "tamagui";
 import { Image as ImageIcon, Camera, File } from "lucide-react-native";
 import { Pressable } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface MoreOptionsProps {
   /** 选择相册图片 */
@@ -17,6 +18,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
   onTakePhoto,
   onFileUpload,
 }) => {
+  const { t } = useTranslation();
   return (
     <XStack
       backgroundColor="$white"
@@ -37,7 +39,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
             color="$gray600"
             textAlign="center"
           >
-            Gallery
+            {t("Gallery")}
           </Text>
         </Pressable>
       </YStack>
@@ -53,7 +55,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
             color="$gray600"
             textAlign="center"
           >
-            Camera
+            {t("Camera")}
           </Text>
         </Pressable>
       </YStack>
@@ -69,7 +71,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
             color="$gray600"
             textAlign="center"
           >
-            File
+            {t("File")}
           </Text>
         </Pressable>
       </YStack>

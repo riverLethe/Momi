@@ -141,5 +141,8 @@ export default {
       "Puedo ayudarte a rastrear tus gastos, gestionar tu presupuesto y proporcionar información financiera.",
     "Hold the mic button and speak to start":
       "Mantén presionado el botón de micrófono y habla para empezar",
+    Gallery: "Galería",
+    Camera: "Cámara",
+    File: "Archivo",
   },
 };

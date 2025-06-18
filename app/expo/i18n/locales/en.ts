@@ -387,5 +387,8 @@ export default {
       "I can help you track expenses, manage your budget, and provide financial insights.",
     "Hold the mic button and speak to start":
       "Hold the mic button and speak to start",
+    Gallery: "Gallery",
+    Camera: "Camera",
+    File: "File",
   },
 };

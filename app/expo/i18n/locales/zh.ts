@@ -401,5 +401,8 @@ export default {
     "I can help you track expenses, manage your budget, and provide financial insights.":
       "我可以帮助您跟踪支出、管理预算并提供财务洞察。",
     "Hold the mic button and speak to start": "按住麦克风按钮并开始说话",
+    Gallery: "相册",
+    Camera: "相机",
+    File: "文件",
   },
 };
