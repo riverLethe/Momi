@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Moon, Sun, Globe } from "lucide-react-native";
-import { 
-  Button, 
-  H2, 
-  Text, 
-  XStack, 
-  YStack, 
-  Card, 
-  Switch, 
+import {
+  Button,
+  H2,
+  Text,
+  XStack,
+  YStack,
+  Card,
+  Switch,
   Select,
   Adapt,
   Sheet,
@@ -70,13 +70,13 @@ export default function SettingsScreen() {
                 <Globe size={24} color="#3B82F6" />
                 <Text fontSize="$4">{t("Language")}</Text>
               </XStack>
-              
+
               <Select value={language} onValueChange={setLanguage}>
                 <Select.Trigger width={120}>
                   <Select.Value placeholder={t("Select language")}>
-                    {language === "en" ? t("English") : 
-                     language === "zh" ? t("中文") : 
-                     language === "es" ? t("Español") : t("English")}
+                    {language === "en" ? t("English") :
+                      language === "zh" ? t("中文") :
+                        language === "es" ? t("Español") : t("System")}
                   </Select.Value>
                 </Select.Trigger>
                 <Adapt platform="touch">
@@ -93,13 +93,16 @@ export default function SettingsScreen() {
                   <Select.ScrollUpButton />
                   <Select.Viewport>
                     <Select.Group>
-                      <Select.Item index={0} value="en">
+                      <Select.Item index={0} value="system">
+                        <Select.ItemText>{t("System")}</Select.ItemText>
+                      </Select.Item>
+                      <Select.Item index={1} value="en">
                         <Select.ItemText>{t("English")}</Select.ItemText>
                       </Select.Item>
-                      <Select.Item index={1} value="zh">
+                      <Select.Item index={2} value="zh">
                         <Select.ItemText>{t("中文")}</Select.ItemText>
                       </Select.Item>
-                      <Select.Item index={2} value="es">
+                      <Select.Item index={3} value="es">
                         <Select.ItemText>{t("Español")}</Select.ItemText>
                       </Select.Item>
                     </Select.Group>
@@ -115,7 +118,7 @@ export default function SettingsScreen() {
               {t("About")}
             </Text>
             <Text color="$gray10">
-            MomiQ v1.0.0
+              MomiQ v1.0.0
             </Text>
             <Text fontSize="$2" color="$gray8" marginTop="$2">
               © 2023 MomiQ Finance Inc.

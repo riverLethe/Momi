@@ -10,10 +10,8 @@ import {
   Sheet,
   Spinner,
   Paragraph,
-  Avatar,
 } from "tamagui";
-import { ChevronDown, Check } from "lucide-react-native";
-import { EXPENSE_CATEGORIES, getCategoryIcon } from "@/constants/categories";
+import { ChevronDown } from "lucide-react-native";
 import { Budgets, BudgetPeriod, BudgetDetail } from "@/utils/budget.utils";
 import { formatCurrency } from "@/utils/format";
 import CategorySelectSheet from "../ui/CategorySelectSheet";

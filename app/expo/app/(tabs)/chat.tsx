@@ -114,6 +114,9 @@ export default function ChatScreen() {
   const tmpPath = tmpPathRaw ? decodeURIComponent(tmpPathRaw) : undefined;
   const { t } = useTranslation();
 
+  // UI language (e.g., "en", "zh")
+  const uiLang = (Localization.getLocales()?.[0]?.languageCode || "en").split(/[-_]/)[0];
+
   // 组件挂载时，尝试从本地读取聊天记录
   useEffect(() => {
     (async () => {
@@ -158,7 +161,7 @@ export default function ChatScreen() {
         const info = await FileSystem.getInfoAsync(sourceUri);
         if (!info.exists) {
           console.warn("tmpPath does not exist", sourceUri);
-          showSystemError("Screenshot not found – please try again.");
+          showSystemError(t("Screenshot not found – please try again."));
           return;
         }
 
@@ -168,7 +171,7 @@ export default function ChatScreen() {
           "chat_images"
         ).catch((e) => {
           console.warn("Copy screenshot error", e);
-          showSystemError("Failed to import screenshot");
+          showSystemError(t("Failed to import screenshot"));
           throw e;
         });
 
@@ -187,7 +190,7 @@ export default function ChatScreen() {
       } catch (err: any) {
         console.warn("Quick attach failed", err);
         showSystemError(
-          `Quick attach failed: ${err?.message || "Unknown error"}`
+          t("Quick attach failed: {{error}}", { error: err?.message || "Unknown error" })
         );
       }
     })();
@@ -235,7 +238,7 @@ export default function ChatScreen() {
       } catch (e: any) {
         console.warn("Failed to read attachment", e);
         showSystemError(
-          `Failed to read attachment: ${e?.message || "unknown error"}`
+          t("Failed to read attachment: {{error}}", { error: e?.message || "unknown error" })
         );
       }
     }
@@ -258,7 +261,8 @@ export default function ChatScreen() {
       inputText,
       history,
       handleAIResponse,
-      attachmentsPayload
+      attachmentsPayload,
+      uiLang
     );
   };
 
@@ -316,8 +320,8 @@ export default function ChatScreen() {
 
           const expenseMessage = chatAPI.createMessage(
             newBills.length > 1
-              ? `${newBills.length} expenses created`
-              : "Expense created",
+              ? t("{{count}} expenses created", { count: newBills.length })
+              : t("Expense created"),
             false,
             "text",
             { type: "expense_list", expenses: newBills }
@@ -326,7 +330,7 @@ export default function ChatScreen() {
         }
       } else if (type === "list_expenses" && query) {
         const listMessage = chatAPI.createMessage(
-          "Expense query",
+          t("Expense query"),
           false,
           "text",
           { type: "expense_list", expenses: [] }
@@ -343,7 +347,11 @@ export default function ChatScreen() {
         })();
 
         const budgetMessage = chatAPI.createMessage(
-          `Budget set: ${budget.amount} (${budget.category || "All"}, ${budget.period})`,
+          t("Budget set: {{amount}} ({{category}}, {{period}})", {
+            amount: budget.amount,
+            category: budget.category || "All",
+            period: budget.period,
+          }),
           false,
           "text",
           { type: "budget", budget }
@@ -452,7 +460,7 @@ export default function ChatScreen() {
           const friendlyMessage =
             event?.error || event?.message || "Unknown recording error";
           const errorBubble = chatAPI.createMessage(
-            `⚠️  Recording error: ${friendlyMessage}`,
+            t("⚠️  Recording error: {{error}}", { error: friendlyMessage }),
             false,
             "text",
             { type: "system_error" }
@@ -521,7 +529,7 @@ export default function ChatScreen() {
       setCurrentStreamedMessage("");
 
       const history = chatAPI.buildHistory([...messages, userMessage]);
-      chatAPI.sendMessage(transcript, history, handleAIResponse, []);
+      chatAPI.sendMessage(transcript, history, handleAIResponse, [], uiLang);
 
       setTimeout(() => scrollToBottom(), 50);
     }
@@ -699,7 +707,7 @@ export default function ChatScreen() {
 
   /** Helper to display a user-visible error bubble */
   const showSystemError = (text: string) => {
-    const errMsg = chatAPI.createMessage(`⚠️  ${text}`, false, "text", {
+    const errMsg = chatAPI.createMessage(t("⚠️  {{text}}", { text }), false, "text", {
       type: "system_error",
     });
     setMessages((prev) => [...prev, errMsg]);
@@ -818,7 +826,7 @@ export default function ChatScreen() {
                     >
                       <ActivityIndicator size="small" color="#3B82F6" />
                       <Text marginLeft="$2" fontSize={14} color="$gray500">
-                        Thinking...
+                        {t("Thinking...")}
                       </Text>
                     </View>
                   </XStack>

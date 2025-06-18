@@ -315,5 +315,23 @@ export default {
     "Are you sure you want to delete all messages?":
       "Are you sure you want to delete all messages?",
     Clear: "Clear",
+    Damaged: "Damaged",
+    "Failed to import screenshot": "Failed to import screenshot",
+    "Screenshot not found – please try again.":
+      "Screenshot not found – please try again.",
+    "Quick attach failed: {{error}}": "Quick attach failed: {{error}}",
+    "Failed to read attachment: {{error}}":
+      "Failed to read attachment: {{error}}",
+    "Expense query": "Expense query",
+    "Budget set: {{amount}} ({{category}}, {{period}})":
+      "Budget set: {{amount}} ({{category}}, {{period}})",
+    "{{count}} expenses created": "{{count}} expenses created",
+    "Expense created": "Expense created",
+    "⚠️  {{text}}": "⚠️  {{text}}",
+    Thinking: "Thinking...",
+    English: "English",
+    中文: "中文",
+    Español: "Español",
+    System: "System",
   },
 };

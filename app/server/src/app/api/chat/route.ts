@@ -6,6 +6,9 @@ import {
 } from "@google/genai";
 import { v4 as uuidv4 } from "uuid";
 const { setGlobalDispatcher, ProxyAgent } = require("undici");
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore – no types available for jsonrepair, but runtime import is fine
+import { jsonrepair } from "jsonrepair";
 if (process.env.https_proxy) {
   const dispatcher = new ProxyAgent({
     uri: new URL(process.env.https_proxy).toString(),
@@ -39,13 +42,11 @@ const safetySettings = [
     threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
   },
 ];
-const generationConfig = {
-  temperature: 1,
-  topP: 0.95,
-  topK: 64,
-  maxOutputTokens: 8192,
-  responseMimeType: "text/plain",
-  systemInstruction: `You are MomiQ, a smart bookkeeping assistant for personal finance. Your job is to convert user messages into FINANCIAL COMMANDS.
+
+// Helper to dynamically build system instruction based on requested language
+function buildSystemInstruction(lang: string): string {
+  // Base English instruction (original)
+  const base = `You are MomiQ, a smart bookkeeping assistant for personal finance. Your job is to convert user messages into FINANCIAL COMMANDS.
 
 Rules:
 1. First decide the intent: create_expense • list_expenses • set_budget • markdown (default).
@@ -125,9 +126,22 @@ for example outputs:
     "content": "markdown content"
   }
 
-Categories and markdown content must be in English. The "note" and "merchant" values should remain in the original language provided by the user (do NOT translate them). Always return JSON, never plain text. If user input is in Chinese, translate any necessary parts (except note and merchant) to English in the response.`,
-  safetySettings,
-};
+Categories must be in English.Markdown content must be in ${lang}. The "note" and "merchant" values should remain in the original language provided by the user (do NOT translate them). Always return JSON, never plain text.`;
+
+  return base;
+}
+
+function buildGenerationConfig(lang: string) {
+  return {
+    temperature: 1,
+    topP: 0.95,
+    topK: 64,
+    maxOutputTokens: 8192,
+    responseMimeType: "text/plain",
+    systemInstruction: buildSystemInstruction(lang),
+    safetySettings,
+  } as const;
+}
 
 interface Expense {
   id: string;
@@ -160,10 +174,12 @@ export async function POST(req: Request) {
     histories,
     message,
     attachments = [],
+    lang = "en",
   }: {
     histories: Content[];
     message: string;
     attachments?: AttachmentPayload[];
+    lang?: string;
   } = await req.json();
 
   // Build parts array combining text and attachments
@@ -185,17 +201,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    // 开始聊天会话
-    // const chat = ai.chats.create({
-    //   model: "gemini-2.5-flash-preview-05-20",
-    //   history: histories,
-    //   config: generationConfig,
-    // });
+    const generationConfig = buildGenerationConfig(lang);
 
     // 发送消息并获取流式响应
-    // const result = await chat.sendMessageStream({
-    //   contents: [{ role: "user", parts }],
-    // });
     const result = await ai.models.generateContentStream({
       model: "gemini-2.5-flash-preview-05-20",
       contents: [{ role: "user", parts }],
@@ -206,6 +214,11 @@ export async function POST(req: Request) {
     const idString = `id:${uuidv4()}\ndata:`;
     const stream = new ReadableStream({
       async start(controller) {
+        // Heartbeat every 15 seconds to keep connection alive
+        const hb = setInterval(() => {
+          controller.enqueue(idString + "keep-alive\n\n");
+        }, 15000);
+
         controller.enqueue(
           idString +
             JSON.stringify({
@@ -231,9 +244,19 @@ export async function POST(req: Request) {
           );
         }
         fullResponse = fullResponse
-          .replace(/```json/, "")
+          .replace(/```json[\s\S]*?{/, "{")
           .replace(/```$/, "")
           .trim();
+
+        let parsed = tryParseJSON(fullResponse);
+        if (!parsed) {
+          try {
+            const repaired = jsonrepair(fullResponse);
+            parsed = JSON.parse(repaired);
+          } catch (_) {
+            parsed = null;
+          }
+        }
 
         controller.enqueue(
           idString +
@@ -244,8 +267,6 @@ export async function POST(req: Request) {
             "\n\n"
         );
 
-        // 优先尝试解析为结构化JSON
-        const parsed = tryParseJSON(fullResponse);
         if (parsed && parsed.type) {
           controller.enqueue(
             idString +
@@ -267,12 +288,13 @@ export async function POST(req: Request) {
           );
         }
 
+        clearInterval(hb);
         controller.close();
       },
     });
     return new Response(stream, {
       headers: {
-        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       },

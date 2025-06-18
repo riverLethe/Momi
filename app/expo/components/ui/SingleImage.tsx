@@ -7,6 +7,7 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { YStack, Text } from "tamagui";
+import { useTranslation } from "react-i18next";
 
 interface SingleImageProps {
   uri: string;
@@ -22,6 +23,7 @@ interface SingleImageProps {
 export const SingleImage: React.FC<SingleImageProps> = ({ uri, small }) => {
   const [error, setError] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const { t } = useTranslation();
 
   const size = small ? 30 : 50;
 
@@ -37,7 +39,7 @@ export const SingleImage: React.FC<SingleImageProps> = ({ uri, small }) => {
         backgroundColor="#F3F4F6"
       >
         <Text fontSize={10} color="$gray700">
-          Damaged
+          {t("Damaged")}
         </Text>
       </YStack>
     );

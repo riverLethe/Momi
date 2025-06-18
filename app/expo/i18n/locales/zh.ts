@@ -222,6 +222,7 @@ export default {
     English: "英语",
     中文: "中文",
     Español: "西班牙语",
+    System: "跟随系统",
 
     // Profile Screen additions
     "Family Spaces": "家庭空间",
@@ -340,5 +341,17 @@ export default {
     "Clear Chat": "清空聊天",
     "Are you sure you want to delete all messages?": "确定要清空所有消息吗？",
     Clear: "清空",
+    Damaged: "损坏",
+    "Failed to import screenshot": "导入截图失败",
+    "Screenshot not found – please try again.": "截图未找到 – 请重试。",
+    "Quick attach failed: {{error}}": "快速附加失败: {{error}}",
+    "Failed to read attachment: {{error}}": "读取附件失败: {{error}}",
+    "Expense query": "支出查询",
+    "Budget set: {{amount}} ({{category}}, {{period}})":
+      "预算设置: {{amount}} ({{category}}, {{period}})",
+    "{{count}} expenses created": "{{count}} 支出已创建",
+    "Expense created": "支出已创建",
+    "⚠️  {{text}}": "⚠️  {{text}}",
+    Thinking: "思考中...",
   },
 };

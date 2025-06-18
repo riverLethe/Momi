@@ -216,9 +216,9 @@ export default function AddBillScreen() {
   };
 
   const renderKeypad = () => (
-    <XStack p="$2" space="$2">
-      <YStack f={3} space="$2">
-        <XStack space="$2">
+    <XStack p="$2" gap="$2">
+      <YStack f={3} gap="$2">
+        <XStack gap="$2">
           {["1", "2", "3"].map((key) => (
             <Button
               f={1}
@@ -230,7 +230,7 @@ export default function AddBillScreen() {
             </Button>
           ))}
         </XStack>
-        <XStack space="$2">
+        <XStack gap="$2">
           {["4", "5", "6"].map((key) => (
             <Button
               f={1}
@@ -242,7 +242,7 @@ export default function AddBillScreen() {
             </Button>
           ))}
         </XStack>
-        <XStack space="$2">
+        <XStack gap="$2">
           {["7", "8", "9"].map((key) => (
             <Button
               f={1}
@@ -254,7 +254,7 @@ export default function AddBillScreen() {
             </Button>
           ))}
         </XStack>
-        <XStack space="$2">
+        <XStack gap="$2">
           <Button f={1} onPress={() => handleKeypadPress(".")} size="$5">
             <Text fontSize="$6">.</Text>
           </Button>
@@ -269,7 +269,7 @@ export default function AddBillScreen() {
           />
         </XStack>
       </YStack>
-      <YStack f={1} space="$2">
+      <YStack f={1} gap="$2">
         <Button
           f={1}
           icon={<CalendarIcon size={24} color="#333" />}
@@ -321,13 +321,13 @@ export default function AddBillScreen() {
             />
           </XStack>
           <ScrollView>
-            <YStack space="$3" p="$3">
+            <YStack gap="$3" p="$3">
               <XStack flexWrap="wrap" jc="flex-start" ai="center">
                 {EXPENSE_CATEGORIES.map((category) => (
                   <YStack
                     key={category.id}
                     ai="center"
-                    space="$2"
+                    gap="$2"
                     p="$2"
                     w="25%"
                     onPress={() => setSelectedCategory(category.id)}
@@ -390,7 +390,7 @@ export default function AddBillScreen() {
             />
           )}
           <YStack p="$2" bg="white">
-            <YStack p="$2" space="$3">
+            <YStack p="$2" gap="$3">
               <Text
                 fontSize={getFontSize(displayString)}
                 fontWeight="bold"
@@ -398,7 +398,7 @@ export default function AddBillScreen() {
               >
                 {displayString}
               </Text>
-              <XStack space="$2" ai="center">
+              <XStack gap="$2" ai="center">
                 <Input
                   f={1}
                   placeholder={t("Notes")}

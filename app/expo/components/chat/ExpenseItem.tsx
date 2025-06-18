@@ -40,7 +40,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(
             elevation={0.5}
           >
             <XStack alignItems="center" justifyContent="space-between">
-              <XStack alignItems="center" space="$2">
+              <XStack alignItems="center" gap="$2">
                 <Avatar circular size="$2" backgroundColor={category.lightColor}>
                   <CategoryIcon size={14} color={category.color} />
                 </Avatar>

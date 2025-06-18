@@ -89,7 +89,8 @@ export const chatAPI = {
     message: string,
     history: Content[],
     onResponse: (response: AIResponseType) => void,
-    attachments: AttachmentPayload[] = []
+    attachments: AttachmentPayload[] = [],
+    lang: string = "en"
   ): Promise<void> => {
     try {
       const response = await fetch(`${API_URL}/api/chat`, {
@@ -101,6 +102,7 @@ export const chatAPI = {
           message,
           histories: history,
           attachments,
+          lang,
         }),
       });
 

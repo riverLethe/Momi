@@ -19,7 +19,8 @@ const LANGUAGE_DETECTOR = {
       }
 
       // 2. Fallback to device locale (expo-localization), e.g. "en-US" => "en"
-      const deviceLocale = Localization.locale.split("-")[0];
+      const normalizedLocale = Localization.locale.replace("_", "-");
+      const deviceLocale = normalizedLocale.split("-")[0].toLowerCase();
       if (["en", "zh", "es"].includes(deviceLocale)) {
         return callback(deviceLocale);
       }

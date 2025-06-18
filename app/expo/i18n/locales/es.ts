@@ -12,6 +12,10 @@ export default {
     Education: "Educación",
     Coffee: "Café",
     Other: "Otros",
+    English: "Inglés",
+    中文: "Chino",
+    Español: "Español",
+    System: "Sistema",
 
     // Bills screen
     Bills: "Facturas",
@@ -64,5 +68,20 @@ export default {
     "Are you sure you want to delete all messages?":
       "¿Estás seguro de querer eliminar todos los mensajes?",
     Clear: "Limpiar",
+    Damaged: "Dañado",
+    "Failed to import screenshot": "Error al importar la captura de pantalla",
+    "Screenshot not found – please try again.":
+      "Captura de pantalla no encontrada – por favor, inténtelo de nuevo.",
+    "Quick attach failed: {{error}}":
+      "Error al adjuntar rápidamente: {{error}}",
+    "Failed to read attachment: {{error}}":
+      "Error al leer el adjunto: {{error}}",
+    "Expense query": "Consulta de gastos",
+    "Budget set: {{amount}} ({{category}}, {{period}})":
+      "Presupuesto establecido: {{amount}} ({{category}}, {{period}})",
+    "{{count}} expenses created": "{{count}} gastos creados",
+    "Expense created": "Gasto creado",
+    "⚠️  {{text}}": "⚠️  {{text}}",
+    Thinking: "Pensando...",
   },
 };
