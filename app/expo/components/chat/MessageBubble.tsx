@@ -8,6 +8,7 @@ import { Audio } from "expo-av";
 import { Play, File as FileIcon } from "lucide-react-native";
 import { SingleImage } from "@/components/ui/SingleImage";
 import i18n from "@/i18n";
+import { formatCurrency } from "@/utils/format";
 
 interface MessageBubbleProps {
   message: Message;
@@ -139,7 +140,7 @@ const renderMessageContent = (message: Message) => {
               color="$gray800"
               marginBottom="$1"
             >
-              {i18n.t("Total Spending")}: {totalAmount.toFixed(2)}
+              {i18n.t("Total Spending")}: {formatCurrency(totalAmount)}
             </Text>
             <Text fontSize={14} color="$gray500" marginBottom="$2">
               {i18n.t("Total {{count}} transactions", { count })}
@@ -155,7 +156,7 @@ const renderMessageContent = (message: Message) => {
                     {category}
                   </Text>
                   <Text fontSize={14} fontWeight="500" color="$blue500">
-                    {(amount as number).toFixed(2)}
+                    {formatCurrency(amount as number)}
                   </Text>
                 </XStack>
               )

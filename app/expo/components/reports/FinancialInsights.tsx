@@ -18,14 +18,14 @@ interface FinancialInsightsProps {
 const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
   const { t } = useTranslation();
 
-  const getIcon = (iconName: string) => {
-    switch (iconName) {
-      case "positive":
-        return <TrendingUp size={16} color="#10B981" />;
-      case "negative":
+  const getIcon = (severity: string | undefined) => {
+    switch (severity) {
+      case "critical":
         return <TrendingDown size={16} color="#EF4444" />;
+      case "warn":
+        return <AlertTriangle size={16} color="#F59E0B" />;
       default:
-        return <DollarSign size={16} color="#3B82F6" />;
+        return <TrendingUp size={16} color="#10B981" />;
     }
   };
 
@@ -36,32 +36,37 @@ const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
       backgroundColor="white"
       marginBottom="$4"
     >
-      <Text fontSize="$3.5" fontWeight="$7" marginBottom="$3" color="$gray12">
+      <Text fontSize="$3" fontWeight="$7" marginBottom="$3" color="$gray12">
         {t("Financial Insights")}
       </Text>
 
-      <YStack gap="$3.5">
+      <YStack gap="$3">
         {insights.map((insight, index) => (
           <XStack key={index} gap="$3" alignItems="center">
             <Circle
-              size="$3.5"
+              size="$3"
               backgroundColor={
-                insight.type === "positive"
-                  ? "#ECFDF5"
-                  : insight.type === "negative"
-                    ? "#FEF2F2"
-                    : "#EBF5FF"
+                insight.severity === "critical"
+                  ? "#FEF2F2"
+                  : insight.severity === "warn"
+                    ? "#FFFBEB"
+                    : "#ECFDF5"
               }
             >
-              {getIcon(insight.type)}
+              {getIcon(insight.severity)}
             </Circle>
             <YStack flex={1} gap="$2">
               <Text fontSize="$3" fontWeight="$6" color="$gray12">
                 {t(insight.title)}
               </Text>
-              <Text fontSize="$2.5" color="$gray10">
+              <Text fontSize="$2" color="$gray10">
                 {t(insight.description)}
               </Text>
+              {insight.recommendedAction && (
+                <Text fontSize="$2" color="$blue9">
+                  {t("Action: ") + t(insight.recommendedAction)}
+                </Text>
+              )}
             </YStack>
           </XStack>
         ))}

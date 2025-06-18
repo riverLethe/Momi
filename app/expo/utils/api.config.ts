@@ -5,9 +5,7 @@
 
 // API基础地址
 export const BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://api.momiq.app/v1"
-    : "https://dev-api.momiq.app/v1";
+  (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000") + "/api";
 
 // 账单相关接口
 export const BILL_API = {

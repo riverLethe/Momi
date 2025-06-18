@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ActivityIndicator, ScrollView, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import { YStack, Text, Separator, Button } from "tamagui";
+import { YStack, Text, Separator } from "tamagui";
 
 // Components
 import DateFilter from "@/components/reports/DateFilter";
@@ -47,6 +47,8 @@ export default function ReportsScreen() {
   );
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("");
   const [reportData, setReportData] = useState<ReportData | null>(null);
+
+  const currentSelector = periodSelectors.find((p) => p.id === selectedPeriodId);
 
   // Check if family mode is accessible
   useEffect(() => {
@@ -229,14 +231,11 @@ export default function ReportsScreen() {
             {/* Budget Insights Panel */}
             <BudgetInsightsPanel
               budget={reportData?.budget}
-              insights={reportData?.insights || []}
-              healthScore={
-                reportData?.healthScore || {
-                  score: 0,
-                  status: "Good",
-                  categories: [],
-                }
-              }
+              bills={bills}
+              budgets={budgets}
+              periodType={periodType}
+              periodStart={currentSelector?.startDate}
+              periodEnd={currentSelector?.endDate}
               onSetBudget={() => setBudgetModalOpen(true)}
             />
           </ScrollView>

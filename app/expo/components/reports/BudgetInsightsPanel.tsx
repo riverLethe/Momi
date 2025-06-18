@@ -1,10 +1,19 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { YStack, XStack, Text, Button, Separator, Card, Progress } from "tamagui";
+import { YStack, XStack, Text, Button, Separator, Card, Spinner } from "tamagui";
 import { formatCurrency as fmtCurrency } from "@/utils/format";
-import { Insight, HealthScore } from "@/types/reports.types";
-import FinancialInsights from "@/components/reports/FinancialInsights";
-import FinancialHealthScore from "@/components/reports/FinancialHealthScore";
+import {
+  Insight,
+  HealthScoreDetail,
+  DatePeriodEnum,
+} from "@/types/reports.types";
+import type { Bill } from "@/types/bills.types";
+import type { Budgets } from "@/utils/budget.utils";
+import InsightsSectionList from "@/components/reports/InsightsSectionList";
+import BudgetHealthCard from "@/components/reports/BudgetHealthCard";
+import { summariseBills } from "@/utils/abi-summary.utils";
+import { computeHealthScore } from "@/utils/health-score.utils";
+import { useAbiReport } from "@/hooks/reports/useAbiReport";
 
 interface BudgetOverview {
   amount: number | null;
@@ -16,18 +25,95 @@ interface BudgetOverview {
 
 interface BudgetInsightsPanelProps {
   budget: BudgetOverview | undefined;
-  insights: Insight[];
-  healthScore: HealthScore;
+  bills: Bill[];
+  budgets: Budgets;
+  periodType: DatePeriodEnum;
+  periodStart?: Date; // may be undefined on first render
+  periodEnd?: Date;
   onSetBudget: () => void;
 }
 
 const BudgetInsightsPanel: React.FC<BudgetInsightsPanelProps> = ({
   budget,
-  insights,
-  healthScore,
+  bills,
+  budgets,
+  periodType,
+  periodStart,
+  periodEnd,
   onSetBudget,
 }) => {
   const { t } = useTranslation();
+
+  // Build summary only when all inputs ready
+  const summary = useMemo(() => {
+    if (!periodStart || !periodEnd) return null;
+    return summariseBills(bills, budgets, periodType, periodStart, periodEnd, 0);
+  }, [bills, budgets, periodType, periodStart, periodEnd]);
+
+  const {
+    data: abiData,
+    loading: abiLoading,
+    refresh,
+  } = useAbiReport(
+    summary
+      ? {
+        summary,
+      }
+      : {
+        summary: {
+          period: "weekly",
+          startDate: "",
+          endDate: "",
+          coreTotals: { totalExpense: 0 },
+          budgetUtilisation: { categoryUtil: [] },
+          volatility: {
+            dailyExpenses: [],
+            volatilityPct: 0,
+            dailyStats: {
+              mean: 0,
+              median: 0,
+              max: 0,
+              min: 0,
+              p90: 0,
+            },
+            topSpendDays: [],
+          },
+          categoryMomentum: [],
+          recurring: { recurringCoverDays: 0 },
+        } as any,
+      }
+  );
+
+  const insights: Insight[] = (abiData?.insights || []).map((ins: any) => ({
+    id: ins.id,
+    title: ins.title,
+    description: ins.description,
+    type:
+      ins.severity === "critical"
+        ? "negative"
+        : ins.severity === "warn"
+          ? "neutral"
+          : "positive",
+    severity: ins.severity,
+    recommendedAction: ins.recommendedAction,
+  }));
+
+  const healthScore: HealthScoreDetail | undefined = summary
+    ? (computeHealthScore(summary) as HealthScoreDetail)
+    : undefined;
+
+  // Determine colour severity to keep consistent with overall health
+  const barSeverity: "danger" | "warning" | "good" = healthScore
+    ? healthScore.status === "Danger"
+      ? "danger"
+      : healthScore.status === "Warning"
+        ? "warning"
+        : "good"
+    : budget?.status === "danger"
+      ? "danger"
+      : budget?.status === "warning"
+        ? "warning"
+        : "good";
 
   if (!budget || budget.amount == null) {
     return (
@@ -51,52 +137,37 @@ const BudgetInsightsPanel: React.FC<BudgetInsightsPanelProps> = ({
   // Helper format
 
   return (
-    <Card padding="$4" backgroundColor="white" borderRadius="$4" gap="$4">
-      {/* Budget Summary */}
-      <YStack gap="$2">
-      <Text fontSize="$3.5" fontWeight="$7" marginBottom="$3" color="$gray12">
-        {t("Budget Overview")}
-      </Text>
-
-        {/* Progress */}
-        <Progress value={budget.percentage} backgroundColor="$gray4" height={10} borderRadius={5}>
-          <Progress.Indicator animation="bouncy" backgroundColor="$blue9" borderRadius={5} />
-        </Progress>
-
-        {/* Figures */}
-        <XStack justifyContent="space-between" marginTop="$2">
-          <YStack>
-            <Text color="$gray10">{t("Budget")}</Text>
-            <Text fontWeight="$7">{fmtCurrency(budget.amount)}</Text>
-          </YStack>
-          <YStack alignItems="flex-end">
-            <Text color="$gray10">{t("Spent")}</Text>
-            <Text fontWeight="$7">{fmtCurrency(budget.spent)}</Text>
-          </YStack>
+    <Card paddingVertical="$4" backgroundColor="white" borderRadius="$4" gap="$4">
+      {/* Header with Refresh */}
+      {refresh && (
+        <XStack justifyContent="space-between" alignItems="center" marginBottom="$3">
+          <Text fontSize="$3" fontWeight="$7" color="$gray12">
+            {t("Budget Overview")}
+          </Text>
+          <Button
+            size="$2"
+            backgroundColor="$blue9"
+            color="white"
+            disabled={abiLoading}
+            pressStyle={{ opacity: 0.8 }}
+            onPress={refresh}
+          >
+            {abiLoading ? t("Refreshing...") : t("Refresh insights")}
+          </Button>
         </XStack>
+      )}
 
-        <XStack justifyContent="space-between" marginTop="$1">
-          <YStack>
-            <Text color="$gray10">{t("Remaining")}</Text>
-            <Text fontWeight="$6" color={budget.remaining > 0 ? "$green9" : "$red9"}>{fmtCurrency(budget.remaining)}</Text>
-          </YStack>
-          <YStack alignItems="flex-end">
-            <Text color="$gray10">{t("Used")}</Text>
-            <Text fontWeight="$6">{budget.percentage.toFixed(1)}%</Text>
-          </YStack>
-        </XStack>
-      </YStack>
-
-      <Separator marginVertical="$2" borderColor="$gray3" />
+      {/* Unified Budget + Health Card */}
+      <BudgetHealthCard budget={budget} health={healthScore} />
 
       {/* Insights */}
-      <FinancialInsights insights={insights} />
-
-
-      <Separator marginVertical="$2" borderColor="$gray3" />
-
-      {/* Health Score */}
-      <FinancialHealthScore healthScore={healthScore} />
+      {abiLoading && !abiData ? (
+        <YStack alignItems="center" paddingVertical="$3">
+          <Spinner color="$blue9" />
+        </YStack>
+      ) : (
+        <InsightsSectionList insights={insights} />
+      )}
 
     </Card>
   );

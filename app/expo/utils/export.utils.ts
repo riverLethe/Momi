@@ -3,6 +3,7 @@ import * as Sharing from "expo-sharing";
 import { getBills } from "./bills.utils";
 import { Bill } from "@/types/bills.types";
 import { getUserPreferences } from "./userPreferences.utils";
+import { getCategoryById } from "@/constants/categories";
 import i18n from "@/i18n";
 
 /**
@@ -37,31 +38,44 @@ const billsToCsv = (
 
   const locale = i18n.language || undefined; // falls back to device locale
 
+  /** Helper to format dates */
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const formatDate = (d: Date) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const formatDateTime = (d: Date) =>
+    `${formatDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(
+      d.getSeconds()
+    )}`;
+
   /** Metadata section */
   const titleLine: string[] = [t("MomiQ Expense Bill Details") as string];
 
   const periodLine: string[] = [
     t("Period") as string,
-    `${startDate.toISOString()} - ${endDate.toISOString()}`,
+    sanitize(`${formatDate(startDate)} - ${formatDate(endDate)}`),
   ];
 
   const exportTimeLine: string[] = [
     t("Export Time") as string,
-    new Date().toISOString(),
+    sanitize(formatDateTime(new Date())),
   ];
 
   const totalRecordsLine: string[] = [
     t("Total") as string,
-    t("Total {{count}} transactions", { count: bills.length }) as string,
+    sanitize(
+      t("Total {{count}} transactions", { count: bills.length }) as string
+    ),
   ];
 
   const totalExpense = bills.reduce((sum, b) => sum + (b.amount || 0), 0);
   const totalExpenseLine: string[] = [
     t("Total Expense") as string,
-    new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency,
-    }).format(totalExpense),
+    sanitize(
+      new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+      }).format(totalExpense)
+    ),
   ];
 
   // Empty line to separate metadata from details section
@@ -82,21 +96,30 @@ const billsToCsv = (
     t("Notes") as string,
   ];
 
+  /** Sort by transaction time descending */
+  const sortedBills = [...bills].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
   /** Build table rows */
-  const tableRows = bills.map((b) => [
-    sanitize(new Date(b.createdAt).toISOString()),
-    sanitize(new Date(b.date).toISOString()),
-    sanitize(b.category),
-    sanitize(b.merchant ?? ""),
-    t("Expense") as string, // Only expense records are exported for now
-    sanitize(
-      new Intl.NumberFormat(locale, {
-        style: "currency",
-        currency,
-      }).format(b.amount)
-    ),
-    sanitize(b.notes ?? ""),
-  ]);
+  const tableRows = sortedBills.map((b) => {
+    const categoryName = getCategoryById(b.category)?.name || b.category;
+
+    return [
+      sanitize(formatDateTime(new Date(b.createdAt))),
+      sanitize(formatDateTime(new Date(b.date))),
+      sanitize(t(categoryName) as string),
+      sanitize(b.merchant ?? ""),
+      t("Expense") as string, // Only expense records are exported for now
+      sanitize(
+        new Intl.NumberFormat(locale, {
+          style: "currency",
+          currency,
+        }).format(b.amount)
+      ),
+      sanitize(b.notes ?? ""),
+    ];
+  });
 
   const allLines: string[][] = [
     titleLine,

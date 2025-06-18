@@ -54,7 +54,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
   const hasMoreCategories = data.length > 5;
 
   // SVG dimensions
-  const strokeWidth = size * 0.15;
+  const strokeWidth = 15;
   const radius = (size - strokeWidth) / 2;
   const center = size / 2;
 
