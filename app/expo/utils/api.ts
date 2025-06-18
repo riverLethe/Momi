@@ -67,7 +67,8 @@ export const readStream = async (
             /\n\n$/,
             ""
           );
-          if (!eventData) continue;
+          // Skip heartbeat events to avoid unnecessary JSON parsing errors
+          if (!eventData || eventData.trim() === "keep-alive") continue;
           const data = JSON.parse(eventData) as AIResponseType;
           onChunk(data);
         }

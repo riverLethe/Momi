@@ -212,6 +212,9 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
     return "#10B981";
   };
 
+  // Clamp progress bar value to [0, 100] so UI remains consistent even when spending exceeds the budget
+  const progressValue = Math.min(Math.max(budgetStatus.percentage, 0), 100);
+
   return (
     <>
       <Card
@@ -284,7 +287,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
               {/* 进度条 */}
               <YStack gap="$2">
                 <Progress
-                  value={budgetStatus.percentage}
+                  value={progressValue}
                   backgroundColor="$gray4"
                 >
                   <Progress.Indicator
