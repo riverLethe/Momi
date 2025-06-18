@@ -5,6 +5,7 @@ import { XStack, YStack, Text, View, Avatar, Card } from "tamagui";
 import { Expense } from "@/utils/api";
 import { formatCurrency } from "@/utils/format";
 import { getCategoryById, getCategoryIcon } from "@/constants/categories";
+import { useTranslation } from "react-i18next";
 
 interface ExpenseItemProps {
   expense: Expense;
@@ -14,6 +15,7 @@ interface ExpenseItemProps {
 export const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(
   ({ expense, compact = false }) => {
     const router = useRouter();
+    const { t } = useTranslation();
 
     const handlePress = () => {
       router.push({
@@ -45,7 +47,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(
                   <CategoryIcon size={14} color={category.color} />
                 </Avatar>
                 <Text fontSize={14} color="$gray700">
-                  {category.name}
+                  {t(category.name)}
                 </Text>
               </XStack>
               <Text fontSize={14} fontWeight="600" color="$gray800">
@@ -91,7 +93,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(
               color="$gray800"
               marginBottom="$1"
             >
-              {expense.category}
+              {t(category.name)}
             </Text>
             <Text fontSize={14} color="$gray500">
               {expense.note}

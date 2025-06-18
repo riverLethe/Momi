@@ -353,5 +353,13 @@ export default {
     "Expense created": "支出已创建",
     "⚠️  {{text}}": "⚠️  {{text}}",
     Thinking: "思考中...",
+    Groceries: "杂货",
+    Insurance: "保险",
+    "Personal Care": "个人护理",
+    Pets: "宠物",
+    Subscriptions: "订阅",
+    Taxes: "税",
+    Travel: "旅行",
+    Health: "健康",
   },
 };

@@ -333,5 +333,11 @@ export default {
     中文: "中文",
     Español: "Español",
     System: "System",
+    Groceries: "Groceries",
+    Insurance: "Insurance",
+    "Personal Care": "Personal Care",
+    Pets: "Pets",
+    Subscriptions: "Subscriptions",
+    Taxes: "Taxes",
   },
 };

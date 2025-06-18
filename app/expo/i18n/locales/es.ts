@@ -83,5 +83,13 @@ export default {
     "Expense created": "Gasto creado",
     "⚠️  {{text}}": "⚠️  {{text}}",
     Thinking: "Pensando...",
+    Groceries: "Compras",
+    Insurance: "Seguros",
+    "Personal Care": "Cuidado Personal",
+    Pets: "Mascotas",
+    Subscriptions: "Suscripciones",
+    Taxes: "Impuestos",
+    Travel: "Viajes",
+    Health: "Salud",
   },
 };
