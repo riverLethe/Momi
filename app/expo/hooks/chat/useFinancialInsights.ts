@@ -28,25 +28,24 @@ interface UseFinancialInsightsProps {
 const buildBillSummary = (
   bills: Parameters<typeof summariseBills>[0],
   budgets: Parameters<typeof summariseBills>[1],
-  periodParam: string
+  periodType: DatePeriodEnum
 ) => {
   const today = new Date();
-  let periodType: DatePeriodEnum;
   let start: Date;
   let end: Date;
-
-  if (periodParam === "week") {
-    periodType = DatePeriodEnum.WEEK;
-    start = startOfWeek(today, { weekStartsOn: 1 });
-    end = endOfWeek(today, { weekStartsOn: 1 });
-  } else if (periodParam === "month") {
-    periodType = DatePeriodEnum.MONTH;
-    start = startOfMonth(today);
-    end = endOfMonth(today);
-  } else {
-    periodType = DatePeriodEnum.YEAR;
-    start = startOfYear(today);
-    end = endOfYear(today);
+  switch (periodType) {
+    case DatePeriodEnum.WEEK:
+      start = startOfWeek(today, { weekStartsOn: 1 });
+      end = endOfWeek(today, { weekStartsOn: 1 });
+      break;
+    case DatePeriodEnum.MONTH:
+      start = startOfMonth(today);
+      end = endOfMonth(today);
+      break;
+    case DatePeriodEnum.YEAR:
+      start = startOfYear(today);
+      end = endOfYear(today);
+      break;
   }
 
   return summariseBills(bills, budgets, periodType, start, end);
@@ -68,7 +67,7 @@ export const useFinancialInsights = ({
     const billSummary: BillSummaryInput = buildBillSummary(
       bills,
       budgets,
-      periodParam
+      periodParam as DatePeriodEnum
     );
     try {
       const report = await fetchAbiReport(billSummary);
