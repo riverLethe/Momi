@@ -5,9 +5,10 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "ios:build": "expo run:ios  --no-build-cache",
-    "ios": "expo run:ios",
-    "web": "expo start --web"
+    "ios:build": "npm run prewidget && expo run:ios --no-build-cache",
+    "ios": "npm run prewidget && expo run:ios",
+    "web": "expo start --web",
+    "prewidget": "node ./scripts/add-widget-target.js"
   },
   "dependencies": {
     "@babel/runtime": "^7.27.4",
@@ -66,7 +67,8 @@
     "@types/uuid": "^10.0.0",
     "autoprefixer": "10.4.14",
     "babel-preset-expo": "~12.0.0",
-    "typescript": "^5.1.3"
+    "typescript": "^5.1.3",
+    "xcode": "^3.0.1"
   },
   "private": true
 }

@@ -37,6 +37,7 @@ import { updateUserPreferences } from "@/utils/userPreferences.utils";
 import { Budgets } from "@/utils/budget.utils";
 import { UserPreferences } from "@/types/user.types";
 import { DatePeriodEnum } from "@/types/reports.types";
+import { updateTotalSpendingWidget } from "@/utils/widgetData.utils";
 
 type FilterMode = "all" | "include" | "exclude";
 
@@ -161,6 +162,11 @@ export default function HomeScreen() {
 
         setReportData({ ...reportData, budget: { amount, spent: spentTotal, remaining, percentage, status } });
       }
+
+      // Refresh full report data so that all statistics (category breakdown, trends, etc.)
+      // are recalculated based on the latest budget configuration and category filters.
+      // This ensures the UI reflects the new budget instantly without requiring a manual refresh.
+      await loadReportData();
     } catch (error) {
       console.error("Failed to save budgets:", error);
     } finally {
@@ -195,6 +201,21 @@ export default function HomeScreen() {
 
     router.push({ pathname: "/bills", params });
   };
+
+  // Sync widget whenever report data updates --------------------------------
+  React.useEffect(() => {
+    if (reportData) {
+      const spentTotal = (reportData.categoryData || []).reduce(
+        (s, c) => s + c.value,
+        0
+      );
+      let label = "This Period";
+      if (periodType === DatePeriodEnum.WEEK) label = "This Week";
+      else if (periodType === DatePeriodEnum.MONTH) label = "This Month";
+      else if (periodType === DatePeriodEnum.YEAR) label = "This Year";
+      updateTotalSpendingWidget(spentTotal, label);
+    }
+  }, [reportData, periodType]);
 
   if (!hasBills) {
     return (
