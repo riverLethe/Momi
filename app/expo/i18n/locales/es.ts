@@ -181,5 +181,8 @@ export default {
       "Se produjo un error al filtrar las facturas",
     "+{{count}} more": "+{{count}} más",
     "AI Filter": "Filtro AI",
+    "This Week Total Expense": "Gasto Total de esta semana",
+    "{{month}} Month Total Expense": "Gasto Total de este mes",
+    "{{year}} Year Total Expense": "Gasto Total de este año",
   },
 };

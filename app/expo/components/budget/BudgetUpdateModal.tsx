@@ -86,41 +86,70 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
     setErrors({});
   }, [isOpen]);
 
-  // Validation rules
-  const validate = () => {
+  /**
+   * Compute validation errors.
+   *
+   * @param currentForm Current form state to validate
+   * @param includeCrossPeriod Whether to include cross-period rules. When saving we
+   *                           skip these rules so they don't block submission.
+   */
+  const computeErrors = (
+    currentForm: Record<BudgetPeriod, PeriodForm>,
+    includeCrossPeriod = true
+  ): { [k in BudgetPeriod]?: string } => {
     const errs: { [k in BudgetPeriod]?: string } = {};
-    const w = parseFloat(form.weekly.amount);
-    const m = parseFloat(form.monthly.amount);
-    const y = parseFloat(form.yearly.amount);
 
-    if (form.weekly.amount && (isNaN(w) || w <= 0)) {
+    const parseAmt = (val: string) => {
+      const num = parseFloat(val);
+      return { num, isInvalid: val !== "" && (isNaN(num) || num <= 0) };
+    };
+
+    const weekly = parseAmt(currentForm.weekly.amount);
+    const monthly = parseAmt(currentForm.monthly.amount);
+    const yearly = parseAmt(currentForm.yearly.amount);
+
+    // Per-period validation (blocking)
+    if (weekly.isInvalid) {
       errs.weekly = t("Invalid amount");
     }
-    if (form.monthly.amount && (isNaN(m) || m <= 0)) {
+    if (monthly.isInvalid) {
       errs.monthly = t("Invalid amount");
     }
-    if (form.yearly.amount && (isNaN(y) || y <= 0)) {
+    if (yearly.isInvalid) {
       errs.yearly = t("Invalid amount");
     }
 
-    // Cross-period rules
-    if (!errs.weekly && !errs.monthly && form.weekly.amount && form.monthly.amount) {
-      if (m < w * 4) {
-        errs.monthly = t("Monthly budget should be at least 4× weekly budget");
+    // Cross-period validation (warning – don't block save)
+    if (includeCrossPeriod) {
+      if (!errs.weekly && !errs.monthly && currentForm.weekly.amount && currentForm.monthly.amount) {
+        if (monthly.num < weekly.num * 4) {
+          errs.monthly = t("Monthly budget should be at least 4× weekly budget");
+        }
       }
-    }
-    if (!errs.monthly && !errs.yearly && form.monthly.amount && form.yearly.amount) {
-      if (y < m * 12) {
-        errs.yearly = t("Yearly budget should be at least 12× monthly budget");
+      if (!errs.monthly && !errs.yearly && currentForm.monthly.amount && currentForm.yearly.amount) {
+        if (yearly.num < monthly.num * 12) {
+          errs.yearly = t("Yearly budget should be at least 12× monthly budget");
+        }
       }
     }
 
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    return errs;
   };
 
+  // Real-time validation – update `errors` whenever form changes while modal is open.
+  useEffect(() => {
+    if (!isOpen) return;
+    setErrors(computeErrors(form, true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, isOpen]);
+
   const handleSave = async () => {
-    if (!validate()) return;
+    const blockingErrors = computeErrors(form, false);
+    if (Object.keys(blockingErrors).length > 0) {
+      // Update UI with full error set for user feedback
+      setErrors(computeErrors(form, true));
+      return;
+    }
     setIsLoading(true);
     try {
       const buildDetail = (p: BudgetPeriod): BudgetDetail => {
@@ -214,22 +243,6 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
       [selectedPeriod]: { ...prev[selectedPeriod], amount: val },
     }));
   };
-
-  function toggleCategory(catId: string) {
-    setForm((prev) => {
-      const curCats = prev[selectedPeriod].ignoredCategories;
-      const nextCats = curCats.includes(catId)
-        ? curCats.filter((c) => c !== catId)
-        : [...curCats, catId];
-      return {
-        ...prev,
-        [selectedPeriod]: {
-          ...prev[selectedPeriod],
-          ignoredCategories: nextCats,
-        },
-      };
-    });
-  }
 
   return (
     <Sheet

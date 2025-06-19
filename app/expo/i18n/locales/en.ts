@@ -426,5 +426,8 @@ export default {
       "Sorry, an error occurred when filtering bills",
     "+{{count}} more": "+{{count}} more",
     "AI Filter": "AI Filter",
+    "This Week Total Expense": "This Week Total Expense",
+    "{{month}} Month Total Expense": "{{month}} Month Total Expense",
+    "{{year}} Year Total Expense": "{{year}} Year Total Expense",
   },
 };

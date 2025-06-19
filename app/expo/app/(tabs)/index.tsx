@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   ScrollView,
   ActivityIndicator,
-  View,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,12 +12,10 @@ import { format } from "date-fns";
 
 // Stores & Providers -------------------------------------------------------
 import { useViewStore } from "@/stores/viewStore";
-import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
 import { useBudgets } from "@/hooks/useBudgets";
 
 // New hooks (logic extracted) ---------------------------------------------
-import { useRemoteSync } from "@/hooks/useRemoteSync";
 import { useCategoryFilters } from "@/hooks/useCategoryFilters";
 import { useBudgetStatus } from "@/hooks/useBudgetStatus";
 import { useReportData } from "@/hooks/useReportData";
@@ -33,13 +30,10 @@ import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
 import WelcomeScreen from "@/components/home/WelcomeScreen";
 
 // Utils & Types ------------------------------------------------------------
-import { updateUserPreferences } from "@/utils/userPreferences.utils";
 import { Budgets } from "@/utils/budget.utils";
-import { UserPreferences } from "@/types/user.types";
 import { DatePeriodEnum } from "@/types/reports.types";
 import { updateTotalSpendingWidget } from "@/utils/widgetData.utils";
-
-type FilterMode = "all" | "include" | "exclude";
+import { formatCurrency } from "@/utils/format";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -47,13 +41,10 @@ export default function HomeScreen() {
   const { t } = useTranslation();
 
   // Data -------------------------------------------------------------------
-  const { bills, transactions, isLoading: isDataLoading, refreshData } =
+  const { bills, transactions, refreshData } =
     useData();
-  const { isAuthenticated, user } = useAuth();
   const { budgets, saveBudgetForPeriod } = useBudgets();
 
-  // Synchronisation --------------------------------------------------------
-  const syncingRemote = useRemoteSync(isAuthenticated, user, refreshData);
 
   // Reports & Period management -------------------------------------------
   const {
@@ -65,7 +56,7 @@ export default function HomeScreen() {
     reportData,
     loadingReport,
     loadReportData,
-    setReportData,
+    onLoadReportData
   } = useReportData(viewMode);
 
   // Derive period key for budget utils
@@ -80,8 +71,6 @@ export default function HomeScreen() {
   const {
     includedCategories,
     excludedCategories,
-    setIncludedCategories,
-    setExcludedCategories,
   } = useCategoryFilters(budgetPeriod, budgets);
 
   // Budget status & categories --------------------------------------------
@@ -120,53 +109,17 @@ export default function HomeScreen() {
         "monthly",
         "yearly",
       ];
-      const prefsUpdate: Partial<UserPreferences> = { budgetFilters: {} };
 
+      // Persist every period's budget detail
       for (const p of periods) {
-        const detailObj = nextBudgets[p] as any;
-        await saveBudgetForPeriod(p, detailObj);
-        prefsUpdate.budgetFilters![p] = {
-          mode: detailObj.filterMode as FilterMode,
-          categories: detailObj.categories,
-        };
-      }
-      await updateUserPreferences(prefsUpdate);
-
-      // Update local filters according to current period
-      const detail = nextBudgets[budgetPeriod];
-      if (detail?.filterMode === "include") {
-        setIncludedCategories(detail.categories);
-        setExcludedCategories([]);
-      } else if (detail?.filterMode === "exclude") {
-        setExcludedCategories(detail.categories);
-        setIncludedCategories([]);
-      } else {
-        setIncludedCategories([]);
-        setExcludedCategories([]);
+        const detail = nextBudgets[p as keyof Budgets];
+        if (detail) {
+          await saveBudgetForPeriod(p, detail);
+        }
       }
 
-      // Reflect budget changes in merged report data
-      if (reportData) {
-        const spentTotal = (reportData.categoryData || []).reduce(
-          (s, c) => s + c.value,
-          0
-        );
-        const amount = detail?.amount ?? null;
-        const remaining = amount ? Math.max(0, amount - spentTotal) : 0;
-        const percentage = amount ? Math.min((spentTotal / amount) * 100, 100) : 0;
-        let status: "good" | "warning" | "danger" | "none" = "none";
-        if (amount == null) status = "none";
-        else if (percentage >= 90) status = "danger";
-        else if (percentage >= 70) status = "warning";
-        else status = "good";
-
-        setReportData({ ...reportData, budget: { amount, spent: spentTotal, remaining, percentage, status } });
-      }
-
-      // Refresh full report data so that all statistics (category breakdown, trends, etc.)
-      // are recalculated based on the latest budget configuration and category filters.
-      // This ensures the UI reflects the new budget instantly without requiring a manual refresh.
-      await loadReportData();
+      // Refresh statistics so UI reflects latest budgets & filters
+      await onLoadReportData();
     } catch (error) {
       console.error("Failed to save budgets:", error);
     } finally {
@@ -205,17 +158,25 @@ export default function HomeScreen() {
   // Sync widget whenever report data updates --------------------------------
   React.useEffect(() => {
     if (reportData) {
-      const spentTotal = (reportData.categoryData || []).reduce(
-        (s, c) => s + c.value,
-        0
-      );
+      const catData = reportData.categoryData || [];
+      const spentTotal = catData.reduce((s, c) => s + c.value, 0);
+
       let label = "This Period";
-      if (periodType === DatePeriodEnum.WEEK) label = "This Week";
-      else if (periodType === DatePeriodEnum.MONTH) label = "This Month";
-      else if (periodType === DatePeriodEnum.YEAR) label = "This Year";
-      updateTotalSpendingWidget(spentTotal, label);
+      if (periodType === DatePeriodEnum.WEEK) label = t("This Week Total Expense");
+      else if (periodType === DatePeriodEnum.MONTH) label = t("{{month}} Month Total Expense", { month: new Date().getMonth() + 1 });
+      else if (periodType === DatePeriodEnum.YEAR) label = t("{{year}} Year Total Expense", { year: new Date().getFullYear() });
+
+      const categoriesPayload = catData.map((c) => ({
+        name: t(c.label),
+        amountText: formatCurrency(c.value),
+        percent: spentTotal ? c.value / spentTotal : 0,
+        color: c.color,
+      }));
+
+      const totalText = formatCurrency(spentTotal);
+      updateTotalSpendingWidget(totalText, label, categoriesPayload);
     }
-  }, [reportData, periodType]);
+  }, [reportData, periodType, t]);
 
   if (!hasBills) {
     return (

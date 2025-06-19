@@ -438,5 +438,8 @@ export default {
     "Sorry, an error occurred when filtering bills": "过滤账单时发生错误",
     "+{{count}} more": "+{{count}} 更多",
     "AI Filter": "AI 过滤",
+    "This Week Total Expense": "本周总支出",
+    "{{month}} Month Total Expense": "{{month}}月总支出",
+    "{{year}} Year Total Expense": "{{year}}年总支出",
   },
 };

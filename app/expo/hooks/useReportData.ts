@@ -16,9 +16,7 @@ export const useReportData = (viewMode: "personal" | "family") => {
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("");
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loadingReport, setLoadingReport] = useState<boolean>(true);
-
-  const loadReportData = useCallback(async () => {
-    setLoadingReport(true);
+  const onLoadReportData = async (onDone?: () => void) => {
     try {
       const data = await fetchReportData(
         periodType,
@@ -37,8 +35,15 @@ export const useReportData = (viewMode: "personal" | "family") => {
     } catch (error) {
       console.error("Error fetching report data:", error);
     } finally {
-      setLoadingReport(false);
+      onDone?.();
     }
+  };
+
+  const loadReportData = useCallback(async () => {
+    setLoadingReport(true);
+    await onLoadReportData(() => {
+      setLoadingReport(false);
+    });
   }, [periodType, viewMode, selectedPeriodId]);
 
   // Fetch on mount & when deps change
@@ -63,5 +68,6 @@ export const useReportData = (viewMode: "personal" | "family") => {
     loadingReport,
     handlePeriodTypeChange,
     loadReportData,
+    onLoadReportData,
   };
 };
