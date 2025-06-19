@@ -32,9 +32,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           marginRight="$2"
         >
           <Image
-            source={{
-              uri: "https://placehold.co/100x100/3B82F6/FFFFFF.png?text=M",
-            }}
+            source={require("@/assets/images/icon.png")}
             style={{ width: "100%", height: "100%" }}
           />
         </View>
@@ -43,11 +41,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         </Text>
       </XStack>
       <XStack alignItems="flex-end" gap="$2">
-        <Button onPress={onAddExpense} circular>
+        <Button size="$3" onPress={onAddExpense} circular borderRadius="$2">
           <PlusIcon size={22} color="#3B82F6" />
         </Button>
         {onClearChat && (
-          <Button onPress={onClearChat} circular>
+          <Button size="$3" onPress={onClearChat} circular borderRadius="$2">
             <BrushCleaningIcon size={22} color="#EF4444" />
           </Button>
         )}
