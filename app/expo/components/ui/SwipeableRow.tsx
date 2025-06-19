@@ -57,6 +57,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10]) // start only when translationX < -10 or > 10
     .failOffsetY([-10, 10]) // cancel if the user is primarily scrolling vertically
+    .hitSlop({ left: -30 })
     .onTouchesDown(() => {
       if (disabled || !onDelete) return;
       if (onSwipeStart) {
