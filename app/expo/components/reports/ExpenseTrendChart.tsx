@@ -47,7 +47,6 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
         <XStack
           justifyContent="space-between"
           alignItems="center"
-          paddingHorizontal="$3"
         >
           <XStack gap="$2" alignItems="center">
             <ChartNoAxesCombinedIcon size={24} color="#6366F1" />

@@ -184,5 +184,9 @@ export default {
     "This Week Total Expense": "Gasto Total de esta semana",
     "{{month}} Month Total Expense": "Gasto Total de este mes",
     "{{year}} Year Total Expense": "Gasto Total de este año",
+    "Week Health Score": "Puntuación de salud de la semana",
+    "Month Health Score": "Puntuación de salud del mes",
+    "Year Health Score": "Puntuación de salud del año",
+    "Used Percentage": "Porcentaje de uso",
   },
 };

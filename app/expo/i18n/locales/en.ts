@@ -429,5 +429,9 @@ export default {
     "This Week Total Expense": "This Week Total Expense",
     "{{month}} Month Total Expense": "{{month}} Month Total Expense",
     "{{year}} Year Total Expense": "{{year}} Year Total Expense",
+    "Week Health Score": "Week Health Score",
+    "Month Health Score": "Month Health Score",
+    "Year Health Score": "Year Health Score",
+    "Used Percentage": "Used Percentage",
   },
 };

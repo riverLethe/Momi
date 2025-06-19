@@ -734,6 +734,18 @@ export const fetchReportData = async (
     );
     const spentTotal = summaryForSpent.coreTotals.totalExpense;
 
+    // ---------------- Health Metrics (for widgets & cross-component consistency) ------------------
+    const healthMetrics = {
+      budgetUsagePct:
+        summaryForSpent.budgetUtilisation?.usagePct != null
+          ? Math.round(summaryForSpent.budgetUtilisation.usagePct)
+          : 0,
+      volatilityPct: Math.round(summaryForSpent.volatility?.volatilityPct ?? 0),
+      // TODO: improve savingsRatePct once income / savings data pipeline ready
+      savingsRatePct: 0,
+      recurringCoverDays: summaryForSpent.recurring?.recurringCoverDays ?? 0,
+    } as const;
+
     const remaining = budgetAmount ? Math.max(0, budgetAmount - spentTotal) : 0;
     const percentage = budgetAmount
       ? Math.min((spentTotal / budgetAmount) * 100, 100)
@@ -754,7 +766,10 @@ export const fetchReportData = async (
       categoryData,
       trendData,
       insights,
-      healthScore,
+      healthScore: {
+        ...healthScore,
+        metrics: healthMetrics,
+      },
       periodSelectors,
       averageSpending,
       topSpendingCategories,

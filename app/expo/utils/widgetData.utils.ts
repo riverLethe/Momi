@@ -101,3 +101,54 @@ export async function updateSpendingWidgetForPeriod(
     console.warn(`Failed to update ${periodKey} Total Spending widget:`, err);
   }
 }
+
+// ------------------------------- Budget Widgets -------------------------------
+
+export interface BudgetSegment {
+  name: string; // e.g., "Used" / "Remaining"
+  amountText: string; // formatted like "¥2,019.04"
+  percent: number; // 0-1
+  color: string; // hex color
+}
+
+/**
+ * Updates a period-specific Budget widget (week / month / year).
+ * The bridge is provided by the native `WidgetBudgetDataBridge` module.
+ */
+export async function updateBudgetWidgetForPeriod(
+  periodKey: "week" | "month" | "year",
+  totalText: string,
+  periodLabel: string,
+  segments: BudgetSegment[] = []
+): Promise<void> {
+  if (Platform.OS !== "ios") return;
+
+  const bridge = NativeModules.WidgetBudgetDataBridge as
+    | {
+        updateBudgetStringsForPeriod?(
+          period: string,
+          totalText: string,
+          label: string,
+          segmentsJson: string
+        ): Promise<void>;
+      }
+    | undefined;
+
+  try {
+    const json = JSON.stringify(segments);
+    if (bridge?.updateBudgetStringsForPeriod) {
+      await bridge.updateBudgetStringsForPeriod(
+        periodKey,
+        totalText,
+        periodLabel,
+        json
+      );
+    } else {
+      console.warn(
+        "updateBudgetStringsForPeriod not available in WidgetBudgetDataBridge"
+      );
+    }
+  } catch (err) {
+    console.warn(`Failed to update ${periodKey} Budget widget:`, err);
+  }
+}

@@ -20,6 +20,7 @@ import { useCategoryFilters } from "@/hooks/useCategoryFilters";
 import { useBudgetStatus } from "@/hooks/useBudgetStatus";
 import { useReportData } from "@/hooks/useReportData";
 import { useSpendingWidgetSync } from "@/hooks/useSpendingWidgetSync";
+import { useBudgetWidgetSync } from "@/hooks/useBudgetWidgetSync";
 
 // UI Components ------------------------------------------------------------
 import DateFilter from "@/components/reports/DateFilter";
@@ -156,6 +157,9 @@ export default function HomeScreen() {
 
   // Sync iOS spending widgets
   useSpendingWidgetSync(reportData, periodType, viewMode);
+
+  // Sync iOS budget widgets
+  useBudgetWidgetSync(reportData, periodType, viewMode);
 
   // Reload report when underlying data (bills/transactions) refreshes
   useEffect(() => {

@@ -441,5 +441,9 @@ export default {
     "This Week Total Expense": "本周总支出",
     "{{month}} Month Total Expense": "{{month}}月总支出",
     "{{year}} Year Total Expense": "{{year}}年总支出",
+    "Week Health Score": "周财务健康分数",
+    "Month Health Score": "月财务健康分数",
+    "Year Health Score": "年财务健康分数",
+    "Used Percentage": "已使用占比",
   },
 };
