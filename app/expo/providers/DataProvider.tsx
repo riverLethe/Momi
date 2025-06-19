@@ -4,6 +4,7 @@ import { Transaction } from '@/types/transactions.types';
 import { getBills, getUpcomingBills } from '@/utils/bills.utils';
 import { getTransactions, getRecentTransactions } from '@/utils/transactions.utils';
 import { useAuth } from './AuthProvider';
+import { syncSpendingWidgets } from "@/utils/spendingWidgetSync.utils";
 
 // Define the data context type
 interface DataContextType {
@@ -38,22 +39,25 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Load bills
       const loadedBills = await getBills();
       setBills(loadedBills);
-      
+
       // Load upcoming bills
       const loadedUpcomingBills = await getUpcomingBills();
       setUpcomingBills(loadedUpcomingBills);
-      
+
       // Load transactions
       const loadedTransactions = await getTransactions();
       setTransactions(loadedTransactions);
-      
+
       // Load recent transactions
       const loadedRecentTransactions = await getRecentTransactions();
       setRecentTransactions(loadedRecentTransactions);
+
+      // After data reload, refresh widgets in background (personal view)
+      syncSpendingWidgets({ viewMode: "personal" }).catch(() => { });
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -93,10 +97,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
  */
 export const useData = (): DataContextType => {
   const context = useContext(DataContext);
-  
+
   if (context === undefined) {
     throw new Error('useData must be used within a DataProvider');
   }
-  
+
   return context;
 }; 

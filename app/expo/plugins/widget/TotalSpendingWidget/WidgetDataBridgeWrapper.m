@@ -27,4 +27,11 @@ RCT_EXTERN_METHOD(updateSpendingStrings:(nonnull NSString)totalText
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(updateSpendingStringsForPeriod:(nonnull NSString)periodKey
+                  totalText:(nonnull NSString)totalText
+                  label:(nonnull NSString)label
+                  categories:(nonnull NSString)categoriesJson
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end

@@ -19,6 +19,7 @@ import { useBudgets } from "@/hooks/useBudgets";
 import { useCategoryFilters } from "@/hooks/useCategoryFilters";
 import { useBudgetStatus } from "@/hooks/useBudgetStatus";
 import { useReportData } from "@/hooks/useReportData";
+import { useSpendingWidgetSync } from "@/hooks/useSpendingWidgetSync";
 
 // UI Components ------------------------------------------------------------
 import DateFilter from "@/components/reports/DateFilter";
@@ -32,8 +33,6 @@ import WelcomeScreen from "@/components/home/WelcomeScreen";
 // Utils & Types ------------------------------------------------------------
 import { Budgets } from "@/utils/budget.utils";
 import { DatePeriodEnum } from "@/types/reports.types";
-import { updateTotalSpendingWidget } from "@/utils/widgetData.utils";
-import { formatCurrency } from "@/utils/format";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -155,28 +154,8 @@ export default function HomeScreen() {
     router.push({ pathname: "/bills", params });
   };
 
-  // Sync widget whenever report data updates --------------------------------
-  React.useEffect(() => {
-    if (reportData) {
-      const catData = reportData.categoryData || [];
-      const spentTotal = catData.reduce((s, c) => s + c.value, 0);
-
-      let label = "This Period";
-      if (periodType === DatePeriodEnum.WEEK) label = t("This Week Total Expense");
-      else if (periodType === DatePeriodEnum.MONTH) label = t("{{month}} Month Total Expense", { month: new Date().getMonth() + 1 });
-      else if (periodType === DatePeriodEnum.YEAR) label = t("{{year}} Year Total Expense", { year: new Date().getFullYear() });
-
-      const categoriesPayload = catData.map((c) => ({
-        name: t(c.label),
-        amountText: formatCurrency(c.value),
-        percent: spentTotal ? c.value / spentTotal : 0,
-        color: c.color,
-      }));
-
-      const totalText = formatCurrency(spentTotal);
-      updateTotalSpendingWidget(totalText, label, categoriesPayload);
-    }
-  }, [reportData, periodType, t]);
+  // Sync iOS spending widgets
+  useSpendingWidgetSync(reportData, periodType, viewMode);
 
   if (!hasBills) {
     return (

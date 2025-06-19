@@ -78,9 +78,51 @@ class WidgetDataBridge: NSObject {
     store?.set(categories as String, forKey: "categoriesJson")
     #if canImport(WidgetKit)
     if #available(iOS 14.0, *) {
-      WidgetCenter.shared.reloadTimelines(ofKind: "TotalSpendingWidget")
+      let kinds = [
+        "TotalSpendingWidget", // legacy
+        "WeeklyTotalSpendingWidget",
+        "MonthlyTotalSpendingWidget",
+        "YearlyTotalSpendingWidget"
+      ]
+      kinds.forEach { WidgetCenter.shared.reloadTimelines(ofKind: $0) }
     }
     #endif
+    store?.synchronize()
+    resolve(nil)
+  }
+
+  // MARK: - Period specific string method ----------------------------------
+
+  // periodKey should be "week", "month" or "year"
+  @objc(updateSpendingStringsForPeriod:totalText:label:categories:resolver:rejecter:)
+  func updateSpendingStringsForPeriod(_ periodKey: NSString,
+                                      totalText: NSString,
+                                      label: NSString,
+                                      categories: NSString,
+                                      resolver resolve: RCTPromiseResolveBlock,
+                                      rejecter reject: RCTPromiseRejectBlock) {
+    let suffix = "_\(periodKey)"
+    store?.set(totalText as String, forKey: "totalText\(suffix)")
+    store?.set(label as String, forKey: "periodLabel\(suffix)")
+    store?.set(categories as String, forKey: "categoriesJson\(suffix)")
+
+    #if canImport(WidgetKit)
+    if #available(iOS 14.0, *) {
+      let kind: String
+      switch periodKey {
+      case "week":
+        kind = "WeeklyTotalSpendingWidget"
+      case "month":
+        kind = "MonthlyTotalSpendingWidget"
+      case "year":
+        kind = "YearlyTotalSpendingWidget"
+      default:
+        kind = "WeeklyTotalSpendingWidget" // fallback
+      }
+      WidgetCenter.shared.reloadTimelines(ofKind: kind)
+    }
+    #endif
+
     store?.synchronize()
     resolve(nil)
   }

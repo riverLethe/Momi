@@ -35,6 +35,12 @@ export async function updateTotalSpendingWidget(
           label: string,
           categoriesJson: string
         ): Promise<void>;
+        updateSpendingStringsForPeriod?(
+          period: string,
+          totalText: string,
+          label: string,
+          categoriesJson: string
+        ): Promise<void>;
       }
     | undefined;
 
@@ -48,5 +54,50 @@ export async function updateTotalSpendingWidget(
     }
   } catch (err) {
     console.warn("Failed to update Total Spending widget:", err);
+  }
+}
+
+/**
+ * Updates a period-specific Total Spending widget (week / month / year).
+ *
+ * @param periodKey   "week" | "month" | "year"
+ * @param totalText   Pre-formatted total spending string.
+ * @param periodLabel Label describing the period (e.g., "This Week").
+ * @param categories  Category breakdown data.
+ */
+export async function updateSpendingWidgetForPeriod(
+  periodKey: "week" | "month" | "year",
+  totalText: string,
+  periodLabel: string,
+  categories: SpendingCategory[] = []
+): Promise<void> {
+  if (Platform.OS !== "ios") return;
+
+  const bridge = NativeModules.WidgetDataBridge as
+    | {
+        updateSpendingStringsForPeriod?(
+          period: string,
+          totalText: string,
+          label: string,
+          categoriesJson: string
+        ): Promise<void>;
+      }
+    | undefined;
+
+  try {
+    const catJson = JSON.stringify(categories);
+    if (bridge?.updateSpendingStringsForPeriod) {
+      await bridge.updateSpendingStringsForPeriod(
+        periodKey,
+        totalText,
+        periodLabel,
+        catJson
+      );
+    } else {
+      // Fallback to legacy single-widget update
+      await updateTotalSpendingWidget(totalText, periodLabel, categories);
+    }
+  } catch (err) {
+    console.warn(`Failed to update ${periodKey} Total Spending widget:`, err);
   }
 }

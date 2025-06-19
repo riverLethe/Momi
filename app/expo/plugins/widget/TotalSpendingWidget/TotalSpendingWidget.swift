@@ -19,11 +19,33 @@ struct SpendingEntry: TimelineEntry {
     let categories: [SpendingCategory]
 }
 
-// Timeline provider that fetches data from App Group storage
-struct SpendingProvider: TimelineProvider {
+// MARK: - Period Enum -------------------------------------------------
+
+// 新增：支出小组件周期类型（周/月/年）
+enum SpendingPeriod: String {
+    case week
+    case month
+    case year
+
+    /// Returns a short, capitalized display name (e.g. "Week")
+    var displayName: String {
+        switch self {
+        case .week: return "Week"
+        case .month: return "Month"
+        case .year: return "Year"
+        }
+    }
+}
+
+// MARK: - Generic Period Provider ------------------------------------
+
+/// Timeline provider that reads data for a fixed `SpendingPeriod` from the shared App Group.
+struct PeriodSpendingProvider: TimelineProvider {
+    let period: SpendingPeriod
     private let store = UserDefaults(suiteName: "group.com.momiq.shared")
 
-    func placeholder(in context: Context) -> SpendingEntry {
+    // Sample data for previews / placeholders (same across periods)
+    private func sampleEntry() -> SpendingEntry {
         let sampleCats: [SpendingCategory] = [
             .init(name: "Groceries", amountText: "$120.00", percent: 0.33, color: "#22C55E"),
             .init(name: "Food", amountText: "$104.00", percent: 0.29, color: "#16A34A"),
@@ -33,24 +55,28 @@ struct SpendingProvider: TimelineProvider {
         return SpendingEntry(date: Date(), totalText: "$364.53", periodLabel: "Total Spending", categories: sampleCats)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (SpendingEntry) -> ()) {
+    func placeholder(in context: Context) -> SpendingEntry {
+        sampleEntry()
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (SpendingEntry) -> Void) {
         completion(readCurrentEntry())
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<SpendingEntry>) -> ()) {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<SpendingEntry>) -> Void) {
         let entry = readCurrentEntry()
         // Refresh after 15 minutes (system may override)
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-        completion(timeline)
+        completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
     }
 
     private func readCurrentEntry() -> SpendingEntry {
-        let totalText = store?.string(forKey: "totalText") ?? "0"
-        let label = store?.string(forKey: "periodLabel") ?? "--"
+        let suffix = "_\(period.rawValue)"
+        let totalText = store?.string(forKey: "totalText\(suffix)") ?? "0"
+        let label = store?.string(forKey: "periodLabel\(suffix)") ?? period.displayName
 
         var cats: [SpendingCategory] = []
-        if let json = store?.string(forKey: "categoriesJson"),
+        if let json = store?.string(forKey: "categoriesJson\(suffix)"),
            let data = json.data(using: .utf8),
            let decoded = try? JSONDecoder().decode([SpendingCategory].self, from: data) {
             cats = decoded
@@ -148,7 +174,7 @@ struct DonutChartWithCenterView: View {
 // MARK: - Widget Views -------------------------------------------------
 
 struct SpendingWidgetEntryView : View {
-    var entry: SpendingProvider.Entry
+    var entry: SpendingEntry
 
     @Environment(\.widgetFamily) var family
 
@@ -233,17 +259,58 @@ struct SpendingWidgetEntryView : View {
     }
 }
 
-// MARK: - Widget Definition -------------------------------------------
-@main
-struct TotalSpendingWidget: Widget {
-    let kind: String = "TotalSpendingWidget"
+// MARK: - New Widget Definitions ------------------------------------
+
+/// 周度总支出小组件
+struct WeeklyTotalSpendingWidget: Widget {
+    let kind: String = "WeeklyTotalSpendingWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: SpendingProvider()) { entry in
+        StaticConfiguration(kind: kind, provider: PeriodSpendingProvider(period: .week)) { entry in
             SpendingWidgetEntryView(entry: entry)
         }
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .configurationDisplayName("Total Spending")
-        .description("Shows your total spending for a selected period.")
+        .configurationDisplayName("Weekly Spending")
+        .description("Shows your total spending for this week.")
+    }
+}
+
+/// 月度总支出小组件
+struct MonthlyTotalSpendingWidget: Widget {
+    let kind: String = "MonthlyTotalSpendingWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PeriodSpendingProvider(period: .month)) { entry in
+            SpendingWidgetEntryView(entry: entry)
+        }
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .configurationDisplayName("Monthly Spending")
+        .description("Shows your total spending for this month.")
+    }
+}
+
+/// 年度总支出小组件
+struct YearlyTotalSpendingWidget: Widget {
+    let kind: String = "YearlyTotalSpendingWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PeriodSpendingProvider(period: .year)) { entry in
+            SpendingWidgetEntryView(entry: entry)
+        }
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .configurationDisplayName("Yearly Spending")
+        .description("Shows your total spending for this year.")
+    }
+}
+
+// MARK: - Bundle exposing all widgets ---------------------------------
+
+@main
+struct SpendingWidgetsBundle: WidgetBundle {
+    @WidgetBundleBuilder
+    var body: some Widget {
+        WeeklyTotalSpendingWidget()
+        MonthlyTotalSpendingWidget()
+        YearlyTotalSpendingWidget()
     }
 }
