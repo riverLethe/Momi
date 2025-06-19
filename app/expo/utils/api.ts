@@ -91,9 +91,19 @@ export const chatAPI = {
     history: Content[],
     onResponse: (response: AIResponseType) => void,
     attachments: AttachmentPayload[] = [],
-    lang: string = "en"
+    lang: string = "en",
+    currentDate?: string
   ): Promise<void> => {
     try {
+      // Derive local date string if not provided (YYYY-MM-DD in user locale)
+      const todayLocal = (() => {
+        if (currentDate) return currentDate;
+        const d = new Date();
+        const tzOffset = d.getTimezoneOffset();
+        const local = new Date(d.getTime() - tzOffset * 60000);
+        return local.toISOString().split("T")[0];
+      })();
+
       const response = await fetch(`${API_URL}/api/chat`, {
         method: "POST",
         headers: {
@@ -104,6 +114,7 @@ export const chatAPI = {
           histories: history,
           attachments,
           lang,
+          currentDate: todayLocal,
         }),
       });
 

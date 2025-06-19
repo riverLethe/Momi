@@ -107,9 +107,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <View
                 width={40}
                 height={40}
-                borderRadius={20}
+                borderRadius="$2"
                 justifyContent="center"
                 alignItems="center"
+                backgroundColor="$gray4"
               >
                 <Camera size={22} color="#4B5563" />
               </View>
@@ -217,13 +218,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           {/* Plus icon hidden during recording */}
           {!isRecording && (
-            <Pressable onPress={() => setShowMoreOptions(true)}>
+            <Pressable onPress={() => setShowMoreOptions(!showMoreOptions)}>
               <View
                 width={40}
                 height={40}
-                borderRadius={20}
+                borderRadius="$2"
                 justifyContent="center"
                 alignItems="center"
+                backgroundColor="$gray4"
               >
                 <Plus size={22} color="#4B5563" />
               </View>

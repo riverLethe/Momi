@@ -432,5 +432,11 @@ export default {
     "Show me my {{period}} financial insights":
       "向我展示我的{{period}}度财务洞察",
     "⚠️ Failed to fetch insights: {{message}}": "⚠️ 无法获取洞察：{{message}}",
+    "Found {{count}} bills, total spending: {{amount}}":
+      "找到 {{count}} 笔账单，总支出：{{amount}}",
+    "No matching bills found": "未找到匹配的账单",
+    "Sorry, an error occurred when filtering bills": "过滤账单时发生错误",
+    "+{{count}} more": "+{{count}} 更多",
+    "AI Filter": "AI 过滤",
   },
 };

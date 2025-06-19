@@ -419,5 +419,12 @@ export default {
       "Show me my {{period}} financial insights",
     "⚠️ Failed to fetch insights: {{message}}":
       "⚠️ Failed to fetch insights: {{message}}",
+    "Found {{count}} bills, total spending: {{amount}}":
+      "Found {{count}} bills, total spending: {{amount}}",
+    "No matching bills found": "No matching bills found",
+    "Sorry, an error occurred when filtering bills":
+      "Sorry, an error occurred when filtering bills",
+    "+{{count}} more": "+{{count}} more",
+    "AI Filter": "AI Filter",
   },
 };

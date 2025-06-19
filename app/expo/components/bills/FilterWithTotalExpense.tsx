@@ -17,6 +17,8 @@ interface FilterWithTotalExpenseProps {
   totalExpense: number;
   startDate: Date | null;
   endDate: Date | null;
+  aiFilterActive?: boolean;
+  children?: React.ReactNode;
 }
 
 export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
@@ -26,6 +28,8 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
   totalExpense,
   startDate,
   endDate,
+  aiFilterActive,
+  children,
 }) => {
   const { t } = useTranslation();
   const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
@@ -119,30 +123,34 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
             {t("Total")}: {formatCurrency(totalExpense)}
           </Text>
         </XStack>
-        <XStack gap="$2" alignItems="center">
-          <Button
-            size="$2"
-            onPress={() => setIsDateSheetOpen(true)}
+        {
+          aiFilterActive ? children : (
+            <XStack gap="$2" alignItems="center">
+              <Button
+                size="$2"
+                onPress={() => setIsDateSheetOpen(true)}
 
-          >
-            <XStack gap="$1.5" alignItems="center">
-              <Calendar size={12} color="#777777" />
-              <Text fontSize="$2.5" color="$gray11">
-                {getDateRangeLabel()}
-              </Text>
-            </XStack>
-          </Button>
+              >
+                <XStack gap="$1.5" alignItems="center">
+                  <Calendar size={12} color="#777777" />
+                  <Text fontSize="$2.5" color="$gray11">
+                    {getDateRangeLabel()}
+                  </Text>
+                </XStack>
+              </Button>
 
-          <Button
-            size="$2"
-            onPress={() => setIsCategorySheetOpen(true)}
-          >
-            <XStack gap="$1.5" alignItems="center">
-              <Filter size={12} color="#777777" />
-              <SelectedCategoryName />
+              <Button
+                size="$2"
+                onPress={() => setIsCategorySheetOpen(true)}
+              >
+                <XStack gap="$1.5" alignItems="center">
+                  <Filter size={12} color="#777777" />
+                  <SelectedCategoryName />
+                </XStack>
+              </Button>
             </XStack>
-          </Button>
-        </XStack>
+          )
+        }
       </XStack>
 
       <CategorySelectSheet

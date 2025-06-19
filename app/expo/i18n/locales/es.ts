@@ -174,5 +174,12 @@ export default {
       "Muéstrame mis {{period}} perspectivas financieras",
     "⚠️ Failed to fetch insights: {{message}}":
       "⚠️ No se pudieron obtener los datos: {{message}}",
+    "Found {{count}} bills, total spending: {{amount}}":
+      "Se encontraron {{count}} facturas, gasto total: {{amount}}",
+    "No matching bills found": "No se encontraron facturas coincidentes",
+    "Sorry, an error occurred when filtering bills":
+      "Se produjo un error al filtrar las facturas",
+    "+{{count}} more": "+{{count}} más",
+    "AI Filter": "Filtro AI",
   },
 };

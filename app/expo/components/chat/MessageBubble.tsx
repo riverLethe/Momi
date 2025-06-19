@@ -10,6 +10,7 @@ import { SingleImage } from "@/components/ui/SingleImage";
 import i18n from "@/i18n";
 import { formatCurrency } from "@/utils/format";
 import FinancialInsights from "@/components/reports/FinancialInsights";
+import { ViewMoreButton } from "@/components/ui/ViewMoreButton";
 
 interface MessageBubbleProps {
   message: Message;
@@ -120,8 +121,11 @@ const renderMessageContent = (message: Message) => {
               {message.text}
             </Text>
           </Card>
-          <YStack marginTop="$2">
+          <YStack marginTop="$2" gap="$2">
             <ExpenseList bills={message.data.expenses} />
+            {typeof message.data.moreCount === "number" && message.data.moreCount > 0 && (
+              <ViewMoreButton moreCount={message.data.moreCount} query={message.data.query} />
+            )}
           </YStack>
         </YStack>
       );

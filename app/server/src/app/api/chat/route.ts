@@ -44,9 +44,10 @@ const safetySettings = [
 ];
 
 // Helper to dynamically build system instruction based on requested language
-function buildSystemInstruction(lang: string): string {
-  // Base English instruction (original)
-  const base = `You are MomiQ, a smart bookkeeping assistant for personal finance. Your job is to convert user messages into FINANCIAL COMMANDS.
+function buildSystemInstruction(lang: string, today: string): string {
+  const base = `Today is ${today}.
+
+You are MomiQ, a smart bookkeeping assistant for personal finance. Your job is to convert user messages into FINANCIAL COMMANDS.
 
 Rules:
 1. First decide the intent: create_expense • list_expenses • set_budget • markdown (default).
@@ -59,7 +60,27 @@ Rules:
    • Detect the merchant / store / vendor mentioned in the message and return it as "merchant" (string). Keep the original language exactly as the user wrote it. If none is mentioned, omit the field or set it to undefined.
    • Extract any remaining descriptive text as a "note" field (string). Keep it exactly as provided by the user without translation. If no note is provided, omit or set undefined.
 3. If intent = list_expenses:
-   • If startDate / endDate missing, default to the current month.
+   • Return a "query" object. Supported optional fields (omit if not provided):
+     startDate, endDate — YYYY-MM-DD strings
+     dateField          — "date" | "createdAt" | "updatedAt" (default "date")
+     category / categories — single category id or an array of ids above
+     keyword / keywords   — single keyword or array to search in "note" and "merchant"
+     minAmount, maxAmount — numbers for amount range (both optional)
+     dateRanges          — array of { startDate, endDate } objects (overrides startDate/endDate)
+   • If a field is omitted, do NOT apply that filter. For example, if startDate/endDate are both missing, return expenses for ALL dates.
+   • Example:
+     {
+       "type": "list_expenses",
+       "query": {
+         "startDate": "2024-05-01",
+         "endDate": "2024-05-31",
+         "category": "food",
+         "keyword": "Starbucks",
+         "minAmount": 10,
+         "maxAmount": 50,
+         "dateField": "date"
+       }
+     }
 4. If intent = set_budget:
    • If period missing, default to "monthly".
 5. For any free-form chat, return markdown.
@@ -108,7 +129,11 @@ for example outputs:
     "query": {
       "startDate": "YYYY-MM-DD",
       "endDate": "YYYY-MM-DD",
-      "category": "category (optional)"
+      "category": "category (optional)",
+      "keyword": "keyword (optional)",
+      "minAmount": number,
+      "maxAmount": number,
+      "dateField": "date|createdAt|updatedAt"
     }
   }
 - Set budget:
@@ -131,14 +156,15 @@ Categories must be in English.Markdown content must be in ${lang}. The "note" an
   return base;
 }
 
-function buildGenerationConfig(lang: string) {
+function buildGenerationConfig(lang: string, currentDate?: string) {
+  const today = currentDate || new Date().toISOString().split("T")[0];
   return {
     temperature: 1,
     topP: 0.95,
     topK: 64,
     maxOutputTokens: 8192,
     responseMimeType: "text/plain",
-    systemInstruction: buildSystemInstruction(lang),
+    systemInstruction: buildSystemInstruction(lang, today),
     safetySettings,
   } as const;
 }
@@ -175,12 +201,16 @@ export async function POST(req: Request) {
     message,
     attachments = [],
     lang = "en",
+    currentDate,
   }: {
     histories: Content[];
     message: string;
     attachments?: AttachmentPayload[];
     lang?: string;
+    currentDate?: string;
   } = await req.json();
+
+  const todayParam = currentDate || new Date().toISOString().split("T")[0];
 
   // Build parts array combining text and attachments
   const parts: Array<any> = [];
@@ -201,7 +231,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const generationConfig = buildGenerationConfig(lang);
+    const generationConfig = buildGenerationConfig(lang, todayParam);
 
     // 发送消息并获取流式响应
     const result = await ai.models.generateContentStream({

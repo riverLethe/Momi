@@ -30,49 +30,70 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
     >
       <YStack alignItems="center">
         <Pressable onPress={onPickImage}>
-          <Circle size={50} backgroundColor="$gray100">
-            <ImageIcon size={24} color="#4B5563" />
-          </Circle>
-          <Text
-            marginTop="$2"
-            fontSize={12}
-            color="$gray600"
-            textAlign="center"
+          <YStack
+            alignItems="center"
+            backgroundColor="$gray4"
+            borderRadius="$2"
+            width="$6"
+            height="$6"
+            justifyContent="center"
           >
-            {t("Gallery")}
-          </Text>
+            <ImageIcon size={24} color="#4B5563" />
+            <Text
+              marginTop="$2"
+              fontSize={12}
+              color="$gray600"
+              textAlign="center"
+            >
+              {t("Gallery")}
+            </Text>
+          </YStack>
         </Pressable>
       </YStack>
 
       <YStack alignItems="center">
         <Pressable onPress={onTakePhoto}>
-          <Circle size={50} backgroundColor="$gray100">
-            <Camera size={24} color="#4B5563" />
-          </Circle>
-          <Text
-            marginTop="$2"
-            fontSize={12}
-            color="$gray600"
-            textAlign="center"
+          <YStack
+            alignItems="center"
+            backgroundColor="$gray4"
+            borderRadius="$2"
+            width="$6"
+            height="$6"
+            justifyContent="center"
           >
-            {t("Camera")}
-          </Text>
+            <Camera size={24} color="#4B5563" />
+            <Text
+              marginTop="$2"
+              fontSize={12}
+              color="$gray600"
+              textAlign="center"
+            >
+              {t("Camera")}
+            </Text>
+          </YStack>
         </Pressable>
       </YStack>
 
       <YStack alignItems="center">
         <Pressable onPress={onFileUpload}>
-          <Circle size={50} backgroundColor="$gray100">
-            <File size={24} color="#4B5563" />
-          </Circle>
-          <Text
-            marginTop="$2"
-            fontSize={12}
-            color="$gray600"
-            textAlign="center"
+          <YStack
+            alignItems="center"
+            backgroundColor="$gray4"
+            borderRadius="$2"
+            width="$6"
+            height="$6"
+            justifyContent="center"
           >
-            {t("File")}
-          </Text>
+            <File size={24} color="#4B5563" />
+            <Text
+              marginTop="$2"
+              fontSize={12}
+              color="$gray600"
+              textAlign="center"
+            >
+              {t("File")}
+            </Text>
+          </YStack>
         </Pressable>
       </YStack>
     </XStack>
