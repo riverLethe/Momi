@@ -301,7 +301,7 @@ const renderMessageContent = (message: Message) => {
   }
 
   // Regular text message
-  return (
+  return message.text && (
     <YStack width="100%" alignItems="flex-end">
       <Card
         borderRadius="$4"
