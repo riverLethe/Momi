@@ -14,6 +14,7 @@ interface DataContextType {
   upcomingBills: Bill[];
   isLoading: boolean;
   refreshData: () => Promise<void>;
+  dataVersion: number;
 }
 
 // Create the data context
@@ -34,6 +35,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [upcomingBills, setUpcomingBills] = useState<Bill[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [dataVersion, setDataVersion] = useState<number>(Date.now());
 
   // Function to load all data
   const loadData = async () => {
@@ -58,6 +60,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
       // After data reload, refresh widgets in background (personal view)
       syncSpendingWidgets({ viewMode: "personal" }).catch(() => { });
+
+      // Mark data as updated
+      setDataVersion(Date.now());
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -83,6 +88,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     upcomingBills,
     isLoading,
     refreshData,
+    dataVersion,
   };
 
   return (

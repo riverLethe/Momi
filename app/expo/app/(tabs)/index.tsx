@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ScrollView,
   ActivityIndicator,
@@ -40,7 +40,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
 
   // Data -------------------------------------------------------------------
-  const { bills, transactions, refreshData } =
+  const { bills, transactions, refreshData, dataVersion } =
     useData();
   const { budgets, saveBudgetForPeriod } = useBudgets();
 
@@ -156,6 +156,14 @@ export default function HomeScreen() {
 
   // Sync iOS spending widgets
   useSpendingWidgetSync(reportData, periodType, viewMode);
+
+  // Reload report when underlying data (bills/transactions) refreshes
+  useEffect(() => {
+    // Avoid initial run duplicating load; rely on hook init (already loads)
+    if (dataVersion) {
+      loadReportData();
+    }
+  }, [dataVersion]);
 
   if (!hasBills) {
     return (
