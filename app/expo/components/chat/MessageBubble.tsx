@@ -5,10 +5,11 @@ import Markdown from "react-native-markdown-display";
 import { ExpenseList } from "./ExpenseList";
 import { Pressable } from "react-native";
 import { Audio } from "expo-av";
-import { Play, File as FileIcon } from "lucide-react-native";
+import { Play, File as FileIcon, TerminalIcon } from "lucide-react-native";
 import { SingleImage } from "@/components/ui/SingleImage";
 import i18n from "@/i18n";
 import { formatCurrency } from "@/utils/format";
+import FinancialInsights from "@/components/reports/FinancialInsights";
 
 interface MessageBubbleProps {
   message: Message;
@@ -78,6 +79,25 @@ const renderMessageContent = (message: Message) => {
         {message.text}
       </Text>
     );
+  }
+  if (message.type === "cmd" && message.text) {
+    return (<YStack width="100%" alignItems="flex-end">
+      <Card
+        borderRadius="$4"
+        overflow="hidden"
+        elevation={0.5}
+        backgroundColor="$blue4"
+        padding="$2"
+        width="fit-content"
+      >
+        <XStack alignItems="center" gap="$2">
+          <TerminalIcon size={16} />
+          <Text fontSize={12} lineHeight={16}>
+            {message.text}
+          </Text>
+        </XStack>
+      </Card>
+    </YStack>)
   }
 
   // Handle special data types
@@ -257,6 +277,25 @@ const renderMessageContent = (message: Message) => {
             )}
           </Card>
         </YStack>
+      );
+    }
+
+    // Financial insights loading / result
+    if (message.data.type === "financial_insights" && message.data.insights) {
+
+      return (
+        <XStack flex={1} width="100%" alignItems="flex-start" >
+          <Card
+            borderRadius="$4"
+            overflow="hidden"
+            elevation={0.5}
+            backgroundColor="white"
+            padding="$2"
+            width="100%"
+          >
+            <FinancialInsights insights={message.data.insights} />
+          </Card>
+        </XStack>
       );
     }
   }

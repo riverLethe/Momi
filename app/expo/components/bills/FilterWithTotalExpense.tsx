@@ -110,10 +110,9 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
   return (
     <>
       <XStack
-        paddingHorizontal="$4"
-        paddingVertical="$2"
         alignItems="center"
         justifyContent="space-between"
+        flex={1}
       >
         <XStack alignItems="flex-start">
           <Text fontSize="$2.5" color="$gray9">
@@ -123,22 +122,25 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
         <XStack gap="$2" alignItems="center">
           <Button
             size="$2"
-            icon={<Calendar size={12} color="#777777" />}
             onPress={() => setIsDateSheetOpen(true)}
-            gap="$1.5"
+
           >
-            <Text fontSize="$2.5" color="$gray11">
-              {getDateRangeLabel()}
-            </Text>
+            <XStack gap="$1.5" alignItems="center">
+              <Calendar size={12} color="#777777" />
+              <Text fontSize="$2.5" color="$gray11">
+                {getDateRangeLabel()}
+              </Text>
+            </XStack>
           </Button>
 
           <Button
             size="$2"
-            icon={<Filter size={12} color="#777777" />}
             onPress={() => setIsCategorySheetOpen(true)}
-            gap="$1.5"
           >
-            <SelectedCategoryName />
+            <XStack gap="$1.5" alignItems="center">
+              <Filter size={12} color="#777777" />
+              <SelectedCategoryName />
+            </XStack>
           </Button>
         </XStack>
       </XStack>

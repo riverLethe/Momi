@@ -415,5 +415,9 @@ export default {
       "Set up a budget for this period to unlock detailed insights",
     Volatility: "Volatility",
     "Recurring cover": "Recurring cover",
+    "Show me my {{period}} financial insights":
+      "Show me my {{period}} financial insights",
+    "⚠️ Failed to fetch insights: {{message}}":
+      "⚠️ Failed to fetch insights: {{message}}",
   },
 };

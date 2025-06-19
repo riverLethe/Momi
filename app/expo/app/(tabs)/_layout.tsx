@@ -1,10 +1,8 @@
 import { Tabs } from "expo-router";
 import {
   Home,
-  CreditCard,
   User,
   Plus,
-  ChartNoAxesCombinedIcon,
 } from "lucide-react-native";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -48,16 +46,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="bills"
-        options={{
-          title: t("Bills"),
-          tabBarIcon: ({ color, focused }) =>
-            focused ?
-              <CreditCard size={22} color="#000" fill={color} /> :
-              <CreditCard size={22} color={color} />
-        }}
-      />
-      <Tabs.Screen
         name="chat"
         options={{
           title: "",
@@ -76,14 +64,6 @@ export default function TabsLayout() {
               <Plus size={24} color="white" />
             </View>
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="reports"
-        options={{
-          title: t("Reports"),
-          tabBarIcon: ({ color }) =>
-            <ChartNoAxesCombinedIcon size={22} color={color} />
         }}
       />
       <Tabs.Screen

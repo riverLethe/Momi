@@ -19,3 +19,13 @@ export interface BudgetProgress {
   percentage: number;
   isOverBudget: boolean;
 }
+export const getSeverityColor = (severity: "good" | "warning" | "danger") => {
+  switch (severity) {
+    case "danger":
+      return "#EF4444"; // red9
+    case "warning":
+      return "#F97316"; // orange9
+    default:
+      return "#22C55E"; // green9
+  }
+};

@@ -22,21 +22,38 @@ import { BillListItem } from "@/components/bills/BillListItem";
 
 interface RecentBillsListProps {
   bills: Bill[];
+  /** loading state (optional) */
   isLoading?: boolean;
+  /** Maximum items to display */
   maxItems?: number;
+  /** Optional start date for filtering (inclusive) */
+  periodStart?: Date;
+  /** Optional end date for filtering (inclusive) */
+  periodEnd?: Date;
 }
 
 export const RecentBillsList: React.FC<RecentBillsListProps> = ({
   bills,
   isLoading = false,
   maxItems = 4,
+  periodStart,
+  periodEnd,
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
 
-  // Sort bills by date (most recent first) and then take the first `maxItems` items
+  // Filter by period if provided, then sort by date (latest first), slice to maxItems
   const displayBills = useMemo(() => {
-    return [...bills]
+    let list = bills;
+
+    if (periodStart && periodEnd) {
+      list = list.filter((b) => {
+        const d = new Date(b.date);
+        return d >= periodStart && d <= periodEnd;
+      });
+    }
+
+    return [...list]
       .sort((a, b) => {
         // Ensure we compare using timestamps to avoid potential type issues
         const timeA = new Date(a.date).getTime();
@@ -44,14 +61,13 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
         return timeB - timeA;
       })
       .slice(0, maxItems);
-  }, [bills, maxItems]);
+  }, [bills, maxItems, periodStart, periodEnd]);
 
   return (
     <Card
       backgroundColor="white"
-      marginHorizontal="$2"
-      marginTop="$4"
-      padding="$0"
+      marginHorizontal="$3"
+      paddingVertical="$3"
     >
       <YStack gap="$4">
         <XStack
@@ -66,22 +82,6 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
             </Text>
           </XStack>
 
-          {bills.length > 0 && (
-            <Button
-              size="$2"
-              color="$blue9"
-              onPress={() => router.push("/bills")}
-              paddingHorizontal="$2"
-              borderWidth={1}
-              borderColor="$blue6"
-              backgroundColor="$blue2"
-            >
-              <Text color="$blue9" fontSize="$2">
-                {t("View All")}
-              </Text>
-              <ChevronRight size={12} />
-            </Button>
-          )}
         </XStack>
 
         <AnimatePresence>

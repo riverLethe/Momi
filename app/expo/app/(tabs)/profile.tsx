@@ -50,7 +50,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
       <YStack flex={1}>
         {/* Header */}
         <ProfileHeader

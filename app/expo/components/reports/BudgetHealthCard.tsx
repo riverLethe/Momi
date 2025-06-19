@@ -6,6 +6,7 @@ import Svg, { Circle as SvgCircle } from "react-native-svg";
 
 import { formatCurrency } from "@/utils/format";
 import type { HealthScoreDetail } from "@/types/reports.types";
+import { getSeverityColor } from "@/types/budget.types";
 
 /**
  * Budget related overview passed down from the reports screen.
@@ -22,21 +23,9 @@ interface BudgetHealthCardProps {
     budget: BudgetOverview;
     /** Computed health-score detail. May be undefined while loading. */
     health?: HealthScoreDetail | null;
+    severity: "good" | "warning" | "danger";
 }
 
-/* -------------------------------------------------------------------------- */
-/*                               Helper utils                                 */
-/* -------------------------------------------------------------------------- */
-const getSeverityColor = (severity: "good" | "warning" | "danger") => {
-    switch (severity) {
-        case "danger":
-            return "#EF4444"; // red9
-        case "warning":
-            return "#F97316"; // orange9
-        default:
-            return "#22C55E"; // green9
-    }
-};
 
 // Added: map severity to Tamagui colour tokens for Text components
 const getSeverityToken = (severity: "good" | "warning" | "danger") =>
@@ -109,21 +98,9 @@ const ScoreRing: React.FC<{
  * Main component that merges the previous budget progress overview with the
  * financial-health score metrics.
  */
-const BudgetHealthCard: React.FC<BudgetHealthCardProps> = ({ budget, health }) => {
+const BudgetHealthCard: React.FC<BudgetHealthCardProps> = ({ budget, health, severity }) => {
     const { t } = useTranslation();
 
-    // Determine severity primarily from health-score, otherwise from budget status
-    const severity: "good" | "warning" | "danger" = health
-        ? health.status === "Danger"
-            ? "danger"
-            : health.status === "Warning"
-                ? "warning"
-                : "good"
-        : budget.status === "danger"
-            ? "danger"
-            : budget.status === "warning"
-                ? "warning"
-                : "good";
 
 
     const scoreDisplay = health
@@ -131,7 +108,7 @@ const BudgetHealthCard: React.FC<BudgetHealthCardProps> = ({ budget, health }) =
         : "-";
 
     return (
-        <YStack gap="$4" paddingHorizontal="$4">
+        <YStack gap="$4">
             {/* Ring + score */}
             <YStack alignItems="center" gap="$2">
                 <YStack position="relative" alignItems="center" justifyContent="center">

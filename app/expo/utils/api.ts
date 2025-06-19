@@ -5,7 +5,7 @@ import { fetch } from "expo/fetch";
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
 
 // 消息类型
-export type MessageType = "text" | "voice" | "image" | "file";
+export type MessageType = "text" | "voice" | "image" | "file" | "cmd";
 
 // 消息对象接口
 export interface Message {

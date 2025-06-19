@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View, Pressable } from "react-native";
 import {
@@ -8,18 +8,24 @@ import {
   Text,
   Button,
   Separator,
-  Progress,
-  Avatar,
   Spinner,
 } from "tamagui";
 import {
-  TrendingDown,
-  TrendingUp,
-  AlertTriangle,
+  BotIcon,
+  DollarSignIcon,
   EditIcon,
-  DollarSign,
 } from "lucide-react-native";
 import { formatCurrency } from "@/utils/format";
+import BudgetHealthCard from "@/components/reports/BudgetHealthCard";
+import { summariseBills } from "@/utils/abi-summary.utils";
+import { computeHealthScore } from "@/utils/health-score.utils";
+import type { Bill } from "@/types/bills.types";
+import type { Budgets } from "@/utils/budget.utils";
+import {
+  DatePeriodEnum,
+  HealthScoreDetail,
+} from "@/types/reports.types";
+import { getSeverityColor } from "@/types/budget.types";
 
 // 预算状态类型
 export type BudgetStatusType = "good" | "warning" | "danger" | "none";
@@ -53,7 +59,6 @@ export interface CategorySpending {
 interface BudgetSummaryCardProps {
   budgetStatus: BudgetStatusInfo;
   categories: CategorySpending[];
-  isPersonalView?: boolean;
   /**
    * Provide budgets for three periods. A value of null/undefined stands for "not set".
    */
@@ -62,83 +67,46 @@ interface BudgetSummaryCardProps {
     monthly?: number | null;
     yearly?: number | null;
   };
-  /**
-   * Currently selected budget period. If provided together with `onPeriodChange`,
-   * the component will behave as a controlled component. When omitted, the
-   * component will manage the period selection internally (back-compat).
-   */
-  currentPeriod?: BudgetPeriod;
-  /** Optional callback when user selects a different period */
-  onPeriodChange?: (period: BudgetPeriod) => void;
-  /** @deprecated kept for backward compatibility */
-  currentBudget?: number | null;
   onCategoryPress?: (categoryId: string) => void;
-  onManageBudgetPress?: () => void;
   onEditBudgetPress?: () => void;
   isLoading?: boolean;
+  /* -------------------- merged from BudgetInsightsPanel -------------------- */
+  /** Overall budget overview object (typically from reports screen) */
+  overviewBudget?: {
+    amount: number | null;
+    spent: number;
+    remaining: number;
+    percentage: number;
+    status: BudgetStatusType;
+  };
+  bills?: Bill[];
+  /** Full budgets detail object including filters */
+  budgetsDetail?: Budgets;
+  periodType: DatePeriodEnum;
+  periodStart?: Date;
+  periodEnd?: Date;
+  /** Triggered when user needs to set a budget (used to open modal) */
+  onSetBudget?: () => void;
+  onChatPress?: () => void;
 }
-
-// Get status info
-const getBudgetStatusInfo = (status: BudgetStatusType) => {
-  switch (status) {
-    case "good":
-      return {
-        icon: <TrendingUp size={18} color="#10B981" />,
-        color: "#10B981",
-        backgroundColor: "#ECFDF5",
-        label: "On Track",
-      };
-    case "warning":
-      return {
-        icon: <AlertTriangle size={18} color="#F59E0B" />,
-        color: "#F59E0B",
-        backgroundColor: "#FFFBEB",
-        label: "Watch Spending",
-      };
-    case "danger":
-      return {
-        icon: <TrendingDown size={18} color="#EF4444" />,
-        color: "#EF4444",
-        backgroundColor: "#FEF2F2",
-        label: "Over Budget",
-      };
-    case "none":
-      return {
-        icon: <DollarSign size={18} color="#3B82F6" />,
-        color: "#3B82F6",
-        backgroundColor: "#EBF5FF",
-        label: "No Budget",
-      };
-  }
-};
-
-// 获取预算周期标签
-const getPeriodLabel = (period: BudgetPeriod, t: (key: string) => string) => {
-  switch (period) {
-    case "weekly":
-      return t("Week");
-    case "monthly":
-      return t("Month");
-    case "yearly":
-      return t("Year");
-  }
-};
 
 export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   budgetStatus,
   categories,
-  isPersonalView = true,
   budgets,
-  currentPeriod: controlledPeriod,
-  onPeriodChange,
-  currentBudget: _deprecatedBudget,
   onCategoryPress,
-  onManageBudgetPress,
   onEditBudgetPress,
   isLoading = false,
+  overviewBudget,
+  bills,
+  budgetsDetail,
+  periodType,
+  periodStart,
+  periodEnd,
+  onSetBudget,
+  onChatPress,
 }) => {
   const { t } = useTranslation();
-  const statusInfo = getBudgetStatusInfo(budgetStatus.status);
 
   // 获取类别状态信息
   const getCategoryStatusInfo = (
@@ -168,95 +136,101 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
     }
   };
 
-  // Period selection – behaves as controlled if `controlledPeriod` is supplied
-  const [internalPeriod, setInternalPeriod] = React.useState<BudgetPeriod>(
-    controlledPeriod ?? "monthly"
-  );
+  // Map DatePeriodEnum to BudgetPeriod key
+  const periodKey: BudgetPeriod =
+    periodType === DatePeriodEnum.WEEK
+      ? "weekly"
+      : periodType === DatePeriodEnum.MONTH
+        ? "monthly"
+        : "yearly";
 
-  // Keep internal state in sync with controlled prop (if any)
-  React.useEffect(() => {
-    if (
-      controlledPeriod !== undefined &&
-      controlledPeriod !== internalPeriod
-    ) {
-      setInternalPeriod(controlledPeriod);
+  const periodBudget = budgets[periodKey] ?? null;
+
+  // Choose the effective budget overview: prefer explicit overviewBudget (from reports)
+  const effectiveBudget = overviewBudget || {
+    amount: periodBudget,
+    spent: budgetStatus.spent,
+    remaining: budgetStatus.remaining,
+    percentage: budgetStatus.percentage,
+    status: budgetStatus.status,
+  };
+
+  const isBudgetSet = effectiveBudget.amount != null;
+
+  const summary = useMemo(() => {
+    if (!bills || !budgetsDetail || !periodStart || !periodEnd || !periodType) {
+      return null;
     }
-  }, [controlledPeriod, internalPeriod]);
-
-  // Handle period button press
-  const handleSelectPeriod = (period: BudgetPeriod) => {
-    if (onPeriodChange) {
-      // Controlled – notify parent
-      onPeriodChange(period);
-    } else {
-      // Uncontrolled – manage locally for backward compatibility
-      setInternalPeriod(period);
+    try {
+      return summariseBills(
+        bills,
+        budgetsDetail,
+        periodType,
+        periodStart,
+        periodEnd,
+        0
+      );
+    } catch (err) {
+      console.error("Failed to summarise bills", err);
+      return null;
     }
-  };
+  }, [bills, budgetsDetail, periodStart, periodEnd, periodType]);
 
-  const periodBudget = budgets[internalPeriod] ?? _deprecatedBudget ?? null;
-
-  // Check if we have actual spending data
-  const hasSpendingData = budgetStatus.spent > 0 || categories.length > 0;
-
-  // Format budget display
-  const formatBudget = (amount: number | null) => {
-    if (amount === null) return t("Not Set");
-    return formatCurrency(amount);
-  };
-
-  // Calculate progress bar color
-  const getProgressColor = (status: BudgetStatusType, percentage: number) => {
-    if (status === "danger") return "#EF4444";
-    if (status === "warning" || percentage > 70) return "#F59E0B";
-    return "#10B981";
-  };
-
-  // Clamp progress bar value to [0, 100] so UI remains consistent even when spending exceeds the budget
-  const progressValue = Math.min(Math.max(budgetStatus.percentage, 0), 100);
+  const healthScore: HealthScoreDetail | undefined = useMemo(() => {
+    if (!summary) return undefined;
+    try {
+      return computeHealthScore(summary);
+    } catch (e) {
+      console.error("Failed to compute health score", e);
+      return undefined;
+    }
+  }, [summary]);
+  // Determine severity primarily from health-score, otherwise from budget status
+  const severity: "good" | "warning" | "danger" = healthScore
+    ? healthScore.status === "Danger"
+      ? "danger"
+      : healthScore.status === "Warning"
+        ? "warning"
+        : "good"
+    : effectiveBudget.status === "danger"
+      ? "danger"
+      : effectiveBudget.status === "warning"
+        ? "warning"
+        : "good";
 
   return (
     <>
       <Card
         backgroundColor="white"
-        marginHorizontal="$2"
-        marginBottom="$4"
-        padding="$4"
+        marginHorizontal="$3"
+        padding="$3"
+        borderRadius="$4"
       >
         <YStack gap="$4">
           {/* Header with status */}
           <XStack justifyContent="space-between" alignItems="center">
             <XStack gap="$2" alignItems="center">
-              <Avatar
-                backgroundColor={statusInfo.backgroundColor}
-                borderWidth={2}
-                borderColor={statusInfo.color}
-                size="$2.5"
-                borderRadius="$10"
-              >
-                {statusInfo.icon}
-              </Avatar>
+              <DollarSignIcon size={24} color="#6366F1" />
               <Text fontSize="$4" fontWeight="$8" color="$gray12">
                 {t("Budget")}
               </Text>
             </XStack>
 
-            <XStack gap="$2">
-              {/* Segmented control */}
-              <XStack gap="$1">
-                {(["weekly", "monthly", "yearly"] as BudgetPeriod[]).map((p) => (
+            <XStack gap="$2" alignItems="center">
+              {
+                isBudgetSet && (
                   <Button
-                    key={p}
-                    onPress={() => handleSelectPeriod(p)}
-                    backgroundColor={internalPeriod === p ? "$blue9" : "$gray2"}
-                    color={internalPeriod === p ? "white" : "$gray11"}
                     size="$2"
+                    borderWidth={1}
                     paddingHorizontal="$2"
+                    pressStyle={{ opacity: 0.8 }}
+                    onPress={onChatPress}
                   >
-                    {t(getPeriodLabel(p, t))}
+                    <BotIcon size={20} color="#6366F1" />
                   </Button>
-                ))}
-              </XStack>
+                )
+              }
+
               <Button
                 size="$2"
                 borderWidth={1}
@@ -269,6 +243,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
             </XStack>
           </XStack>
 
+
           {isLoading ? (
             <YStack alignItems="center" justifyContent="center" height={120}>
               <Spinner size="large" color="#3B82F6" />
@@ -276,75 +251,30 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 {t("Loading...")}
               </Text>
             </YStack>
-          ) : periodBudget ? (
-            <YStack gap="$3">
-              <Text fontSize="$3" fontWeight="$6" color="$gray10">
-                {t("Spending Analysis")}
-              </Text>
-
-              {/* 进度条 */}
-              <YStack gap="$2">
-                <Progress
-                  value={progressValue}
-                  backgroundColor="$gray4"
-                >
-                  <Progress.Indicator
-                    animation="bouncy"
-                    backgroundColor={getProgressColor(
-                      budgetStatus.status,
-                      budgetStatus.percentage
-                    )}
-                  />
-                </Progress>
-
-                <XStack justifyContent="space-between">
-                  <Text fontSize="$3" color="$gray10">
-                    {t("Spent")}: {formatCurrency(budgetStatus.spent)} (
-                    {budgetStatus.percentage.toFixed(2)}%)
-                  </Text>
-                  <XStack alignItems="flex-end">
-                    <Text
-                      fontSize="$3"
-                      fontWeight="$7"
-                      color={budgetStatus.remaining > 0 ? "$green9" : "$red9"}
-                    >
-                      {t("Total")}: {formatBudget(periodBudget)}
-                    </Text>
-                    <Text color="$gray10" fontSize="$3" marginHorizontal="$1">
-                      /
-                    </Text>
-                    <Text fontSize="$3" fontWeight="$6" color="$gray10">
-                      {getPeriodLabel(internalPeriod, t)}
-                    </Text>
-                  </XStack>
-                </XStack>
+          ) : !isBudgetSet ? (
+            <YStack gap="$4" alignItems="center" paddingVertical="$4">
+              <YStack alignItems="center" gap="$2">
+                <Text fontWeight="$7" fontSize="$4" color="$gray12" textAlign="center">
+                  {t("Set up a budget for this period to unlock detailed insights")}
+                </Text>
+                {/* {onSetBudget && (
+                  <Button
+                    size="$3"
+                    backgroundColor="$blue9"
+                    color="white"
+                    pressStyle={{ opacity: 0.8 }}
+                    onPress={onSetBudget}
+                  >
+                    {t("Set Budget")}
+                  </Button>
+                )} */}
               </YStack>
             </YStack>
           ) : (
-            <YStack gap="$4" alignItems="center" paddingVertical="$4">
-              <YStack alignItems="center" gap="$2">
-                <Text fontWeight="$7" fontSize="$4" color="$gray12">
-                  {t("No Budget Set")}
-                </Text>
-                <Text
-                  fontSize="$3"
-                  color="$gray10"
-                  textAlign="center"
-                  paddingHorizontal="$6"
-                >
-                  {t(
-                    "Set up your budget to track your spending against your financial goals"
-                  )}
-                </Text>
-              </YStack>
-
-
-            </YStack>
-          )}
-
-          {periodBudget && (
-            <>
-              <Separator marginBottom="$3" />
+            <YStack gap="$3">
+              {/* Replaced progress bar with merged BudgetHealthCard */}
+              <BudgetHealthCard budget={effectiveBudget as any} health={healthScore} severity={severity} />
+              <Separator marginVertical="$3" />
 
               {/* 类别分析 */}
               <YStack gap="$3">
@@ -384,7 +314,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                                 style={{
                                   width: 12,
                                   height: 12,
-                                  borderRadius: 6,
+                                  borderRadius: 3,
                                   backgroundColor:
                                     category.color || catStatus.color,
                                 }}
@@ -416,31 +346,9 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                   </YStack>
                 )}
               </YStack>
-            </>
+            </YStack>
           )}
 
-          {/* Only show "View More Report" button if there's actual spending data */}
-          {hasSpendingData && periodBudget && (
-            <>
-              <Button
-                backgroundColor="$blue2"
-                color="$blue9"
-                size="$3"
-                onPress={onManageBudgetPress}
-                pressStyle={{ opacity: 0.8 }}
-                borderColor="$blue6"
-                borderWidth={1}
-              >
-                {t("View More Report")}
-              </Button>
-
-              <Text fontSize="$2" color="$gray9" marginTop="$2">
-                {t(
-                  "View detailed reports to better understand your spending patterns"
-                )}
-              </Text>
-            </>
-          )}
         </YStack>
       </Card>
     </>

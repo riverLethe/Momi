@@ -9,12 +9,10 @@ import { formatCurrency } from "@/utils/format";
 
 interface EnhancedDonutChartProps {
   data: CategoryData[];
-  topSpendingCategories?: TopSpendingCategory[];
 }
 
 const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
   data,
-  topSpendingCategories,
 }) => {
   const { t } = useTranslation();
   const [showAllCategories, setShowAllCategories] = useState(false);
@@ -86,55 +84,55 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
   }
 
   return (
-    <YStack alignItems="center" justifyContent="center" paddingVertical="$3">
-      <View style={{ width: size, height: size, position: "relative" }}>
-        <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <SvgCircle
-            cx={center}
-            cy={center}
-            r={radius}
-            fill="transparent"
-            stroke="#f1f5f9"
-            strokeWidth={strokeWidth}
-          />
-          {segments.map((segment, i) => (
-            <Path key={i} d={segment.path} fill={segment.color} />
-          ))}
-          <SvgCircle
-            cx={center}
-            cy={center}
-            r={radius - strokeWidth}
-            fill="white"
-          />
-        </Svg>
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Text fontWeight="$8" fontSize="$6">
-            {formatCurrency(totalValue)}
-          </Text>
-          <Text color="$gray10" fontSize="$2" marginTop="$1">
-            {t("Total Expenses")}
-          </Text>
-        </View>
-      </View>
+    <Card
 
-      {/* Legend */}
-      <Card
-        width="100%"
-        padding="$2"
-        borderRadius="$4"
-        marginTop="$3"
-        backgroundColor="white"
-      >
+      backgroundColor="white"
+      marginHorizontal="$3"
+      paddingVertical="$3"
+    >
+      <YStack alignItems="center" justifyContent="center" paddingVertical="$3">
+        <View style={{ width: size, height: size, position: "relative" }}>
+          <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+            <SvgCircle
+              cx={center}
+              cy={center}
+              r={radius}
+              fill="transparent"
+              stroke="#f1f5f9"
+              strokeWidth={strokeWidth}
+            />
+            {segments.map((segment, i) => (
+              <Path key={i} d={segment.path} fill={segment.color} />
+            ))}
+            <SvgCircle
+              cx={center}
+              cy={center}
+              r={radius - strokeWidth}
+              fill="white"
+            />
+          </Svg>
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Text fontWeight="$8" fontSize="$6">
+              {formatCurrency(totalValue)}
+            </Text>
+            <Text color="$gray10" fontSize="$2" marginTop="$1">
+              {t("Total Expenses")}
+            </Text>
+          </View>
+        </View>
+
+      </YStack>
+      <YStack paddingHorizontal="$3">
         {displayedCategories.map((item) => {
           // 直接从当前显示的类别中获取同比数据
           const yearOverYearChange =
@@ -209,8 +207,8 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
             {t(showAllCategories ? "Show Less" : "Show More Categories")}
           </Button>
         )}
-      </Card>
-    </YStack>
+      </YStack>
+    </Card>
   );
 };
 

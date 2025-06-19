@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import {
   KeyboardAvoidingView,
   SafeAreaView,
@@ -36,6 +36,7 @@ import { useChatAttachments } from "@/hooks/chat/useChatAttachments";
 import { createHandleAIResponse } from "@/hooks/chat/useAIResponse";
 import { useChatSender } from "@/hooks/chat/useChatSender";
 import { useQuickScreenshot } from "@/hooks/chat/useQuickScreenshot";
+import { useFinancialInsights } from "@/hooks/chat/useFinancialInsights";
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function ChatScreen() {
   const [isTextMode, setIsTextMode] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [currentStreamedMessage, setCurrentStreamedMessage] = useState("");
+  const [isFirstLoading, setIsFirstLoading] = useState(true);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -54,7 +56,10 @@ export default function ChatScreen() {
   }
 
   const { messages, setMessages, clearMessages } = useChatMessages({
-    onLoaded: () => setTimeout(() => scrollToBottom(), 50),
+    onLoaded: () => {
+      setIsFirstLoading(false);
+      setTimeout(() => scrollToBottom(), 50)
+    },
   });
 
   /** 处理 Quick Screenshot Deeplink 参数 */
@@ -151,6 +156,9 @@ export default function ChatScreen() {
     maxDuration: 60000,
   });
 
+  const insightsPeriodParam = typeof params.insightsPeriod === "string" ? params.insightsPeriod : undefined;
+  // Auto-generate financial insights based on router param
+  useFinancialInsights({ isMessageLoading: isFirstLoading, ts: typeof params.ts === "string" ? params.ts : undefined, periodParam: insightsPeriodParam, setMessages, setIsThinking, scrollToBottom });
 
   const handleAddExpense = () => {
     router.push("/bills/add");

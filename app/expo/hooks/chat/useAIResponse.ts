@@ -24,9 +24,22 @@ export const createHandleAIResponse = (params: UseAIResponseParams) => {
     setCurrentStreamedMessage,
   } = params;
 
+  let placeholderId: string | null = null;
+
   return async (response: AIResponseType) => {
     if (response.type === "thinking") {
-      setIsThinking(!!response.content);
+      const isNowThinking = !!response.content;
+      setIsThinking(isNowThinking);
+
+      if (isNowThinking && !placeholderId) {
+        const placeholder = chatAPI.createMessage("", false, "text", {
+          type: "ai_loading",
+        });
+        placeholderId = placeholder.id;
+        setMessages((prev) => [...prev, placeholder]);
+        setTimeout(scrollToBottom, 50);
+      }
+
       return;
     }
 
@@ -41,8 +54,19 @@ export const createHandleAIResponse = (params: UseAIResponseParams) => {
     }
 
     if (response.type === "complete") {
-      const aiMessage = chatAPI.createMessage(response.content, false);
-      setMessages((prev) => [...prev, aiMessage]);
+      if (placeholderId) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === placeholderId
+              ? { ...m, text: response.content, data: undefined }
+              : m
+          )
+        );
+        placeholderId = null;
+      } else {
+        const aiMessage = chatAPI.createMessage(response.content, false);
+        setMessages((prev) => [...prev, aiMessage]);
+      }
       setCurrentStreamedMessage("");
       setIsThinking(false);
       setTimeout(scrollToBottom, 50);
@@ -50,13 +74,28 @@ export const createHandleAIResponse = (params: UseAIResponseParams) => {
     }
 
     if (response.type === "error") {
-      const errorMessage = chatAPI.createMessage(
-        i18n.t("Sorry, an error occurred: {{error}}", {
-          error: response.error,
-        }),
-        false
-      );
-      setMessages((prev) => [...prev, errorMessage]);
+      const errorText = i18n.t("Sorry, an error occurred: {{error}}", {
+        error: response.error,
+      });
+      if (placeholderId) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === placeholderId
+              ? {
+                  ...m,
+                  text: `⚠️ ${errorText}`,
+                  data: { type: "system_error" },
+                }
+              : m
+          )
+        );
+        placeholderId = null;
+      } else {
+        const errorMessage = chatAPI.createMessage(errorText, false, "text", {
+          type: "system_error",
+        });
+        setMessages((prev) => [...prev, errorMessage]);
+      }
       setIsThinking(false);
       setCurrentStreamedMessage("");
       setTimeout(scrollToBottom, 50);

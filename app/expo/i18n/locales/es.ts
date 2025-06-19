@@ -170,5 +170,9 @@ export default {
       "Establece un presupuesto para este período y desbloquea información detallada",
     Volatility: "Volatilidad",
     "Recurring cover": "Cobertura recurrente",
+    "Show me my {{period}} financial insights":
+      "Muéstrame mis {{period}} perspectivas financieras",
+    "⚠️ Failed to fetch insights: {{message}}":
+      "⚠️ No se pudieron obtener los datos: {{message}}",
   },
 };

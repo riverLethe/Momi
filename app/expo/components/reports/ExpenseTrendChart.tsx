@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { Dimensions, ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Card, XStack, Text, Button, View } from "tamagui";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { ChartNoAxesCombinedIcon, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { LineChart } from "react-native-chart-kit";
 import { TrendData } from "@/types/reports.types";
 import { formatCurrency } from "@/utils/format";
@@ -33,10 +33,10 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
 
   return (
     <Card
-      padding="$2"
-      borderRadius="$4"
       backgroundColor="white"
-      marginBottom="$4"
+      marginHorizontal="$3"
+      paddingVertical="$3"
+      paddingHorizontal="$3"
     >
       {/* Chart title and legend */}
       <XStack
@@ -44,9 +44,20 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
         alignItems="center"
         marginBottom="$3"
       >
-        <Text fontSize="$3" fontWeight="$7" color="$gray12">
-          {t("Expense Trends")}
-        </Text>
+        <XStack
+          justifyContent="space-between"
+          alignItems="center"
+          paddingHorizontal="$3"
+        >
+          <XStack gap="$2" alignItems="center">
+            <ChartNoAxesCombinedIcon size={24} color="#6366F1" />
+            <Text fontSize="$4" fontWeight="$8" color="$gray12">
+              {t("Expense Trends")}
+
+            </Text>
+          </XStack>
+
+        </XStack>
         <XStack gap="$3" alignItems="center">
           <XStack gap="$1" alignItems="center">
             <View

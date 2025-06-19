@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ScrollView,
   ActivityIndicator,
@@ -27,7 +27,6 @@ import WelcomeScreen from "@/components/home/WelcomeScreen";
 
 // Constants and Types
 import { getCategoryById } from "@/constants/categories";
-import { Bill } from "@/types/bills.types";
 import {
   getUserPreferences,
   updateUserPreferences,
@@ -36,6 +35,17 @@ import { syncRemoteData } from "@/utils/sync.utils";
 import { UserPreferences } from "@/types/user.types";
 import { useBudgets } from "@/hooks/useBudgets";
 import { Budgets } from "@/utils/budget.utils";
+
+// Reports components & types
+import DateFilter from "@/components/reports/DateFilter";
+import EnhancedDonutChart from "@/components/reports/EnhancedDonutChart";
+import ExpenseTrendChart from "@/components/reports/ExpenseTrendChart";
+import {
+  DatePeriodEnum,
+  PeriodSelectorData,
+  ReportData,
+} from "@/types/reports.types";
+import { fetchReportData } from "@/utils/reports.utils";
 
 type FilterMode = "all" | "include" | "exclude";
 
@@ -57,21 +67,6 @@ export default function HomeScreen() {
   // Budgets loaded via custom hook
   const { budgets, saveBudgetForPeriod } = useBudgets();
 
-  // Selected period for UI (default monthly)
-  const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>("monthly");
-
-  // Budget data
-  const [budgetStatus, setBudgetStatus] = useState<BudgetStatusInfo>({
-    status: "none",
-    remaining: 0,
-    spent: 0,
-    total: 0,
-    percentage: 0,
-  });
-
-  // Category analysis data
-  const [categories, setCategories] = useState<CategorySpending[]>([]);
-
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
 
@@ -84,6 +79,38 @@ export default function HomeScreen() {
   // Category filter state
   const [includedCategories, setIncludedCategories] = useState<string[]>([]);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
+
+  // ---------------- Report view state ----------------
+  const [periodType, setPeriodType] = useState<DatePeriodEnum>(DatePeriodEnum.WEEK);
+  const [periodSelectors, setPeriodSelectors] = useState<PeriodSelectorData[]>([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>("");
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [loadingReport, setLoadingReport] = useState<boolean>(true);
+
+  // Derive budgetPeriod key from periodType for backward compatibility in budget calculations
+  const budgetPeriod: BudgetPeriod = useMemo(
+    () =>
+      periodType === DatePeriodEnum.WEEK
+        ? "weekly"
+        : periodType === DatePeriodEnum.MONTH
+          ? "monthly"
+          : "yearly",
+    [periodType]
+  );
+
+  // Budget status for current period
+  const [budgetStatus, setBudgetStatus] = useState<BudgetStatusInfo>({
+    status: "none",
+    remaining: 0,
+    spent: 0,
+    total: 0,
+    percentage: 0,
+  });
+
+  // Top spending categories list
+  const [categories, setCategories] = useState<CategorySpending[]>([]);
+
+  const currentSelector = periodSelectors.find((p) => p.id === selectedPeriodId);
 
   // Sync remote data
   useEffect(() => {
@@ -150,6 +177,11 @@ export default function HomeScreen() {
   useEffect(() => {
     setHasBills(bills.length > 0 || transactions.length > 0);
   }, [bills, transactions]);
+
+  // Load report data when dependencies change
+  useEffect(() => {
+    loadReportData();
+  }, [viewMode, periodType, selectedPeriodId, bills, transactions]);
 
   // Calculate budget status (for selected period)
   useEffect(() => {
@@ -382,6 +414,48 @@ export default function HomeScreen() {
         setIncludedCategories([]);
         setExcludedCategories([]);
       }
+
+      // ----- additionally update merged report budget section -----
+      if (reportData) {
+        const spentTotal = (reportData.categoryData || []).reduce((s, c) => s + c.value, 0);
+
+        const periodMap = {
+          weekly: "weekly",
+          monthly: "monthly",
+          yearly: "yearly",
+        } as const;
+
+        const periodBudgetDetail = nextBudgets[
+          periodMap[
+          periodType === DatePeriodEnum.WEEK
+            ? "weekly"
+            : periodType === DatePeriodEnum.MONTH
+              ? "monthly"
+              : "yearly"
+          ]
+        ] as any;
+
+        if (periodBudgetDetail) {
+          const amount = periodBudgetDetail.amount;
+          const remaining = amount ? Math.max(0, amount - spentTotal) : 0;
+          const percentage = amount ? Math.min((spentTotal / amount) * 100, 100) : 0;
+
+          let status: "good" | "warning" | "danger" | "none" = "none";
+          if (amount == null) status = "none";
+          else if (percentage >= 90) status = "danger";
+          else if (percentage >= 70) status = "warning";
+          else status = "good";
+
+          setReportData((prev) =>
+            prev
+              ? {
+                ...prev,
+                budget: { amount, spent: spentTotal, remaining, percentage, status },
+              }
+              : prev
+          );
+        }
+      }
     } catch (error) {
       console.error("Failed to save budgets:", error);
     } finally {
@@ -392,22 +466,52 @@ export default function HomeScreen() {
   // Handle refresh
   const handleRefresh = async () => {
     await refreshData();
+    await loadReportData();
   };
 
   // Handle starting chat
   const handleStartChat = () => {
     router.push("/chat");
   };
-
-
-  // Navigate to dedicated budget management page
-  const handleManageBudget = () => {
-    router.push("/reports?tab=budget");
+  const handleBudgetFinancialInsights = () => {
+    const periodParam =
+      periodType === DatePeriodEnum.WEEK
+        ? "week"
+        : periodType === DatePeriodEnum.MONTH
+          ? "month"
+          : "year";
+    router.push(`/chat?insightsPeriod=${periodParam}&ts=${new Date().getTime()}`);
   };
 
   // Handle viewing category details
   const handleCategoryPress = (categoryId: string) => {
-    router.push(`/reports?category=${categoryId}`);
+    // could scroll to charts or highlight category
+  };
+
+  // Fetch report data (merged from reports screen)
+  const loadReportData = async () => {
+    setLoadingReport(true);
+    try {
+      const data = await fetchReportData(periodType, viewMode, selectedPeriodId);
+      setPeriodSelectors(data.periodSelectors || []);
+
+      // Auto-select first period if none chosen yet
+      if (!selectedPeriodId && data.periodSelectors && data.periodSelectors.length > 0) {
+        setSelectedPeriodId(data.periodSelectors[0].id);
+      }
+
+      setReportData(data);
+    } catch (error) {
+      console.error("Error fetching report data:", error);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  const handlePeriodTypeChange = (newPeriodType: DatePeriodEnum) => {
+    setLoadingReport(true);
+    setPeriodType(newPeriodType);
+    setSelectedPeriodId(""); // reset period selector
   };
 
   // If loading data, show loading state
@@ -435,8 +539,25 @@ export default function HomeScreen() {
 
   return (
     <>
-      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
         <YStack flex={1}>
+
+          {/* Reports Section */}
+
+          <YStack
+            marginHorizontal="$2"
+            marginBottom="$2"
+            padding="$1"
+          >
+            <DateFilter
+              selectedPeriod={periodType}
+              onPeriodChange={handlePeriodTypeChange}
+              periodSelectors={periodSelectors}
+              selectedPeriodId={selectedPeriodId}
+              onPeriodSelectorChange={setSelectedPeriodId}
+              onBillsPress={() => router.push("/bills")}
+            />
+          </YStack>
           {/* Content */}
           <ScrollView
             style={{ flex: 1 }}
@@ -450,31 +571,68 @@ export default function HomeScreen() {
               />
             }
           >
-            {/* Budget Summary Card */}
-            <BudgetSummaryCard
-              budgetStatus={budgetStatus}
-              categories={categories}
-              isLoading={isLoading}
-              budgets={{
-                weekly: budgets.weekly?.amount ?? null,
-                monthly: budgets.monthly?.amount ?? null,
-                yearly: budgets.yearly?.amount ?? null,
-              }}
-              currentPeriod={budgetPeriod}
-              onPeriodChange={setBudgetPeriod}
-              onCategoryPress={handleCategoryPress}
-              onManageBudgetPress={handleManageBudget}
-              onEditBudgetPress={() => setBudgetModalOpen(true)}
-              isPersonalView={viewMode === "personal"}
-            />
-            <Separator marginVertical="$2" borderColor="$gray3" />
 
-            {/* Recent Bills List */}
-            <RecentBillsList
-              bills={bills.slice(0, 5)}
-              isLoading={false}
-              maxItems={5}
-            />
+            {/* Budget & Report Section */}
+            {loadingReport ? (
+              <YStack
+                alignItems="center"
+                justifyContent="center"
+                paddingVertical="$4"
+              >
+                <ActivityIndicator size="large" color="#3B82F6" />
+                <Text marginTop="$2">{t("Loading...")}</Text>
+              </YStack>
+            ) : (
+              <YStack gap="$3">
+                {/* Budget Summary Card */}
+                <BudgetSummaryCard
+                  budgetStatus={budgetStatus}
+                  categories={categories}
+                  isLoading={isLoading}
+                  budgets={{
+                    weekly: budgets.weekly?.amount ?? null,
+                    monthly: budgets.monthly?.amount ?? null,
+                    yearly: budgets.yearly?.amount ?? null,
+                  }}
+                  onCategoryPress={handleCategoryPress}
+                  onEditBudgetPress={() => setBudgetModalOpen(true)}
+                  overviewBudget={reportData?.budget}
+                  bills={bills}
+                  budgetsDetail={budgets}
+                  periodType={periodType}
+                  periodStart={currentSelector?.startDate}
+                  periodEnd={currentSelector?.endDate}
+                  onSetBudget={() => setBudgetModalOpen(true)}
+                  onChatPress={handleBudgetFinancialInsights}
+                />
+
+
+                {/* Charts Section – rendered once reportData ready */}
+                {reportData && (
+                  <>
+                    {/* Category Distribution */}
+                    <EnhancedDonutChart
+                      data={reportData.categoryData || []}
+                    />
+
+                    {/* Expense Trend Chart */}
+                    <ExpenseTrendChart
+                      data={reportData.trendData || []}
+                      averageSpending={reportData.averageSpending || 0}
+                    />
+                  </>
+                )}
+
+                {/* Recent Bills List */}
+                <RecentBillsList
+                  bills={bills}
+                  periodStart={currentSelector?.startDate}
+                  periodEnd={currentSelector?.endDate}
+                  maxItems={5}
+                />
+              </YStack>
+            )}
+
           </ScrollView>
         </YStack>
       </SafeAreaView>

@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar, ChevronDown } from "lucide-react-native";
+import { Calendar, ChevronDown, CreditCard, ReceiptTextIcon } from "lucide-react-native";
 import { Button, XStack, Text, ScrollView, Sheet, YStack, View } from "tamagui";
 import { useTranslation } from "react-i18next";
 import { DatePeriodEnum, PeriodSelectorData } from "@/types/reports.types";
@@ -10,6 +10,7 @@ interface DateFilterProps {
   periodSelectors?: PeriodSelectorData[];
   selectedPeriodId?: string;
   onPeriodSelectorChange?: (periodId: string) => void;
+  onBillsPress?: () => void;
 }
 
 export const DateFilter: React.FC<DateFilterProps> = ({
@@ -18,6 +19,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   periodSelectors,
   selectedPeriodId,
   onPeriodSelectorChange,
+  onBillsPress,
 }) => {
   const { t } = useTranslation();
   const [periodSheetOpen, setPeriodSheetOpen] = React.useState(false);
@@ -29,7 +31,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
 
   return (
     <>
-      <YStack width="100%">
+      <XStack width="100%" justifyContent="space-between" alignItems="center">
         {/* Period Type Selector */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <XStack gap="$2" padding="$1.5">
@@ -46,7 +48,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
                 onPress={() => onPeriodChange(period)}
                 size="$2"
               >
-                <XStack alignItems="center" gap="$2">
+                <XStack alignItems="center" gap="$1.5">
                   <Calendar
                     size={14}
                     color={selectedPeriod === period ? "white" : "#6B7280"}
@@ -54,7 +56,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
                   <Text
                     color={selectedPeriod === period ? "white" : "$gray10"}
                     fontWeight="$6"
-                    fontSize="$2.5"
+                    fontSize="$3"
                   >
                     {t(period)}
                   </Text>
@@ -63,9 +65,28 @@ export const DateFilter: React.FC<DateFilterProps> = ({
             ))}
           </XStack>
         </ScrollView>
+        {/**go to bills */}
+        <Button
+          onPress={onBillsPress}
+          size="$2"
+          marginRight="$1"
+          paddingHorizontal="$1.5"
+          paddingVertical="$2"
+          backgroundColor="$blue9"
+          chromeless
+
+          pressStyle={{
+            opacity: 0.8,
+            backgroundColor: "$blue8",
+            borderColor: "$blue8",
+          }}
+
+        >
+          <ReceiptTextIcon size={18} color="white" />
+        </Button>
 
         {/* Period Selector Button (if available) */}
-        {periodSelectors && periodSelectors.length > 0 && (
+        {/* {periodSelectors && periodSelectors.length > 0 && (
           <Button
             alignSelf="center"
             backgroundColor="$blue4"
@@ -86,8 +107,8 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               <ChevronDown size={14} color="#64748B" />
             </XStack>
           </Button>
-        )}
-      </YStack>
+        )} */}
+      </XStack>
 
       {/* Period Selector Sheet */}
       <Sheet

@@ -32,6 +32,27 @@ const isSameDay = (isoDate: string) => {
   );
 };
 
+// ------------------- Stand-alone API function -------------------
+/**
+ * Fetches an ABI financial insights report from the backend.
+ * Can be used outside of React components / hooks.
+ */
+export async function fetchAbiReport(
+  summary: BillSummaryInput,
+  lang: string = i18n.language || "en"
+): Promise<AbiReport> {
+  const res = await fetch(REPORT_API.getFinancialInsights, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept-Language": lang,
+    },
+    body: JSON.stringify(summary),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 export const useAbiReport = ({ summary }: UseAbiReportOptions) => {
   const [state, setState] = useState<AbiState>({
     data: null,
@@ -48,16 +69,7 @@ export const useAbiReport = ({ summary }: UseAbiReportOptions) => {
   const fetchRemote = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const res = await fetch(REPORT_API.getFinancialInsights, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept-Language": i18n.language || "en",
-        },
-        body: JSON.stringify(summary),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json: AbiReport = await res.json();
+      const json = await fetchAbiReport(summary);
       // cache
       await storage.setItem<AbiReport>(key, json);
       setState({ data: json, loading: false, error: null, isStale: false });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { FlatList, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { YStack } from "tamagui";
+import { Button, XStack, YStack } from "tamagui";
 import { useTranslation } from "react-i18next";
 
 import { useViewStore } from "@/stores/viewStore";
@@ -16,6 +16,8 @@ import { BillDateGroup } from "@/components/bills/BillDateGroup";
 import { EmptyState } from "@/components/bills/EmptyState";
 import { syncRemoteData } from "@/utils/sync.utils";
 import { useBillActions } from "@/hooks/useBillActions";
+import { ChevronLeft } from "lucide-react-native";
+import { router } from "expo-router";
 
 export default function BillsScreen() {
   const { viewMode } = useViewStore();
@@ -180,14 +182,28 @@ export default function BillsScreen() {
           ) : (
             <>
               {/* Filters & Total Expense in one row */}
-              <FilterWithTotalExpense
-                categoryFilter={categoryFilter}
-                onCategoryFilterChange={setCategoryFilter}
-                onDateRangeChange={handleDateRangeChange}
-                totalExpense={totalExpense}
-                startDate={startDate}
-                endDate={endDate}
-              />
+              <XStack
+                paddingHorizontal="$4"
+                paddingLeft="$2"
+                paddingVertical="$2"
+                gap="$2"
+                alignItems="center"
+                justifyContent="space-between"
+              >
+
+                <Button size="$3" circular chromeless onPress={() => router.back()}>
+                  <ChevronLeft size={20} color="#64748B" />
+                </Button>
+
+                <FilterWithTotalExpense
+                  categoryFilter={categoryFilter}
+                  onCategoryFilterChange={setCategoryFilter}
+                  onDateRangeChange={handleDateRangeChange}
+                  totalExpense={totalExpense}
+                  startDate={startDate}
+                  endDate={endDate}
+                />
+              </XStack>
 
               {/* Bills List */}
               <FlatList

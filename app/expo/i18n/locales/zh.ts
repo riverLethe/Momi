@@ -429,5 +429,8 @@ export default {
       "为此期间设置预算以解锁详细洞察",
     Volatility: "波动",
     "Recurring cover": "周期性覆盖",
+    "Show me my {{period}} financial insights":
+      "向我展示我的{{period}}度财务见解",
+    "⚠️ Failed to fetch insights: {{message}}": "⚠️ 无法获取洞察：{{message}}",
   },
 };
