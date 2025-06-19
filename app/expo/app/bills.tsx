@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, XStack, YStack } from "tamagui";
 import { useTranslation } from "react-i18next";
+import { FlashList } from "@shopify/flash-list";
 
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
@@ -206,14 +207,17 @@ export default function BillsScreen() {
               </XStack>
 
               {/* Bills List */}
-              <FlatList
+              <FlashList<(typeof billGroups)[0]>
                 data={billGroups}
                 renderItem={renderDateGroup}
-                keyExtractor={(item) => item.date}
+                keyExtractor={(item: (typeof billGroups)[0]) => item.date}
+                extraData={openBillId}
+                estimatedItemSize={200}
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
                 onRefresh={handleRefresh}
                 refreshing={isLoading || syncingRemote}
+                disableAutoLayout={true}
               />
             </>
           )

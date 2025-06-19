@@ -32,7 +32,7 @@ interface BillListItemProps {
   onSwipeStart?: () => void;
 }
 
-export const BillListItem: React.FC<BillListItemProps> = ({
+const BillListItemComponent: React.FC<BillListItemProps> = ({
   item,
   disabled = false,
   onDelete,
@@ -114,3 +114,12 @@ export const BillListItem: React.FC<BillListItemProps> = ({
     </SwipeableRow>
   );
 };
+
+// Memoize to avoid unnecessary re-renders
+export const BillListItem = React.memo(
+  BillListItemComponent,
+  (prevProps, nextProps) =>
+    prevProps.item === nextProps.item &&
+    prevProps.isOpen === nextProps.isOpen &&
+    prevProps.disabled === nextProps.disabled
+);

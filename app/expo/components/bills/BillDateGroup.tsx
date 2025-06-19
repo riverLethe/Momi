@@ -46,7 +46,7 @@ const formatDate = (dateStr: string, t: (key: string) => string) => {
   }
 };
 
-export const BillDateGroup: React.FC<BillDateGroupProps> = ({
+const BillDateGroupComponent: React.FC<BillDateGroupProps> = ({
   item,
   onDelete,
   openBillId,
@@ -118,3 +118,5 @@ export const BillDateGroup: React.FC<BillDateGroupProps> = ({
     </Card>
   );
 };
+
+export const BillDateGroup = React.memo(BillDateGroupComponent);
