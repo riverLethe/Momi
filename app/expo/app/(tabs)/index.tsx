@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { YStack, Text } from "tamagui";
+import { format } from "date-fns";
 
 // Stores & Providers -------------------------------------------------------
 import { useViewStore } from "@/stores/viewStore";
@@ -90,6 +91,8 @@ export default function HomeScreen() {
     budgets,
     includedCategories,
     excludedCategories,
+    periodStart: periodSelectors.find((p) => p.id === selectedPeriodId)?.startDate,
+    periodEnd: periodSelectors.find((p) => p.id === selectedPeriodId)?.endDate,
   });
 
   // Local UI states --------------------------------------------------------
@@ -178,6 +181,21 @@ export default function HomeScreen() {
 
   const currentSelector = periodSelectors.find((p) => p.id === selectedPeriodId);
 
+  /* --------------------------- Category navigation --------------------------- */
+  const handleCategoryPress = (categoryId: string) => {
+    const start = currentSelector?.startDate;
+    const end = currentSelector?.endDate;
+
+    // Build params object compatible with expo-router typed navigation
+    const params: Record<string, string> = {
+      category: categoryId,
+    };
+    if (start) params.startDate = format(start, "yyyy-MM-dd");
+    if (end) params.endDate = format(end, "yyyy-MM-dd");
+
+    router.push({ pathname: "/bills", params });
+  };
+
   if (!hasBills) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
@@ -231,7 +249,7 @@ export default function HomeScreen() {
                     yearly: budgets.yearly?.amount ?? null,
                   }}
                   onEditBudgetPress={() => setBudgetModalOpen(true)}
-                  onCategoryPress={() => { }}
+                  onCategoryPress={handleCategoryPress}
                   overviewBudget={reportData?.budget}
                   bills={bills}
                   budgetsDetail={budgets}

@@ -88,11 +88,12 @@ export const chatAPI = {
   // 发送消息到API
   sendMessage: async (
     message: string,
-    history: Content[],
+    history: Content[], // history messages,to be determined
     onResponse: (response: AIResponseType) => void,
     attachments: AttachmentPayload[] = [],
     lang: string = "en",
-    currentDate?: string
+    currentDate?: string,
+    summary?: any
   ): Promise<void> => {
     try {
       // Derive local date string if not provided (YYYY-MM-DD in user locale)
@@ -111,10 +112,10 @@ export const chatAPI = {
         },
         body: JSON.stringify({
           message,
-          histories: history,
           attachments,
           lang,
           currentDate: todayLocal,
+          summary,
         }),
       });
 

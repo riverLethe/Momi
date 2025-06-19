@@ -202,18 +202,27 @@ export async function POST(req: Request) {
     attachments = [],
     lang = "en",
     currentDate,
+    summary,
   }: {
     histories: Content[];
     message: string;
     attachments?: AttachmentPayload[];
     lang?: string;
     currentDate?: string;
+    summary?: any;
   } = await req.json();
 
   const todayParam = currentDate || new Date().toISOString().split("T")[0];
 
   // Build parts array combining text and attachments
   const parts: Array<any> = [];
+  // If bill summary is provided, prepend it so the model can reference it.
+  if (summary) {
+    parts.push({
+      text: `BILL_SUMMARY\n${typeof summary === "string" ? summary : JSON.stringify(summary)}`,
+    });
+  }
+
   if (message && message.trim()) {
     parts.push({ text: message });
   }

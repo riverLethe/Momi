@@ -49,10 +49,8 @@ export default function BillsScreen() {
 
   const aiFilterActive = params.ai === "1" || params.ai === "true";
 
-  // Initialize filters only once based on params
+  // Initialize filters only once based on params (supports both AI and manual deep link)
   useEffect(() => {
-    if (!aiFilterActive) return;
-
     // Date range
     if (typeof params.startDate === "string") {
       const sd = new Date(params.startDate);

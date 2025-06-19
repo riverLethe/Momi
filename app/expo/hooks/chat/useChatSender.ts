@@ -1,6 +1,11 @@
 import { Keyboard } from "react-native";
 import * as FileSystem from "expo-file-system";
 import { chatAPI, AIResponseType, Message } from "@/utils/api";
+import { useData } from "@/providers/DataProvider";
+import { useBudgets } from "@/hooks/useBudgets";
+import { summariseBills } from "@/utils/abi-summary.utils";
+import { startOfMonth, endOfMonth } from "date-fns";
+import { DatePeriodEnum } from "@/types/reports.types";
 
 export interface Attachment {
   id: string;
@@ -40,6 +45,10 @@ export const useChatSender = (params: Params) => {
     setCurrentStreamedMessage,
     handleAIResponse,
   } = params;
+
+  // Access global bills & budgets for building summary
+  const { bills } = useData();
+  const { budgets } = useBudgets();
 
   const handleSend = async (directlySendAttachments?: Attachment[]) => {
     if (
@@ -88,12 +97,25 @@ export const useChatSender = (params: Params) => {
     const history = chatAPI.buildHistory([...messages, combined]);
     setIsThinking(true);
     setCurrentStreamedMessage("");
+
+    // Build a simple current-month summary to accompany every message.
+    const today = new Date();
+    const summary = summariseBills(
+      bills,
+      budgets,
+      DatePeriodEnum.MONTH,
+      startOfMonth(today),
+      endOfMonth(today)
+    );
+
     await chatAPI.sendMessage(
       inputText,
       history,
       handleAIResponse,
       payload,
-      uiLang
+      uiLang,
+      undefined,
+      summary
     );
   };
 

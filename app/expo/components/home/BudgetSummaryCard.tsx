@@ -12,8 +12,8 @@ import {
 } from "tamagui";
 import {
   BotIcon,
-  DollarSignIcon,
   EditIcon,
+  WalletIcon,
 } from "lucide-react-native";
 import { formatCurrency } from "@/utils/format";
 import BudgetHealthCard from "@/components/reports/BudgetHealthCard";
@@ -25,7 +25,6 @@ import {
   DatePeriodEnum,
   HealthScoreDetail,
 } from "@/types/reports.types";
-import { getSeverityColor } from "@/types/budget.types";
 
 // 预算状态类型
 export type BudgetStatusType = "good" | "warning" | "danger" | "none";
@@ -210,7 +209,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
           {/* Header with status */}
           <XStack justifyContent="space-between" alignItems="center">
             <XStack gap="$2" alignItems="center">
-              <DollarSignIcon size={24} color="#6366F1" />
+              <WalletIcon size={24} color="#6366F1" />
               <Text fontSize="$4" fontWeight="$8" color="$gray12">
                 {t("Budget")}
               </Text>
@@ -302,12 +301,12 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                         <Pressable
                           key={category.id}
                           onPress={() => onCategoryPress?.(category.id)}
+                          style={({ pressed }) => ({ opacity: onCategoryPress && pressed ? 0.7 : 1 })}
                         >
                           <XStack
                             justifyContent="space-between"
                             alignItems="center"
                             paddingVertical="$2"
-                            pressStyle={{ opacity: onCategoryPress ? 0.7 : 1 }}
                           >
                             <XStack gap="$2" alignItems="center">
                               <View

@@ -13,6 +13,10 @@ import { View } from "tamagui";
 import { chatAPI } from "@/utils/api";
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
+import { useBudgets } from "@/hooks/useBudgets";
+import { summariseBills } from "@/utils/abi-summary.utils";
+import { startOfMonth, endOfMonth } from "date-fns";
+import { DatePeriodEnum } from "@/types/reports.types";
 import * as Localization from "expo-localization";
 
 // Import components
@@ -41,7 +45,8 @@ import { useFinancialInsights } from "@/hooks/chat/useFinancialInsights";
 export default function ChatScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { refreshData } = useData();
+  const { refreshData, bills } = useData();
+  const { budgets } = useBudgets();
   const [inputText, setInputText] = useState("");
   const [isTextMode, setIsTextMode] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
@@ -138,7 +143,25 @@ export default function ChatScreen() {
         setIsThinking(true);
         setCurrentStreamedMessage("");
         const history = chatAPI.buildHistory(all);
-        chatAPI.sendMessage(transcript, history, handleAIResponse, [], uiLang);
+        // Build current month summary for context
+        const today = new Date();
+        const summary = summariseBills(
+          bills,
+          budgets,
+          DatePeriodEnum.MONTH,
+          startOfMonth(today),
+          endOfMonth(today)
+        );
+
+        chatAPI.sendMessage(
+          transcript,
+          history,
+          handleAIResponse,
+          [],
+          uiLang,
+          undefined,
+          summary
+        );
         setTimeout(() => scrollToBottom(), 50);
         return all;
       });

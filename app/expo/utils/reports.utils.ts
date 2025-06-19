@@ -677,38 +677,11 @@ export const fetchReportData = async (
     // 根据实际数据生成类别支出数据
     let categoryData = await generateCategoryData(startDate, endDate, viewMode);
 
-    // Apply category filters defined in budget settings (include / exclude)
-    const budgets = await getBudgets();
-    const periodMapForFilter: Record<DatePeriodEnum, BudgetPeriod> = {
-      [DatePeriodEnum.WEEK]: "weekly",
-      [DatePeriodEnum.MONTH]: "monthly",
-      [DatePeriodEnum.YEAR]: "yearly",
-    } as const;
-
-    const periodBudgetForFilter = budgets[periodMapForFilter[periodType]];
-
-    if (
-      periodBudgetForFilter &&
-      periodBudgetForFilter.filterMode &&
-      periodBudgetForFilter.filterMode !== "all" &&
-      periodBudgetForFilter.categories?.length
-    ) {
-      categoryData = categoryData.filter((cd) => {
-        // Map the label back to category id if possible
-        const matchedCat = EXPENSE_CATEGORIES.find(
-          (c) => c.name === cd.label || c.id === cd.label
-        );
-        const catId = matchedCat ? matchedCat.id : cd.label;
-
-        if (periodBudgetForFilter.filterMode === "exclude") {
-          return !periodBudgetForFilter.categories.includes(catId);
-        }
-        if (periodBudgetForFilter.filterMode === "include") {
-          return periodBudgetForFilter.categories.includes(catId);
-        }
-        return true;
-      });
-    }
+    // -------------------------
+    // IMPORTANT: Do NOT filter categoryData by budget category filters.
+    // The donut chart (EnhancedDonutChart) should always display the overall
+    // spending breakdown, independent of any budget include/exclude settings.
+    // -------------------------
 
     // 生成趋势数据
     const trendData = await generateTrendData(
@@ -739,6 +712,7 @@ export const fetchReportData = async (
     const topSpendingCategories = generateTopSpendingCategories(categoryData);
 
     // ---------------- Budget Stats ------------------
+    const budgets = await getBudgets();
     const periodMap: Record<DatePeriodEnum, BudgetPeriod> = {
       [DatePeriodEnum.WEEK]: "weekly",
       [DatePeriodEnum.MONTH]: "monthly",

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Dimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 import { View, Text, Card, Button, XStack, YStack } from "tamagui";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react-native";
+import { ArrowDownRight, ArrowUpRight, DollarSignIcon } from "lucide-react-native";
 import Svg, { Circle as SvgCircle, Path } from "react-native-svg";
 import { CategoryData, TopSpendingCategory } from "@/types/reports.types";
 import { formatCurrency } from "@/utils/format";
@@ -90,6 +90,12 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
       marginHorizontal="$3"
       paddingVertical="$3"
     >
+      <XStack gap="$2" alignItems="center" paddingHorizontal="$3">
+        <DollarSignIcon size={24} color="#6366F1" />
+        <Text fontSize="$4" fontWeight="$8" color="$gray12">
+          {t("Total Expenses")}
+        </Text>
+      </XStack>
       <YStack alignItems="center" justifyContent="center" paddingVertical="$3">
         <View style={{ width: size, height: size, position: "relative" }}>
           <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>

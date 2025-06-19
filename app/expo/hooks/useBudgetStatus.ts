@@ -16,6 +16,10 @@ interface Params {
   budgets: Budgets;
   includedCategories: string[];
   excludedCategories: string[];
+  /** Explicit start date for the period (overrides internal calculation when provided) */
+  periodStart?: Date;
+  /** Explicit end date for the period (overrides internal calculation when provided) */
+  periodEnd?: Date;
 }
 
 export const useBudgetStatus = ({
@@ -25,6 +29,8 @@ export const useBudgetStatus = ({
   budgets,
   includedCategories,
   excludedCategories,
+  periodStart,
+  periodEnd,
 }: Params) => {
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatusInfo>({
     status: "none",
@@ -45,7 +51,32 @@ export const useBudgetStatus = ({
         : "yearly";
 
   useEffect(() => {
+    // Determine the effective date range -----------------------------------
     const today = new Date();
+
+    // If explicit periodStart/End provided, use those; otherwise derive based on today
+    let startDate: Date;
+    let endDate: Date;
+
+    if (periodStart && periodEnd) {
+      startDate = new Date(periodStart);
+      endDate = new Date(periodEnd);
+      // Normalise time to ensure inclusivity
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      // Fallback to current-period calculation (original behaviour)
+      if (budgetPeriod === "weekly") {
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - today.getDay());
+        startDate.setHours(0, 0, 0, 0);
+      } else if (budgetPeriod === "monthly") {
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      } else {
+        startDate = new Date(today.getFullYear(), 0, 1);
+      }
+      endDate = new Date(today);
+    }
 
     // Filter helpers -------------------------------------------------------
     const isCategorySkipped = (category: string) =>
@@ -59,18 +90,7 @@ export const useBudgetStatus = ({
       if (isCategorySkipped(tx.category)) return false;
 
       const txDate = new Date(tx.date);
-      if (budgetPeriod === "weekly") {
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-        return txDate >= startOfWeek && tx.type === "expense";
-      }
-      if (budgetPeriod === "monthly") {
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        return txDate >= startOfMonth && tx.type === "expense";
-      }
-      const startOfYear = new Date(today.getFullYear(), 0, 1);
-      return txDate >= startOfYear && tx.type === "expense";
+      return txDate >= startDate && txDate <= endDate && tx.type === "expense";
     });
 
     // Bills ----------------------------------------------------------------
@@ -78,18 +98,7 @@ export const useBudgetStatus = ({
       if (isCategorySkipped(bill.category)) return false;
 
       const billDate = new Date(bill.date);
-      if (budgetPeriod === "weekly") {
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-        return billDate >= startOfWeek;
-      }
-      if (budgetPeriod === "monthly") {
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        return billDate >= startOfMonth;
-      }
-      const startOfYear = new Date(today.getFullYear(), 0, 1);
-      return billDate >= startOfYear;
+      return billDate >= startDate && billDate <= endDate;
     });
 
     // Totals ---------------------------------------------------------------
@@ -174,6 +183,8 @@ export const useBudgetStatus = ({
     budgets,
     includedCategories,
     excludedCategories,
+    periodStart,
+    periodEnd,
   ]);
 
   return { budgetStatus, categories };
