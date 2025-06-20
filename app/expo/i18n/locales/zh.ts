@@ -449,5 +449,11 @@ export default {
     "Bill Due Reminders": "到期账单提醒",
     "Global Switch": "全局开关",
     "Coming Soon": "敬请期待",
+    "Budget 80% used": "预算已使用80%",
+    "You have spent 80% of your monthly budget.": "您已使用本月预算的80%。",
+    "Budget exceeded": "预算已超出",
+    "You have reached 100% of your monthly budget.": "您已用尽本月全部预算。",
+    "Open MomiQ to view insights.": "打开 MomiQ 查看洞察。",
+    "Your weekly report is ready": "您的每周报告已准备好",
   },
 };

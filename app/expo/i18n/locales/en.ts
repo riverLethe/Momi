@@ -437,5 +437,14 @@ export default {
     "Year Health Score": "Year Health Score",
     "Used Percentage": "Used Percentage",
     "Global Switch": "Global Switch",
+
+    "Budget 80% used": "Budget 80% used",
+    "You have spent 80% of your monthly budget.":
+      "You have spent 80% of your monthly budget.",
+    "Budget exceeded": "Budget exceeded",
+    "You have reached 100% of your monthly budget.":
+      "You have reached 100% of your monthly budget.",
+    "Open MomiQ to view insights.": "Open MomiQ to view insights.",
+    "Your weekly report is ready": "Your weekly report is ready",
   },
 };

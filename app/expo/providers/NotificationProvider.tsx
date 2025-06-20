@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 // @ts-ignore – expo-notifications types provided by expo SDK runtime
 import * as Notifications from 'expo-notifications';
-import type { DailyNotificationTrigger } from 'expo-notifications';
+import { useTranslation } from 'react-i18next';
 import { storage, STORAGE_KEYS } from '@/utils/storage.utils';
 import { useData } from '@/providers/DataProvider';
 import { useBudgets } from '@/hooks/useBudgets';
@@ -95,6 +95,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   // Track which months have been alerted to avoid duplicates
   const [alertHistory, setAlertHistory] = useState<Record<string, { l80: boolean; l100: boolean }>>({});
 
+  const { t } = useTranslation();
+
   const maybeTriggerBudgetAlert = useCallback(() => {
     if (!settings.budgetAlerts) return;
 
@@ -115,18 +117,22 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     const hist = alertHistory[monthKey] || { l80: false, l100: false };
 
     if (usagePct >= 100 && !hist.l100) {
-      addNotification({
-        title: 'Budget Exceeded',
-        message: 'You have reached 100% of your monthly budget.',
-        type: 'error',
-      });
+      const title = t('Budget exceeded');
+      const body = t('You have reached 100% of your monthly budget.');
+      addNotification({ title, message: body, type: 'error' });
+      Notifications.scheduleNotificationAsync({
+        content: { title, body },
+        trigger: { seconds: 1, repeats: false, type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL },
+      }).catch(() => { });
       setAlertHistory(prev => ({ ...prev, [monthKey]: { ...hist, l100: true } }));
     } else if (usagePct >= 80 && !hist.l80) {
-      addNotification({
-        title: 'Budget 80% Utilised',
-        message: 'You have spent 80% of your monthly budget.',
-        type: 'warning',
-      });
+      const title = t('Budget 80% used');
+      const body = t('You have spent 80% of your monthly budget.');
+      addNotification({ title, message: body, type: 'warning' });
+      Notifications.scheduleNotificationAsync({
+        content: { title, body },
+        trigger: { seconds: 1, repeats: false, type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL },
+      }).catch(() => { });
       setAlertHistory(prev => ({ ...prev, [monthKey]: { ...hist, l80: true } }));
     }
   }, [settings.budgetAlerts, bills, budgets, alertHistory]);
@@ -179,6 +185,33 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   useEffect(() => {
     scheduleLogReminder();
   }, [scheduleLogReminder, dataVersion]);
+
+  // -------------------------------------------------------------------
+  // 5. Weekly Report Notification -------------------------------------
+  const scheduleWeeklyReport = useCallback(async () => {
+    if (!settings.pushEnabled || !settings.weeklyReports) return;
+
+    // cancel existing weekly triggers (identified by id prefix)
+    await Notifications.cancelScheduledNotificationAsync('weekly-report').catch(() => { });
+
+    await Notifications.scheduleNotificationAsync({
+      identifier: 'weekly-report',
+      content: {
+        title: t('Your weekly report is ready'),
+        body: t('Open MomiQ to view insights.'),
+      },
+      trigger: {
+        weekday: 2, // Monday
+        hour: 8,
+        minute: 0,
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY
+      },
+    }).catch(() => { });
+  }, [settings.pushEnabled, settings.weeklyReports]);
+
+  useEffect(() => {
+    scheduleWeeklyReport();
+  }, [scheduleWeeklyReport]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

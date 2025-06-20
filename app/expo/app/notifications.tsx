@@ -82,7 +82,7 @@ export default function NotificationsScreen() {
               </Text>
 
               <YStack gap="$4">
-                <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
+                {/* <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
                   <XStack alignItems="center" gap="$3">
                     <Circle size="$2.5" backgroundColor="$blue4">
                       <Calendar size={16} color="#3B82F6" />
@@ -95,7 +95,7 @@ export default function NotificationsScreen() {
                     disabled={!settings.pushEnabled}
                     onCheckedChange={() => toggleNotification('billReminders')}
                   ><Switch.Thumb animation="bouncy" /></Switch>
-                </XStack>
+                </XStack> */}
 
                 {/* Log Reminders */}
                 <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
