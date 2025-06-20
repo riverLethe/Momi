@@ -1,3 +1,4 @@
+import { DatePeriodEnum } from "@/types/reports.types";
 import { storage, STORAGE_KEYS } from "./storage.utils";
 
 export type BudgetPeriod = "weekly" | "monthly" | "yearly";
@@ -16,7 +17,11 @@ export interface Budgets {
   yearly?: BudgetDetail;
 }
 
-const DEFAULT_DETAIL: BudgetDetail = { amount: null, filterMode: "all", categories: [] };
+const DEFAULT_DETAIL: BudgetDetail = {
+  amount: null,
+  filterMode: "all",
+  categories: [],
+};
 
 const DEFAULT_BUDGETS: Budgets = {
   weekly: { ...DEFAULT_DETAIL },
@@ -56,4 +61,9 @@ export const resetBudgets = async (): Promise<Budgets> => {
     console.error("Failed to reset budgets:", error);
     throw error;
   }
-}; 
+};
+export const _BudgetPeriodMap: { [key in DatePeriodEnum]: BudgetPeriod } = {
+  [DatePeriodEnum.WEEK]: "weekly",
+  [DatePeriodEnum.MONTH]: "monthly",
+  [DatePeriodEnum.YEAR]: "yearly",
+};

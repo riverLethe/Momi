@@ -12,13 +12,13 @@ import {
   Paragraph,
 } from "tamagui";
 import { ChevronDown } from "lucide-react-native";
-import { Budgets, BudgetPeriod, BudgetDetail } from "@/utils/budget.utils";
+import { Budgets, BudgetPeriod, BudgetDetail, _BudgetPeriodMap } from "@/utils/budget.utils";
 import { formatCurrency } from "@/utils/format";
 import CategorySelectSheet from "../ui/CategorySelectSheet";
+import { DatePeriodEnum } from "@/types/reports.types";
 
 // Category filter mode
 type FilterMode = "all" | "include" | "exclude";
-
 interface BudgetUpdateModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,7 +26,7 @@ interface BudgetUpdateModalProps {
   budgets: Budgets;
   /** 保存回调：返回新的预算对象 */
   onSave: (next: Budgets) => Promise<void>;
-  defaultPeriod?: BudgetPeriod;
+  defaultPeriod?: DatePeriodEnum;
 }
 
 const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
@@ -34,7 +34,7 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
   onOpenChange,
   budgets,
   onSave,
-  defaultPeriod = "weekly",
+  defaultPeriod = DatePeriodEnum.WEEK,
 }) => {
   const { t } = useTranslation();
 
@@ -44,7 +44,7 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
     ignoredCategories: string[];
   };
 
-  const [selectedPeriod, setSelectedPeriod] = useState<BudgetPeriod>(defaultPeriod);
+  const [selectedPeriod, setSelectedPeriod] = useState<BudgetPeriod>(_BudgetPeriodMap[defaultPeriod]);
 
   const [form, setForm] = useState<Record<BudgetPeriod, PeriodForm>>({
     weekly: {
@@ -82,7 +82,7 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
         ignoredCategories: budgets.yearly?.categories || [],
       },
     });
-    setSelectedPeriod(defaultPeriod);
+    setSelectedPeriod(_BudgetPeriodMap[defaultPeriod]);
     setErrors({});
   }, [isOpen]);
 

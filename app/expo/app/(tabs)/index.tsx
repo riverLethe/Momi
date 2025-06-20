@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { YStack, Text } from "tamagui";
 import { format } from "date-fns";
+import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
 
 // Stores & Providers -------------------------------------------------------
 import { useViewStore } from "@/stores/viewStore";
@@ -32,7 +33,7 @@ import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
 import WelcomeScreen from "@/components/home/WelcomeScreen";
 
 // Utils & Types ------------------------------------------------------------
-import { Budgets } from "@/utils/budget.utils";
+import { BudgetPeriod, Budgets } from "@/utils/budget.utils";
 import { DatePeriodEnum } from "@/types/reports.types";
 
 export default function HomeScreen() {
@@ -59,19 +60,11 @@ export default function HomeScreen() {
     onLoadReportData
   } = useReportData(viewMode);
 
-  // Derive period key for budget utils
-  const budgetPeriod: "weekly" | "monthly" | "yearly" =
-    periodType === DatePeriodEnum.WEEK
-      ? "weekly"
-      : periodType === DatePeriodEnum.MONTH
-        ? "monthly"
-        : "yearly";
-
   // Category filters -------------------------------------------------------
   const {
     includedCategories,
     excludedCategories,
-  } = useCategoryFilters(budgetPeriod, budgets);
+  } = useCategoryFilters(periodType, budgets);
 
   // Budget status & categories --------------------------------------------
   const { budgetStatus, categories } = useBudgetStatus({
@@ -104,11 +97,7 @@ export default function HomeScreen() {
   const handleSaveBudgets = async (nextBudgets: Budgets) => {
     setSavingBudget(true);
     try {
-      const periods: ("weekly" | "monthly" | "yearly")[] = [
-        "weekly",
-        "monthly",
-        "yearly",
-      ];
+      const periods: BudgetPeriod[] = ["weekly", "monthly", "yearly"];
 
       // Persist every period's budget detail
       for (const p of periods) {
@@ -129,13 +118,7 @@ export default function HomeScreen() {
 
   const handleStartChat = () => router.push("/chat");
   const handleBudgetFinancialInsights = () => {
-    const periodParam =
-      periodType === DatePeriodEnum.WEEK
-        ? "week"
-        : periodType === DatePeriodEnum.MONTH
-          ? "month"
-          : "year";
-    router.push(`/chat?insightsPeriod=${periodParam}&ts=${Date.now()}`);
+    router.push(`/chat?insightsPeriod=${periodType}&ts=${Date.now()}`);
   };
 
   const currentSelector = periodSelectors.find((p) => p.id === selectedPeriodId);
@@ -164,103 +147,136 @@ export default function HomeScreen() {
   // Reload report when underlying data (bills/transactions) refreshes
   useEffect(() => {
     // Avoid initial run duplicating load; rely on hook init (already loads)
-    if (dataVersion) {
-      loadReportData();
-    }
+    if (!dataVersion) return
+    loadReportData();
   }, [dataVersion]);
 
-  if (!hasBills) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-        <WelcomeScreen onStartChatPress={handleStartChat} />
-      </SafeAreaView>
-    );
-  }
+  /* --------------------------- Swipe gestures --------------------------- */
+  const periodOrder = [
+    DatePeriodEnum.WEEK,
+    DatePeriodEnum.MONTH,
+    DatePeriodEnum.YEAR,
+  ];
+
+  // Navigate to the next period (week → month → year → week ...)
+  const goNextPeriod = () => {
+    const currentIdx = periodOrder.indexOf(periodType);
+    const nextIdx = (currentIdx + 1) % periodOrder.length;
+    handlePeriodTypeChange(periodOrder[nextIdx]);
+  };
+
+  // Navigate to the previous period (reverse order)
+  const goPrevPeriod = () => {
+    const currentIdx = periodOrder.indexOf(periodType);
+    const prevIdx = (currentIdx - 1 + periodOrder.length) % periodOrder.length;
+    handlePeriodTypeChange(periodOrder[prevIdx]);
+  };
+
+  // Define fling gestures for left / right
+  const swipeLeft = Gesture.Fling()
+    .direction(Directions.LEFT)
+    .onEnd(goNextPeriod);
+
+  const swipeRight = Gesture.Fling()
+    .direction(Directions.RIGHT)
+    .onEnd(goPrevPeriod);
+
+  const swipeGesture = Gesture.Simultaneous(swipeLeft, swipeRight);
+
+  const mainContent = hasBills ? (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
+      <YStack flex={1}>
+        {/* Header filter */}
+        <YStack marginHorizontal="$2" marginBottom="$2" padding="$1">
+          <DateFilter
+            selectedPeriod={periodType}
+            onPeriodChange={handlePeriodTypeChange}
+            periodSelectors={periodSelectors}
+            selectedPeriodId={selectedPeriodId}
+            onPeriodSelectorChange={setSelectedPeriodId}
+            onBillsPress={() => router.push("/bills")}
+          />
+        </YStack>
+
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              colors={["#3B82F6"]}
+            />
+          }
+        >
+          {loadingReport && !isRefreshing ? (
+            <YStack alignItems="center" justifyContent="center" paddingVertical="$4">
+              <ActivityIndicator size="large" color="#3B82F6" />
+              <Text marginTop="$2">{t("Loading...")}</Text>
+            </YStack>
+          ) : (
+            <YStack gap="$3">
+              <BudgetSummaryCard
+                budgetStatus={budgetStatus}
+                categories={categories}
+                isLoading={savingBudget}
+                budgets={{
+                  weekly: budgets.weekly?.amount ?? null,
+                  monthly: budgets.monthly?.amount ?? null,
+                  yearly: budgets.yearly?.amount ?? null,
+                }}
+                onEditBudgetPress={() => setBudgetModalOpen(true)}
+                onCategoryPress={handleCategoryPress}
+                overviewBudget={reportData?.budget}
+                bills={bills}
+                budgetsDetail={budgets}
+                periodType={periodType}
+                periodStart={currentSelector?.startDate}
+                periodEnd={currentSelector?.endDate}
+                onSetBudget={() => setBudgetModalOpen(true)}
+                onChatPress={handleBudgetFinancialInsights}
+              />
+
+              {reportData && (
+                <>
+                  <EnhancedDonutChart data={reportData.categoryData || []} />
+                  <ExpenseTrendChart
+                    data={reportData.trendData || []}
+                    averageSpending={reportData.averageSpending || 0}
+                  />
+                </>
+              )}
+
+              <RecentBillsList
+                bills={bills}
+                periodStart={currentSelector?.startDate}
+                periodEnd={currentSelector?.endDate}
+                maxItems={5}
+              />
+            </YStack>
+          )}
+        </ScrollView>
+      </YStack>
+    </SafeAreaView>
+  ) : (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+      <WelcomeScreen onStartChatPress={handleStartChat} />
+    </SafeAreaView>
+  );
 
   return (
     <>
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
-        <YStack flex={1}>
-          {/* Header filter */}
-          <YStack marginHorizontal="$2" marginBottom="$2" padding="$1">
-            <DateFilter
-              selectedPeriod={periodType}
-              onPeriodChange={handlePeriodTypeChange}
-              periodSelectors={periodSelectors}
-              selectedPeriodId={selectedPeriodId}
-              onPeriodSelectorChange={setSelectedPeriodId}
-              onBillsPress={() => router.push("/bills")}
-            />
-          </YStack>
-
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                colors={["#3B82F6"]}
-              />
-            }
-          >
-            {loadingReport && !isRefreshing ? (
-              <YStack alignItems="center" justifyContent="center" paddingVertical="$4">
-                <ActivityIndicator size="large" color="#3B82F6" />
-                <Text marginTop="$2">{t("Loading...")}</Text>
-              </YStack>
-            ) : (
-              <YStack gap="$3">
-                <BudgetSummaryCard
-                  budgetStatus={budgetStatus}
-                  categories={categories}
-                  isLoading={savingBudget}
-                  budgets={{
-                    weekly: budgets.weekly?.amount ?? null,
-                    monthly: budgets.monthly?.amount ?? null,
-                    yearly: budgets.yearly?.amount ?? null,
-                  }}
-                  onEditBudgetPress={() => setBudgetModalOpen(true)}
-                  onCategoryPress={handleCategoryPress}
-                  overviewBudget={reportData?.budget}
-                  bills={bills}
-                  budgetsDetail={budgets}
-                  periodType={periodType}
-                  periodStart={currentSelector?.startDate}
-                  periodEnd={currentSelector?.endDate}
-                  onSetBudget={() => setBudgetModalOpen(true)}
-                  onChatPress={handleBudgetFinancialInsights}
-                />
-
-                {reportData && (
-                  <>
-                    <EnhancedDonutChart data={reportData.categoryData || []} />
-                    <ExpenseTrendChart
-                      data={reportData.trendData || []}
-                      averageSpending={reportData.averageSpending || 0}
-                    />
-                  </>
-                )}
-
-                <RecentBillsList
-                  bills={bills}
-                  periodStart={currentSelector?.startDate}
-                  periodEnd={currentSelector?.endDate}
-                  maxItems={5}
-                />
-              </YStack>
-            )}
-          </ScrollView>
-        </YStack>
-      </SafeAreaView>
+      <GestureDetector gesture={swipeGesture}>
+        {mainContent}
+      </GestureDetector>
 
       <BudgetUpdateModal
         isOpen={isBudgetModalOpen}
         onOpenChange={setBudgetModalOpen}
         budgets={budgets}
         onSave={handleSaveBudgets}
-        defaultPeriod={budgetPeriod}
+        defaultPeriod={periodType}
       />
     </>
   );
