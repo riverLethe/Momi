@@ -11,6 +11,10 @@ import {
   Bell,
   LogOut,
   ChevronRight,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Clock,
 } from "lucide-react-native";
 import {
   Text,
@@ -20,17 +24,26 @@ import {
   Card,
   Circle,
   Separator,
+  Spinner,
 } from "tamagui";
 import { LinearGradient } from "tamagui/linear-gradient";
 import { installQuickScreenshotBillShortcut } from '@/utils/shortcutInstaller';
 
 import { useAuth } from "@/providers/AuthProvider";
+import { useDataSync } from "@/hooks/useDataSync";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileSection } from "@/components/profile/ProfileSection";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
+  const {
+    isOnline,
+    isSyncing,
+    syncData,
+    getSyncStatusText,
+    getSyncStatusColor
+  } = useDataSync();
   const { t } = useTranslation();
 
   const handleFamilySpacePress = () => {
@@ -49,6 +62,12 @@ export default function ProfileScreen() {
     router.push("/auth/login");
   };
 
+  const handleSyncPress = () => {
+    if (isAuthenticated && isOnline) {
+      syncData();
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
       <YStack flex={1}>
@@ -64,6 +83,67 @@ export default function ProfileScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* Sync Status Section */}
+          {isAuthenticated && (
+            <ProfileSection title={t("Data Sync")}>
+              <YStack space="$3">
+                {/* Sync Status */}
+                <XStack alignItems="center" justifyContent="space-between">
+                  <XStack alignItems="center" gap="$3">
+                    <Circle size="$3" backgroundColor={isOnline ? "$green4" : "$red4"}>
+                      {isOnline ? (
+                        <Wifi size={18} color="#10B981" />
+                      ) : (
+                        <WifiOff size={18} color="#EF4444" />
+                      )}
+                    </Circle>
+                    <YStack>
+                      <Text fontWeight="$6" fontSize="$3">
+                        {t("Status")}
+                      </Text>
+                      <Text
+                        fontSize="$2"
+                        color={getSyncStatusColor()}
+                        opacity={0.8}
+                      >
+                        {getSyncStatusText()}
+                      </Text>
+                    </YStack>
+                  </XStack>
+                  <Button
+                    chromeless
+                    onPress={handleSyncPress}
+                    disabled={!isAuthenticated || !isOnline || isSyncing}
+                    opacity={(!isAuthenticated || !isOnline || isSyncing) ? 0.5 : 1}
+                  >
+                    {isSyncing ? (
+                      <Spinner size="small" color="$blue9" />
+                    ) : (
+                      <RefreshCw size={20} color="#3B82F6" />
+                    )}
+                  </Button>
+                </XStack>
+
+                <Separator opacity={0.3} />
+
+                {/* Last Sync Time */}
+                <XStack alignItems="center" gap="$3">
+                  <Circle size="$3" backgroundColor="$blue4">
+                    <Clock size={18} color="#3B82F6" />
+                  </Circle>
+                  <YStack>
+                    <Text fontWeight="$6" fontSize="$3">
+                      {t("Last Sync")}
+                    </Text>
+                    <Text fontSize="$2" color="$gray10" opacity={0.8}>
+                      {getSyncStatusText()}
+                    </Text>
+                  </YStack>
+                </XStack>
+              </YStack>
+            </ProfileSection>
+          )}
+
           {/* Family Space Section */}
           <ProfileSection title={t("Family")}>
             <Button
@@ -76,7 +156,7 @@ export default function ProfileScreen() {
               height="$5"
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" space="$3">
+                <XStack alignItems="center" gap="$3">
                   <Circle size="$3" backgroundColor="$blue4">
                     <Home size={22} color="#3B82F6" />
                   </Circle>
@@ -99,7 +179,7 @@ export default function ProfileScreen() {
               borderWidth={0}
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" space="$3">
+                <XStack alignItems="center" gap="$3">
                   <Circle size="$3" backgroundColor="$green4">
                     <CreditCard size={22} color="#10B981" />
                   </Circle>
@@ -121,7 +201,7 @@ export default function ProfileScreen() {
               borderWidth={0}
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" space="$3">
+                <XStack alignItems="center" gap="$3">
                   <Circle size="$3" backgroundColor="$purple4">
                     <FileText size={22} color="#8B5CF6" />
                   </Circle>
@@ -144,7 +224,7 @@ export default function ProfileScreen() {
               borderWidth={0}
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" space="$3">
+                <XStack alignItems="center" gap="$3">
                   <Circle size="$3" backgroundColor="$gray4">
                     <Settings size={22} color="#6B7280" />
                   </Circle>
@@ -166,7 +246,7 @@ export default function ProfileScreen() {
               borderWidth={0}
             >
               <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" space="$3">
+                <XStack alignItems="center" gap="$3">
                   <Circle size="$3" backgroundColor="$yellow4">
                     <Bell size={22} color="#F59E0B" />
                   </Circle>
@@ -193,7 +273,7 @@ export default function ProfileScreen() {
               pressStyle={{ backgroundColor: "$gray2" }}
               onPress={handleLogout}
             >
-              <XStack alignItems="center" space="$2">
+              <XStack alignItems="center" gap="$2">
                 <LogOut size={20} color="#EF4444" />
                 <Text fontWeight="$6" color="#EF4444" fontSize="$3">{t("Logout")}</Text>
               </XStack>

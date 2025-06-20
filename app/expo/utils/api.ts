@@ -1,5 +1,6 @@
 import { Content } from "@google/genai";
 import { fetch } from "expo/fetch";
+import { User } from "@/types/user.types";
 
 // API基础URL
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
@@ -44,6 +45,32 @@ export interface AttachmentPayload {
   name?: string;
 }
 
+// 认证相关接口
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: User;
+}
+
+export interface GoogleLoginRequest {
+  idToken: string;
+}
+
+export interface AppleLoginRequest {
+  authorizationCode: string;
+  state: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
 // 流式读取处理函数
 export const readStream = async (
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -81,6 +108,161 @@ export const readStream = async (
     console.error("Error reading stream:", e);
     onChunk({ type: "error", error: "Failed to read response stream" });
   }
+};
+
+// API 客户端
+export const apiClient = {
+  // 认证相关
+  auth: {
+    login: async (data: LoginRequest): Promise<LoginResponse> => {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    register: async (data: RegisterRequest): Promise<LoginResponse> => {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    googleLogin: async (data: GoogleLoginRequest): Promise<LoginResponse> => {
+      const response = await fetch(`${API_URL}/api/auth/google`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    appleLogin: async (data: AppleLoginRequest): Promise<LoginResponse> => {
+      const response = await fetch(`${API_URL}/api/auth/apple`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    getProfile: async (token: string): Promise<User> => {
+      const response = await fetch(`${API_URL}/api/auth/profile`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    logout: async (token: string): Promise<void> => {
+      const response = await fetch(`${API_URL}/api/auth/logout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    },
+  },
+
+  // 数据同步相关
+  sync: {
+    syncData: async (token: string): Promise<void> => {
+      const response = await fetch(`${API_URL}/api/sync`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    },
+
+    uploadBills: async (token: string, bills: any[]): Promise<void> => {
+      const response = await fetch(`${API_URL}/api/sync/bills`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ bills }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    },
+
+    downloadBills: async (
+      token: string,
+      lastSyncTime?: string
+    ): Promise<any[]> => {
+      const url = lastSyncTime
+        ? `${API_URL}/api/sync/bills?lastSync=${lastSyncTime}`
+        : `${API_URL}/api/sync/bills`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+  },
 };
 
 // 聊天API服务

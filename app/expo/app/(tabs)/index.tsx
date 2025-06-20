@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { YStack, Text } from "tamagui";
 import { format } from "date-fns";
 import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
 
 // Stores & Providers -------------------------------------------------------
 import { useViewStore } from "@/stores/viewStore";
@@ -175,11 +176,18 @@ export default function HomeScreen() {
   // Define fling gestures for left / right
   const swipeLeft = Gesture.Fling()
     .direction(Directions.LEFT)
-    .onEnd(goNextPeriod);
+    .onEnd(() => {
+      "worklet";
+      // Call JS handler on the JS thread to prevent RNGH warning
+      runOnJS(goNextPeriod)();
+    });
 
   const swipeRight = Gesture.Fling()
     .direction(Directions.RIGHT)
-    .onEnd(goPrevPeriod);
+    .onEnd(() => {
+      "worklet";
+      runOnJS(goPrevPeriod)();
+    });
 
   const swipeGesture = Gesture.Simultaneous(swipeLeft, swipeRight);
 

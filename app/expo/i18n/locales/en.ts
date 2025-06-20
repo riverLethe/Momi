@@ -198,6 +198,49 @@ export default {
     "Budget Analysis": "Budget Analysis",
     "Watch Spending": "Watch Spending",
     "Over Budget": "Over Budget",
+
+    // Authentication
+    "Welcome back": "Welcome back",
+    "Sign in to continue and sync your data":
+      "Sign in to continue and sync your data",
+    "Continue with Apple": "Continue with Apple",
+    "Continue with Google": "Continue with Google",
+    Or: "Or",
+    Email: "Email",
+    "Enter your email": "Enter your email",
+    Password: "Password",
+    "Enter your password": "Enter your password",
+    "Please enter a valid email address": "Please enter a valid email address",
+    "Please enter both email and password":
+      "Please enter both email and password",
+    "Sign in with Email": "Sign in with Email",
+    "Login Failed": "Login Failed",
+    "Please check your credentials and try again.":
+      "Please check your credentials and try again.",
+    "Google login failed. Please try again.":
+      "Google login failed. Please try again.",
+    "Apple login failed. Please try again.":
+      "Apple login failed. Please try again.",
+    Login: "Login",
+
+    // Sync Status
+    "Data Sync": "Data Sync",
+    Status: "Status",
+    "Last Sync": "Last Sync",
+    "Not signed in": "Not signed in",
+    "Syncing...": "Syncing...",
+    Offline: "Offline",
+    "changes pending": "changes pending",
+    "Synced just now": "Synced just now",
+    "Never synced": "Never synced",
+    day: "day",
+    days: "days",
+    hour: "hour",
+    hours: "hours",
+    minute: "minute",
+    minutes: "minutes",
+    ago: "ago",
+    Synced: "Synced",
     Spent: "Spent",
     Remaining: "Remaining",
     "Total Budget": "Total Budget",
@@ -332,6 +375,8 @@ export default {
     "Expense created": "Expense created",
     "⚠️  {{text}}": "⚠️  {{text}}",
     "Thinking...": "Thinking...",
+    "Loading more messages...": "Loading more messages...",
+    "Pull down to load more messages": "Pull down to load more messages",
     English: "English",
     中文: "中文",
     Español: "Español",

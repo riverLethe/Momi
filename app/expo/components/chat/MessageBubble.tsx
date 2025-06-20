@@ -16,7 +16,7 @@ interface MessageBubbleProps {
   message: Message;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message }) => {
   return (
     <XStack
       width="100%"
@@ -32,16 +32,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         backgroundColor={message.isUser ? "$blue500" : "$gray100"}
         borderBottomRightRadius={message.isUser ? 4 : 18}
         borderBottomLeftRadius={message.isUser ? 18 : 4}
-        shadowColor="$black"
-        shadowOpacity={0.08}
-        shadowRadius={2}
-        shadowOffset={{ width: 0, height: 1 }}
       >
         {renderMessageContent(message)}
       </YStack>
     </XStack>
   );
 };
+
+// Memoise to avoid re-render when message reference unchanged
+export const MessageBubble = React.memo(
+  MessageBubbleComponent,
+  (prevProps, nextProps) => prevProps.message === nextProps.message
+);
 
 // Helper function to render message content based on type
 const renderMessageContent = (message: Message) => {
@@ -89,7 +91,7 @@ const renderMessageContent = (message: Message) => {
         elevation={0.5}
         backgroundColor="$blue4"
         padding="$2"
-        width="fit-content"
+        width="auto"
       >
         <XStack alignItems="center" gap="$2">
           <TerminalIcon size={16} />
@@ -115,7 +117,7 @@ const renderMessageContent = (message: Message) => {
             elevation={0.5}
             backgroundColor="white"
             padding="$2"
-            width="fit-content"
+            width="auto"
           >
             <Text fontSize={12} lineHeight={16}>
               {message.text}
@@ -198,7 +200,7 @@ const renderMessageContent = (message: Message) => {
           elevation={0.5}
           backgroundColor="white"
           padding="$2"
-          width="fit-content"
+          width="auto"
         >
           <Markdown>{message.data.content}</Markdown>
         </Card>
@@ -214,7 +216,7 @@ const renderMessageContent = (message: Message) => {
           elevation={0.5}
           backgroundColor="#FEE2E2" // light red
           padding="$2"
-          width="fit-content"
+          width="auto"
           borderColor="#FCA5A5"
           borderWidth={1}
         >
@@ -238,7 +240,7 @@ const renderMessageContent = (message: Message) => {
             overflow="hidden"
             elevation={0.5}
             backgroundColor="white"
-            width="fit-content"
+            width="auto"
           >
             <XStack flexWrap="wrap" gap="$1" padding="$2">
               {message.data.attachments.map((att: any) => {
@@ -313,7 +315,7 @@ const renderMessageContent = (message: Message) => {
         elevation={0.5}
         backgroundColor="white"
         padding="$2"
-        width="fit-content"
+        width="auto"
       >
         <Text fontSize={12} lineHeight={16}>
           {message.text}

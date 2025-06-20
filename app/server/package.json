@@ -6,15 +6,36 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "db:deploy": "prisma migrate deploy",
+    "db:setup": "prisma generate && prisma migrate dev && npm run db:seed",
+    "dev:setup": "./scripts/dev-setup.sh",
+    "quick-start": "npm run dev:setup && npm run dev",
+    "turso:setup": "./scripts/setup-turso.sh",
+    "turso:deploy": "npm run turso:setup && npm run db:deploy && npm run db:seed"
   },
   "dependencies": {
     "@google/genai": "^1.4.0",
+    "@libsql/client": "^0.15.9",
+    "@prisma/client": "^6.10.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/uuid": "^10.0.0",
+    "bcryptjs": "^3.0.2",
+    "google-auth-library": "^10.1.0",
     "jsonrepair": "^3.12.0",
+    "jsonwebtoken": "^9.0.2",
     "next": "15.3.3",
+    "prisma": "^6.10.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "undici": "^7.10.0",
+    "uuid": "^11.1.0",
     "uuidv4": "^6.2.13"
   },
   "devDependencies": {
@@ -23,6 +44,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }

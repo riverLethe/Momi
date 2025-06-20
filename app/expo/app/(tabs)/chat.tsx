@@ -57,13 +57,13 @@ export default function ChatScreen() {
 
   // Helper: scroll chat to bottom (used by many hooks)
   function scrollToBottom() {
-    scrollViewRef.current?.scrollToEnd({ animated: true });
+    scrollViewRef.current?.scrollToOffset({ offset: 0, animated: true });
   }
 
-  const { messages, setMessages, clearMessages } = useChatMessages({
+  const { messages, setMessages, clearMessages, loadMoreMessages, isLoadingMore, hasMoreMessages } = useChatMessages({
     onLoaded: () => {
       setIsFirstLoading(false);
-      setTimeout(() => scrollToBottom(), 50)
+      // ChatMessages组件会自动滚动到底部
     },
   });
 
@@ -268,6 +268,9 @@ export default function ChatScreen() {
                 currentStreamedMessage={currentStreamedMessage}
                 isThinking={isThinking}
                 scrollViewRef={scrollViewRef}
+                loadMoreMessages={loadMoreMessages}
+                isLoadingMore={isLoadingMore}
+                hasMoreMessages={hasMoreMessages}
               />
             )}
           </View>

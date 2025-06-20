@@ -83,6 +83,9 @@ export default {
     "Expense created": "Gasto creado",
     "⚠️  {{text}}": "⚠️  {{text}}",
     "Thinking...": "Pensando...",
+    "Loading more messages...": "Cargando más mensajes...",
+    "Pull down to load more messages":
+      "Desliza hacia abajo para cargar más mensajes",
     Groceries: "Compras",
     Insurance: "Seguros",
     "Personal Care": "Cuidado Personal",
@@ -197,5 +200,6 @@ export default {
       "Has alcanzado el 100% de tu presupuesto mensual.",
     "Open MomiQ to view insights.": "Abre MomiQ para ver las perspectivas.",
     "Your weekly report is ready": "Tu informe semanal está listo",
+    Or: "O",
   },
 };
