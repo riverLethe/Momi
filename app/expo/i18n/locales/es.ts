@@ -188,5 +188,6 @@ export default {
     "Month Health Score": "Puntuación de salud del mes",
     "Year Health Score": "Puntuación de salud del año",
     "Used Percentage": "Porcentaje de uso",
+    "Global Switch": "Interruptor Global",
   },
 };

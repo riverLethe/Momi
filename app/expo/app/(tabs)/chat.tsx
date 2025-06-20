@@ -3,14 +3,14 @@ import {
   KeyboardAvoidingView,
   SafeAreaView,
   StatusBar,
-  ScrollView,
+  FlatList,
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
 } from "react-native";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { View } from "tamagui";
-import { chatAPI } from "@/utils/api";
+import { chatAPI, Message } from "@/utils/api";
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
 import { useBudgets } from "@/hooks/useBudgets";
@@ -53,7 +53,7 @@ export default function ChatScreen() {
   const [currentStreamedMessage, setCurrentStreamedMessage] = useState("");
   const [isFirstLoading, setIsFirstLoading] = useState(true);
 
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<FlatList<Message>>(null);
 
   // Helper: scroll chat to bottom (used by many hooks)
   function scrollToBottom() {

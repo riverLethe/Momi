@@ -249,6 +249,9 @@ export default {
     "Alert Types": "Alert Types",
     "Bill Reminders": "Bill Reminders",
     "Budget Alerts": "Budget Alerts",
+    "Log Reminders": "Log Reminders",
+    "Bill Due Reminders": "Bill Due Reminders",
+    "Coming Soon": "Coming Soon",
     "Family Updates": "Family Updates",
     "Weekly Reports": "Weekly Reports",
     "Notification Delivery": "Notification Delivery",
@@ -433,5 +436,6 @@ export default {
     "Month Health Score": "Month Health Score",
     "Year Health Score": "Year Health Score",
     "Used Percentage": "Used Percentage",
+    "Global Switch": "Global Switch",
   },
 };

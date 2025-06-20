@@ -445,5 +445,9 @@ export default {
     "Month Health Score": "月财务健康分数",
     "Year Health Score": "年财务健康分数",
     "Used Percentage": "已使用占比",
+    "Log Reminders": "记账提醒",
+    "Bill Due Reminders": "到期账单提醒",
+    "Global Switch": "全局开关",
+    "Coming Soon": "敬请期待",
   },
 };

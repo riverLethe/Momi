@@ -1,5 +1,5 @@
-import React, { RefObject } from "react";
-import { ScrollView, ActivityIndicator } from "react-native";
+import React, { RefObject, useCallback, useMemo } from "react";
+import { FlatList, ActivityIndicator } from "react-native";
 import { XStack, Text, View } from "tamagui";
 import { Message } from "@/utils/api";
 import { MessageBubble } from "./MessageBubble";
@@ -9,7 +9,10 @@ interface ChatMessagesProps {
     messages: Message[];
     currentStreamedMessage: string;
     isThinking: boolean;
-    scrollViewRef: RefObject<ScrollView>;
+    /**
+     * Ref to access internal FlatList instance so that parent can call scrollToEnd etc.
+     */
+    scrollViewRef: RefObject<FlatList<Message>>;
 }
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
@@ -19,21 +22,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     scrollViewRef,
 }) => {
     const { t } = useTranslation();
-    return (
-        <ScrollView
-            ref={scrollViewRef}
-            style={{ flex: 1 }}
-            contentContainerStyle={{
-                paddingTop: 16,
-                paddingHorizontal: 0,
-                paddingBottom: 24,
-            }}
-        >
-            {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
-            ))}
 
-            {currentStreamedMessage ? (
+    // Memoise footer to avoid unnecessary re-renders when list items change
+    const ListFooter = useMemo(() => {
+        if (currentStreamedMessage) {
+            return (
                 <XStack
                     width="80%"
                     maxWidth="80%"
@@ -67,9 +60,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         </Text>
                     </View>
                 </XStack>
-            ) : null}
+            );
+        }
 
-            {isThinking && !currentStreamedMessage && (
+        if (isThinking) {
+            return (
                 <XStack
                     width="80%"
                     maxWidth="80%"
@@ -92,7 +87,34 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         </Text>
                     </View>
                 </XStack>
-            )}
-        </ScrollView>
+            );
+        }
+
+        return null;
+    }, [currentStreamedMessage, isThinking, t]);
+
+    const renderItem = useCallback(({ item }: { item: Message }) => {
+        return <MessageBubble message={item} />;
+    }, []);
+
+    const keyExtractor = useCallback((item: Message) => item.id, []);
+
+    return (
+        <FlatList
+            ref={scrollViewRef as any}
+            data={messages}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={{
+                paddingTop: 16,
+                paddingHorizontal: 0,
+                paddingBottom: 24,
+            }}
+            ListFooterComponent={ListFooter}
+            initialNumToRender={20}
+            maxToRenderPerBatch={20}
+            windowSize={21}
+            removeClippedSubviews
+        />
     );
 }; 

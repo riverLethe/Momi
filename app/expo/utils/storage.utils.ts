@@ -10,6 +10,8 @@ export const STORAGE_KEYS = {
   BUDGETS: "momiq_budgets",
   AUTH_TOKEN: "momiq_auth_token",
   FAMILY_SPACES: "momiq_family_spaces",
+  NOTIFICATIONS: "momiq_notifications",
+  NOTIFICATION_SETTINGS: "momiq_notification_settings",
 };
 
 //todo: remove this after migration

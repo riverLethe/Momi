@@ -5,6 +5,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { TamaguiProvider } from "tamagui";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Linking, NativeModules, AppState } from "react-native";
+// @ts-ignore – provided by Expo SDK
+import * as Notifications from "expo-notifications";
 
 import config from "../tamagui.config";
 import "../global.css";
@@ -24,6 +26,16 @@ export {
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+// Ensure notifications show alert while app is foreground
+Notifications.setNotificationHandler({
+  // @ts-ignore – SDK type version mismatch workaround
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  } as any),
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -54,7 +66,7 @@ export default function RootLayout() {
           .then((url: string | null) => {
             if (url && typeof url === "string" && url.length > 0) {
               // Give navigation tree a tick to mount before navigating
-              setTimeout(() => Linking.openURL(url).catch(() => {}), 200);
+              setTimeout(() => Linking.openURL(url).catch(() => { }), 200);
             }
           })
           .catch((e: any) => {
