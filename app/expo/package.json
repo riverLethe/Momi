@@ -16,7 +16,6 @@
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/datetimepicker": "8.2.0",
     "@react-native-google-signin/google-signin": "^14.0.1",
-    "@shopify/flash-list": "^1.8.3",
     "@tamagui/config": "^1.126.14",
     "@tamagui/font-inter": "^1.126.14",
     "babel-plugin-module-resolver": "^5.0.2",

@@ -234,15 +234,24 @@ export default {
 
     // Login / Auth
     "Welcome back": "欢迎回来",
-    "Sign in to continue": "登录以继续",
-    Username: "用户名",
+    "Sign in to continue and sync your data": "登录以继续并同步您的数据",
+    Email: "邮箱",
+    "Enter your email": "输入您的邮箱",
     Password: "密码",
-    "Enter your username": "输入您的用户名",
     "Enter your password": "输入您的密码",
-    Login: "登录",
+    "Sign in with Email": "邮箱登录",
+    Or: "或",
+    "Continue with Apple": "使用 Apple 登录",
+    "Continue with Google": "使用 Google 登录",
+    "Please enter both email and password": "请输入邮箱和密码",
+    "Please enter a valid email address": "请输入有效的邮箱地址",
     "Login Failed": "登录失败",
-    "Please check your credentials and try again.": "请检查您的凭证并重试。",
-    "Please enter both username and password": "请输入用户名和密码",
+    "Please check your credentials and try again.": "请检查您的凭据并重试。",
+    "Google login failed. Please try again.": "Google登录失败，请重试。",
+    "Apple login failed. Please try again.": "Apple登录失败，请重试。",
+    "Back to other options": "返回其他选项",
+    "By continuing, you agree to our Terms of Service and Privacy Policy":
+      "继续即表示您同意我们的服务条款和隐私政策",
 
     // New section title
     Finance: "财务",
@@ -455,6 +464,5 @@ export default {
     "You have reached 100% of your monthly budget.": "您已用尽本月全部预算。",
     "Open MomiQ to view insights.": "打开 MomiQ 查看洞察。",
     "Your weekly report is ready": "您的每周报告已准备好",
-    Or: "或",
   },
 };
