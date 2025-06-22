@@ -7,7 +7,7 @@ import { useData } from '@/providers/DataProvider';
 import { useBudgets } from '@/hooks/useBudgets';
 import { summariseBills } from '@/utils/abi-summary.utils';
 import { DatePeriodEnum } from '@/types/reports.types';
-import { startOfMonth, endOfMonth, format as formatDate } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, format as formatDate } from 'date-fns';
 
 interface Notification {
   id: string;
@@ -91,55 +91,101 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   }, [settings]);
 
   // -------------------------------------------------------------------
-  // 3. Budget Alert Logic ---------------------------------------------
-  // Track which months have been alerted to avoid duplicates
-  const [alertHistory, setAlertHistory] = useState<Record<string, { l80: boolean; l100: boolean }>>({});
-
+  // 3. Budget Alert Logic - Simple daily check ----------------------
   const { t } = useTranslation();
 
-  const maybeTriggerBudgetAlert = useCallback(() => {
-    if (!settings.budgetAlerts) return;
+  const checkAndScheduleBudget = useCallback(async () => {
+    if (!settings.pushEnabled || !settings.budgetAlerts) return;
+
+    // Cancel existing budget alerts
+    await Notifications.cancelScheduledNotificationAsync('budget-weekly-check').catch(() => { });
+    await Notifications.cancelScheduledNotificationAsync('budget-monthly-check').catch(() => { });
+    await Notifications.cancelScheduledNotificationAsync('budget-yearly-check').catch(() => { });
+
+    // Request permissions if needed
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      const req = await Notifications.requestPermissionsAsync();
+      if (req.status !== 'granted') return;
+    }
 
     const today = new Date();
-    const monthKey = formatDate(today, 'yyyy-MM');
 
-    const summary = summariseBills(
-      bills,
-      budgets,
-      DatePeriodEnum.MONTH,
-      startOfMonth(today),
-      endOfMonth(today)
-    );
+    // Define the three periods to check
+    const periods = [
+      {
+        type: DatePeriodEnum.WEEK,
+        start: startOfWeek(today, { weekStartsOn: 1 }),
+        end: endOfWeek(today, { weekStartsOn: 1 }),
+        identifier: 'budget-weekly-check',
+        labelKey: 'weekly'
+      },
+      {
+        type: DatePeriodEnum.MONTH,
+        start: startOfMonth(today),
+        end: endOfMonth(today),
+        identifier: 'budget-monthly-check',
+        labelKey: 'monthly'
+      },
+      {
+        type: DatePeriodEnum.YEAR,
+        start: startOfYear(today),
+        end: endOfYear(today),
+        identifier: 'budget-yearly-check',
+        labelKey: 'yearly'
+      }
+    ];
 
-    const usagePct = summary.budgetUtilisation.usagePct ?? 0;
-    if (usagePct === 0) return; // no budget set
+    // Check each period for budget alerts
+    for (const period of periods) {
+      const summary = summariseBills(
+        bills,
+        budgets,
+        period.type,
+        period.start,
+        period.end
+      );
 
-    const hist = alertHistory[monthKey] || { l80: false, l100: false };
+      const usagePct = summary.budgetUtilisation.usagePct ?? 0;
 
-    if (usagePct >= 100 && !hist.l100) {
-      const title = t('Budget exceeded');
-      const body = t('You have reached 100% of your monthly budget.');
-      addNotification({ title, message: body, type: 'error' });
-      Notifications.scheduleNotificationAsync({
-        content: { title, body },
-        trigger: { seconds: 1, repeats: false, type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL },
-      }).catch(() => { });
-      setAlertHistory(prev => ({ ...prev, [monthKey]: { ...hist, l100: true } }));
-    } else if (usagePct >= 80 && !hist.l80) {
-      const title = t('Budget 80% used');
-      const body = t('You have spent 80% of your monthly budget.');
-      addNotification({ title, message: body, type: 'warning' });
-      Notifications.scheduleNotificationAsync({
-        content: { title, body },
-        trigger: { seconds: 1, repeats: false, type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL },
-      }).catch(() => { });
-      setAlertHistory(prev => ({ ...prev, [monthKey]: { ...hist, l80: true } }));
+      // Only schedule if there's actually a budget set for this period
+      if (usagePct > 0) {
+        if (usagePct >= 100) {
+          // 100% exceeded - critical alert
+          await Notifications.scheduleNotificationAsync({
+            identifier: period.identifier,
+            content: {
+              title: t('Budget exceeded'),
+              body: t('You have reached 100% of your {{period}} budget.', { period: t(period.labelKey) }),
+            },
+            trigger: {
+              hour: 18,
+              minute: 0,
+              type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            },
+          }).catch(() => { });
+        } else if (usagePct >= 80) {
+          // 80% warning alert
+          await Notifications.scheduleNotificationAsync({
+            identifier: period.identifier,
+            content: {
+              title: t('Budget 80% used'),
+              body: t('You have spent 80% of your {{period}} budget.', { period: t(period.labelKey) }),
+            },
+            trigger: {
+              hour: 18,
+              minute: 0,
+              type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            },
+          }).catch(() => { });
+        }
+      }
     }
-  }, [settings.budgetAlerts, bills, budgets, alertHistory]);
+  }, [settings.pushEnabled, settings.budgetAlerts, bills, budgets, t]);
 
   useEffect(() => {
-    maybeTriggerBudgetAlert();
-  }, [maybeTriggerBudgetAlert, dataVersion]);
+    checkAndScheduleBudget();
+  }, [checkAndScheduleBudget]);
 
   // -------------------------------------------------------------------
   // 4. Daily Log Reminder ---------------------------------------------
