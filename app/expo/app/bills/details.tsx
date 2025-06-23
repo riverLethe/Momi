@@ -118,6 +118,11 @@ export default function BillDetailsScreen() {
 
   const handleCategoryChange = async (categoryId: string) => {
     if (!bill) return;
+    // 只有当分类实际变化时才更新
+    if (bill.category === categoryId) {
+      setActiveSheet(null);
+      return;
+    }
     setUpdating(true);
     updateBillField(bill, "category", categoryId, {
       onSuccess: (updated) => {
@@ -133,6 +138,10 @@ export default function BillDetailsScreen() {
 
   const handleUpdateField = async (field: keyof Bill, value: any) => {
     if (!bill) return;
+    // 只有当值实际变化时才更新
+    if (bill[field] === value) {
+      return;
+    }
     setUpdating(true);
     updateBillField(bill, field, value, {
       onSuccess: (updated) => {

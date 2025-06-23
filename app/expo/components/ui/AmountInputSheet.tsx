@@ -14,7 +14,6 @@ interface AmountInputSheetProps {
   initialAmount?: number;
   onSubmit: (amount: number) => void;
   onlyContent?: boolean;
-  key?: string;
 }
 
 /**
@@ -30,7 +29,6 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
   initialAmount = 0,
   onSubmit,
   onlyContent = false,
-  key,
 }) => {
   const { t } = useTranslation();
 
@@ -258,7 +256,6 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
   ) : (
     <Sheet
       modal
-      key={key}
       open={open}
       onOpenChange={onOpenChange}
       snapPoints={[45]}
