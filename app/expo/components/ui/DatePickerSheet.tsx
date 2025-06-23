@@ -16,6 +16,7 @@ export interface DatePickerSheetProps {
   /** 选择模式，默认为 "date" */
   mode?: "date" | "time" | "datetime";
   onlyContent?: boolean;
+  key?: string;
 }
 
 /**
@@ -34,6 +35,7 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
   title,
   mode = "date",
   onlyContent = false,
+  key,
 }) => {
   const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
@@ -45,7 +47,7 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
     if (open) {
       setSelectedDate(initialDate);
     }
-  }, [open, initialDate]);
+  }, [open]);
 
   /**
    * 点击『Done』按钮
@@ -91,6 +93,7 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
   return onlyContent ? renderContent() : (
     <Sheet
       modal
+      key={key}
       open={open}
       onOpenChange={onOpenChange}
       snapPoints={[40]}

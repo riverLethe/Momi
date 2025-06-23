@@ -22,6 +22,7 @@ export interface CategorySelectSheetProps {
   selectedCategories?: string[];
   onCategoriesChange?: (categories: string[]) => void;
   onlyContent?: boolean;
+  key?: string;
 }
 
 export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
@@ -34,6 +35,7 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
   selectedCategories = [],
   onCategoriesChange,
   onlyContent = false,
+  key,
 }) => {
   const { t } = useTranslation();
 
@@ -94,6 +96,7 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
   return onlyContent ? renderContent() : (
     <Sheet
       modal
+      key={key}
       open={isOpen}
       onOpenChange={(open: boolean) => {
         if (!open && multiSelect && onCategoriesChange) {

@@ -56,6 +56,7 @@ export default function BillDetailsScreen() {
   // long-press handlers
   const onMerchantLongPress = () => setEditingMerchant(true);
   const onNotesLongPress = () => setEditingNotes(true);
+  const [changeUuid, setChangeUuid] = useState(0);
 
   // 从本地存储加载账单详情
   useEffect(() => {
@@ -115,6 +116,7 @@ export default function BillDetailsScreen() {
       onSuccess: (updated) => {
         setBill(updated);
         setUpdating(false);
+        setChangeUuid(prev => prev + 1);
       },
       onError: () => setUpdating(false),
     });
@@ -127,6 +129,7 @@ export default function BillDetailsScreen() {
       onSuccess: (updated) => {
         setBill(updated);
         setUpdating(false);
+        setChangeUuid(prev => prev + 1);
       },
       onError: () => setUpdating(false),
     });
@@ -426,63 +429,35 @@ export default function BillDetailsScreen() {
           </KeyboardAvoidingView>
         </YStack>
 
-        {/* 通用底部弹窗 */}
-        <Sheet
-          key={activeSheet}
-          modal
-          open={activeSheet !== null}
+
+        <DatePickerSheet
+          open={activeSheet === "date"}
           onOpenChange={(open: boolean) => {
             if (!open) setActiveSheet(null);
           }}
-          snapPoints={
-            activeSheet === "date"
-              ? [40]
-              : activeSheet === "amount"
-                ? [45]
-                : [50]
-          }
-          dismissOnSnapToBottom
-        >
-          <Sheet.Overlay />
-          <Sheet.Handle />
-          <Sheet.Frame
-            padding="$4"
-          >
-            {activeSheet === "date" && (
-              <DatePickerSheet
-                open
-                onOpenChange={(open: boolean) => {
-                  if (!open) setActiveSheet(null);
-                }}
-                initialDate={new Date(bill.date)}
-                onConfirm={(date) => handleUpdateField("date", date)}
-                onlyContent
-              />
-            )}
-            {activeSheet === "category" && (
-              <CategorySelectSheet
-                isOpen
-                setIsOpen={(open: boolean) => {
-                  if (!open) setActiveSheet(null);
-                }}
-                selectedCategory={bill.category}
-                onCategoryChange={handleCategoryChange}
-                onlyContent
-              />
-            )}
-            {activeSheet === "amount" && (
-              <AmountInputSheet
-                open
-                onOpenChange={(open: boolean) => {
-                  if (!open) setActiveSheet(null);
-                }}
-                initialAmount={bill.amount}
-                onSubmit={(val) => handleUpdateField("amount", val)}
-                onlyContent
-              />
-            )}
-          </Sheet.Frame>
-        </Sheet>
+          initialDate={new Date(bill.date)}
+          onConfirm={(date) => handleUpdateField("date", date)}
+          key={`date-${changeUuid}`}
+        />
+        <CategorySelectSheet
+          isOpen={activeSheet === "category"}
+          setIsOpen={(open: boolean) => {
+            if (!open) setActiveSheet(null);
+          }}
+          selectedCategory={bill.category}
+          onCategoryChange={handleCategoryChange}
+          key={`category-${changeUuid}`}
+        />
+
+        <AmountInputSheet
+          open={activeSheet === "amount"}
+          onOpenChange={(open: boolean) => {
+            if (!open) setActiveSheet(null);
+          }}
+          initialAmount={bill.amount}
+          onSubmit={(val) => handleUpdateField("amount", val)}
+          key={`amount-${changeUuid}`}
+        />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
