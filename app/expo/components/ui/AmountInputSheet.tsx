@@ -68,7 +68,6 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
 
   /* 键盘点击 - 优化性能处理 */
   const handleKeypadPress = (key: string) => {
-    console.log("handelkeyboard", key)
     // 直接更新UI，然后将计算放在下一个渲染循环
     if (amountAnalysis.maxLength && !shouldResetDisplay) return;
 
