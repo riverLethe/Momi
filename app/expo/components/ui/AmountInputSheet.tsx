@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Sheet, YStack, XStack, Button, Text } from "tamagui";
 import {
   Delete as DeleteIcon,
@@ -158,90 +158,6 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
     return amount;
   };
 
-  /* 渲染键盘 */
-  const renderKeypad = () => (
-    <XStack p="$2" gap="$2">
-      {/* 数字区 */}
-      <YStack flex={3} gap="$2">
-        {[
-          ["1", "2", "3"],
-          ["4", "5", "6"],
-          ["7", "8", "9"],
-        ].map((row) => (
-          <XStack key={row.join("-")} gap="$2">
-            {row.map((key) => (
-              <Button
-                key={key}
-                flex={1}
-                size="$5"
-                onPress={() => handleKeypadPress(key)}
-              >
-                <Text fontSize="$6">{key}</Text>
-              </Button>
-            ))}
-          </XStack>
-        ))}
-        <XStack gap="$2">
-          <Button flex={1} size="$5" onPress={() => handleKeypadPress(".")}>
-            <Text fontSize="$6">.</Text>
-          </Button>
-          <Button flex={1} size="$5" onPress={() => handleKeypadPress("0")}>
-            <Text fontSize="$6">0</Text>
-          </Button>
-          <Button
-            flex={1}
-            size="$5"
-            onPress={handleDeletePress}
-            icon={<DeleteIcon size={24} color="#333" />}
-          />
-        </XStack>
-      </YStack>
-      {/* 功能区 */}
-      <YStack flex={1} gap="$2">
-        <Button
-          flex={1}
-          size="$5"
-          icon={<PlusIcon size={24} color="#333" />}
-          onPress={() => handleOperatorPress("+")}
-        />
-        <Button
-          flex={1}
-          size="$5"
-          icon={<MinusIcon size={24} color="#333" />}
-          onPress={() => handleOperatorPress("-")}
-        />
-
-        <Button
-          flex={1}
-          size="$5"
-          padding="$0"
-          onPress={() => {
-            onOpenChange(false);
-          }}
-        >
-          <Text>{t("Cancel")}</Text>
-        </Button>
-        <Button
-          flex={1}
-          size="$5"
-          theme="active"
-          backgroundColor="$blue10"
-          padding="$0"
-          onPress={
-            operator && !shouldResetDisplay ? handleCalculate : handleDone
-          }
-        >
-          {operator && !shouldResetDisplay ? (
-            <EqualIcon size={24} color="white" />
-          ) : (
-            <Text color="white" fontWeight="bold">
-              {t("Done")}
-            </Text>
-          )}
-        </Button>
-      </YStack>
-    </XStack>
-  );
   const renderContent = () => (
     <YStack gap="$3">
       <YStack paddingVertical="$2">
@@ -253,7 +169,87 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
           {displayString()}
         </Text>
       </YStack>
-      {renderKeypad()}
+      <XStack p="$2" gap="$2">
+        {/* 数字区 */}
+        <YStack flex={3} gap="$2">
+          {[
+            ["1", "2", "3"],
+            ["4", "5", "6"],
+            ["7", "8", "9"],
+          ].map((row) => (
+            <XStack key={row.join("-")} gap="$2">
+              {row.map((key) => (
+                <Button
+                  key={key}
+                  flex={1}
+                  size="$5"
+                  onPress={() => handleKeypadPress(key)}
+                >
+                  <Text fontSize="$6">{key}</Text>
+                </Button>
+              ))}
+            </XStack>
+          ))}
+          <XStack gap="$2">
+            <Button flex={1} size="$5" onPress={() => handleKeypadPress(".")}>
+              <Text fontSize="$6">.</Text>
+            </Button>
+            <Button flex={1} size="$5" onPress={() => handleKeypadPress("0")}>
+              <Text fontSize="$6">0</Text>
+            </Button>
+            <Button
+              flex={1}
+              size="$5"
+              onPress={handleDeletePress}
+              icon={<DeleteIcon size={24} color="#333" />}
+            />
+          </XStack>
+        </YStack>
+        {/* 功能区 */}
+        <YStack flex={1} gap="$2">
+          <Button
+            flex={1}
+            size="$5"
+            icon={<PlusIcon size={24} color="#333" />}
+            onPress={() => handleOperatorPress("+")}
+          />
+          <Button
+            flex={1}
+            size="$5"
+            icon={<MinusIcon size={24} color="#333" />}
+            onPress={() => handleOperatorPress("-")}
+          />
+
+          <Button
+            flex={1}
+            size="$5"
+            padding="$0"
+            onPress={() => {
+              onOpenChange(false);
+            }}
+          >
+            <Text>{t("Cancel")}</Text>
+          </Button>
+          <Button
+            flex={1}
+            size="$5"
+            theme="active"
+            backgroundColor="$blue10"
+            padding="$0"
+            onPress={
+              operator && !shouldResetDisplay ? handleCalculate : handleDone
+            }
+          >
+            {operator && !shouldResetDisplay ? (
+              <EqualIcon size={24} color="white" />
+            ) : (
+              <Text color="white" fontWeight="bold">
+                {t("Done")}
+              </Text>
+            )}
+          </Button>
+        </YStack>
+      </XStack>
     </YStack>
   );
 
@@ -277,4 +273,5 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
   );
 };
 
-export default AmountInputSheet;
+// Memoize to prevent unnecessary re-renders when parent state changes
+export default React.memo(AmountInputSheet);

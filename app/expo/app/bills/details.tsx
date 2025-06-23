@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   ActivityIndicator,
@@ -33,6 +33,7 @@ import AmountInputSheet from "@/components/ui/AmountInputSheet";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
 import { useBillActions } from "@/hooks/useBillActions";
 import { formatCurrency } from "@/utils/format";
+import { useData } from "@/providers/DataProvider";
 
 export default function BillDetailsScreen() {
   const router = useRouter();
@@ -52,6 +53,10 @@ export default function BillDetailsScreen() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState("");
   const { confirmDeleteBill, updateBillField } = useBillActions();
+  const { refreshData } = useData();
+
+  // Track whether any field has been modified so we refresh once on exit
+  const hasChangesRef = useRef(false);
 
   // long-press handlers
   const onMerchantLongPress = () => setEditingMerchant(true);
@@ -99,6 +104,7 @@ export default function BillDetailsScreen() {
     setUpdating(true);
     confirmDeleteBill(bill, {
       onSuccess: () => {
+        hasChangesRef.current = true; // deletion changes list too
         setUpdating(false);
         router.back();
       },
@@ -106,6 +112,7 @@ export default function BillDetailsScreen() {
         setUpdating(false);
         Alert.alert(t("Error"), t("Failed to delete bill"));
       },
+      ignoreRefresh: true,
     });
   };
 
@@ -117,8 +124,10 @@ export default function BillDetailsScreen() {
         setBill(updated);
         setUpdating(false);
         setChangeUuid(prev => prev + 1);
+        hasChangesRef.current = true;
       },
       onError: () => setUpdating(false),
+      ignoreRefresh: true,
     });
   };
 
@@ -130,10 +139,26 @@ export default function BillDetailsScreen() {
         setBill(updated);
         setUpdating(false);
         setChangeUuid(prev => prev + 1);
+        hasChangesRef.current = true;
       },
       onError: () => setUpdating(false),
+      ignoreRefresh: true,
     });
   };
+
+  // Memoize derived values to avoid recalculations on every render
+  const category = useMemo(() => (bill ? getCategoryById(bill!.category) : null), [bill]);
+  const CategoryIcon = useMemo(() => (bill ? getCategoryIcon(bill!.category) : () => null), [bill]);
+  const formattedAmount = useMemo(() => (bill ? formatCurrency(bill!.amount) : ""), [bill]);
+
+  // On unmount, refresh global data once if needed
+  useEffect(() => {
+    return () => {
+      if (hasChangesRef.current) {
+        refreshData().catch(() => { });
+      }
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -173,9 +198,6 @@ export default function BillDetailsScreen() {
       </TouchableWithoutFeedback>
     );
   }
-
-  const category = getCategoryById(bill.category);
-  const CategoryIcon = getCategoryIcon(bill.category);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -228,7 +250,7 @@ export default function BillDetailsScreen() {
                 padding="$5"
                 marginTop="$2"
                 marginBottom="$4"
-                backgroundColor={category.color}
+                backgroundColor={category!.color}
                 elevate
               >
                 <Text
@@ -261,7 +283,7 @@ export default function BillDetailsScreen() {
                     color="white"
                     marginTop="$2"
                   >
-                    {formatCurrency(bill.amount)}
+                    {formattedAmount}
                   </Text>
                 </Button>
                 <XStack justifyContent="space-between" marginTop="$4">
@@ -313,12 +335,12 @@ export default function BillDetailsScreen() {
                         <Avatar
                           circular
                           size="$3"
-                          backgroundColor={`${category.color}20`}
+                          backgroundColor={`${category!.color}20`}
                         >
-                          <CategoryIcon size={14} color={category.color} />
+                          <CategoryIcon size={14} color={category!.color} />
                         </Avatar>
                         <Text fontSize="$3" fontWeight="$6">
-                          {t(category.name)}
+                          {t(category!.name)}
                         </Text>
                       </XStack>
                     </Button>

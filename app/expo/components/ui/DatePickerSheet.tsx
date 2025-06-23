@@ -108,4 +108,5 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
   );
 };
 
-export default DatePickerSheet;
+// Memoize to avoid unnecessary rerenders when parent updates
+export default React.memo(DatePickerSheet);

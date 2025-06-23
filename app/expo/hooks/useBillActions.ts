@@ -91,24 +91,30 @@ export const useBillActions = () => {
         return;
       }
 
-      const updatedBill = await updateBillUtil(bill.id, {
+      // Build the updated bill object locally for immediate UI feedback
+      const updatedLocal: Bill = {
         ...bill,
         [field]: value,
-      });
+        updatedAt: new Date(),
+      } as Bill;
 
-      if (updatedBill) {
-        // First update the current screen to provide immediate feedback.
-        onSuccess?.(updatedBill as Bill);
+      // Optimistically update caller
+      onSuccess?.(updatedLocal);
 
-        // Optionally refresh the global data store in the background.
-        if (!ignoreRefresh) {
-          refreshData().catch((err) => {
-            console.error("Failed to refresh data after bill update:", err);
-          });
+      // Persist change in background – this prevents blocking the UI thread
+      (async () => {
+        try {
+          await updateBillUtil(bill.id, updatedLocal);
+
+          // Refresh global store after persistence completes if requested
+          if (!ignoreRefresh) {
+            await refreshData();
+          }
+        } catch (err) {
+          console.error("Failed to persist bill update:", err);
+          onError?.(err);
         }
-      } else {
-        throw new Error("Failed to update bill");
-      }
+      })();
     } catch (error) {
       console.error("Failed to update bill field:", error);
       onError?.(error);

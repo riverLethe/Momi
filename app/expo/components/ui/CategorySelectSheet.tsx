@@ -116,4 +116,5 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
   );
 };
 
-export default CategorySelectSheet;
+// Export a memoized version to improve rendering performance
+export default React.memo(CategorySelectSheet);
