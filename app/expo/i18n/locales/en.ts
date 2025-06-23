@@ -500,5 +500,6 @@ export default {
     weekly: "weekly",
     monthly: "monthly",
     yearly: "yearly",
+    "Release to cancel": "Release to cancel",
   },
 };

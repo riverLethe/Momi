@@ -201,5 +201,6 @@ export default {
     "Open MomiQ to view insights.": "Abre MomiQ para ver las perspectivas.",
     "Your weekly report is ready": "Tu informe semanal está listo",
     Or: "O",
+    "Release to cancel": "Suelta para cancelar",
   },
 };

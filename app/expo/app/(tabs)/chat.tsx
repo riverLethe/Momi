@@ -133,6 +133,7 @@ export default function ChatScreen() {
     isRecording,
     startRecording: startVoiceRecording,
     stopRecording: stopVoiceRecording,
+    cancelRecording: cancelVoiceRecording,
   } = useVoiceRecognition({
     onFinalResult: (transcript) => {
       // Create a text message from the recognised speech
@@ -274,6 +275,7 @@ export default function ChatScreen() {
             onToggleInputMode={toggleInputMode}
             onStartRecording={startVoiceRecording}
             onStopRecording={stopVoiceRecording}
+            onCancelRecording={cancelVoiceRecording}
             onImageUpload={handleTakePhoto}
             attachments={attachments}
             onRemoveAttachment={removeAttachment}

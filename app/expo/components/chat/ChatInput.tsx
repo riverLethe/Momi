@@ -1,9 +1,17 @@
-import React from "react";
-import { Pressable, Animated, Easing } from "react-native";
+import React, { useRef, useState } from "react";
+import {
+  Pressable,
+  Animated,
+  Easing,
+  GestureResponderEvent,
+  LayoutChangeEvent
+} from "react-native";
 import { XStack, YStack, Text, View, Input } from "tamagui";
 import {
   Camera,
   Plus,
+  Mic,
+  Send
 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { MoreOptions } from "./MoreOptions";
@@ -18,6 +26,7 @@ interface ChatInputProps {
   onToggleInputMode: () => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
+  onCancelRecording?: () => void;
   onImageUpload: () => void;
   onPickImage: () => void;
   onTakePhoto: () => void;
@@ -35,6 +44,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onToggleInputMode,
   onStartRecording,
   onStopRecording,
+  onCancelRecording,
   onImageUpload,
   onPickImage,
   onTakePhoto,
@@ -43,10 +53,50 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onRemoveAttachment,
 }) => {
   const { t } = useTranslation();
-  const [showMoreOptions, setShowMoreOptions] = React.useState(false);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [isCancelZone, setIsCancelZone] = useState(false);
+
+  // 记录滑动状态
+  const currentY = useRef<number>(0);
+  const startY = useRef<number>(0);
+
+  // 处理布局变化
+  const handleLayout = (event: LayoutChangeEvent) => {
+    // 保留这个方法，以兼容现有代码
+  };
+
+  // 移除handleTouchStart，因为我们已经在长按事件中记录初始位置
+
+  const handleTouchMove = (e: GestureResponderEvent) => {
+    if (!isRecording) return;
+
+    currentY.current = e.nativeEvent.pageY;
+    const diff = currentY.current - startY.current;
+
+    // 上滑超过20像素就进入取消模式
+    const shouldCancel = diff < -20;
+
+    if (shouldCancel !== isCancelZone) {
+      setIsCancelZone(shouldCancel);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isRecording) return;
+
+    const diff = currentY.current - startY.current;
+
+    if (isCancelZone && diff < -20) {
+      onCancelRecording?.();
+    } else {
+      onStopRecording();
+    }
+
+    setIsCancelZone(false);
+  };
 
   /* Waveform animation setup - smoother wave effect */
-  const BAR_COUNT = 50; // 增加数量以获得更连续的效果
+  const BAR_COUNT = 50;
   const barAnimatedValues = React.useRef(
     Array.from({ length: BAR_COUNT }, () => new Animated.Value(1))
   ).current;
@@ -54,18 +104,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   React.useEffect(() => {
     if (isRecording) {
-      // Start looping animations for each bar with improved timing
-      // 创建更平滑的波浪动画效果
       barAnimations.current = barAnimatedValues.map((val, index) => {
-        // 使用正弦波形模式，使相邻的条形动画联动，形成连续波浪
         const phaseOffset = index * (Math.PI / 10);
-        const randomFactor = 0.3 + Math.random() * 0.4; // 随机因子增加自然感
+        const randomFactor = 0.3 + Math.random() * 0.4;
 
         return Animated.loop(
           Animated.sequence([
             Animated.timing(val, {
               toValue: 1.2 + Math.sin(phaseOffset) * randomFactor,
-              duration: 300 + Math.sin(phaseOffset) * 100, // 更长的时间使波浪更平滑
+              duration: 300 + Math.sin(phaseOffset) * 100,
               easing: Easing.inOut(Easing.sin),
               useNativeDriver: true,
             }),
@@ -79,16 +126,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         );
       });
 
-      // 错开动画启动时间，形成完美的波浪效果
       barAnimations.current.forEach((anim, index) => {
         setTimeout(() => anim.start(), index * 15);
       });
     } else {
-      // Stop animations and reset bars
       barAnimations.current.forEach((anim) => anim.stop && anim.stop());
       barAnimatedValues.forEach((v) => v.setValue(1));
     }
-    // Cleanup on unmount
+
     return () => {
       barAnimations.current.forEach((anim) => anim.stop && anim.stop());
     };
@@ -108,10 +153,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         paddingHorizontal="$3"
         paddingVertical="$2"
       >
-        {/* Placeholder / Voice mode */}
         <XStack alignItems="center" paddingVertical="$1">
           {!isTextMode && !isRecording && (
-            /* Camera icon only when voice mode & not recording */
             <Pressable onPress={onImageUpload}>
               <View
                 width={40}
@@ -126,109 +169,135 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </Pressable>
           )}
 
-          {/* Core pressable – stays mounted during recording */}
-          {(!isTextMode || isRecording) && (
-            <Pressable
-              style={{
-                flex: 1,
-                height: 44,
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: isRecording ? "transparent" : "#F3F4F6",
-                borderRadius: isRecording ? 0 : 22,
-                marginHorizontal: 8,
-                paddingHorizontal: isRecording ? 0 : 16,
-              }}
-              android_disableSound
-              delayLongPress={50}
-              onPress={onToggleInputMode}
-              onLongPress={onStartRecording}
-              onPressOut={onStopRecording}
-              pressRetentionOffset={{ top: 30, left: 30, bottom: 30, right: 30 }}
-            >
-              {isRecording ? (
-                <YStack flex={1} justifyContent="center" alignItems="center">
-                  <Text color="$gray9" fontSize={11} marginBottom="$2">
-                    {t("Release to send, slide up to cancel")}
-                  </Text>
-                  <Animated.View
-                    style={{
-                      width: "100%",
-                      paddingVertical: 10,
-                      borderRadius: 20,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      elevation: 2,
-                    }}
-                  >
+          {/* 核心消息输入区域 */}
+          <View
+            flex={1}
+            marginHorizontal="$2"
+            onLayout={handleLayout}
+          >
+            {/* Voice recording UI */}
+            {isRecording ? (
+              <Pressable
+                style={{
+                  height: 80,
+                  backgroundColor: "transparent",
+                  borderRadius: 4,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  paddingVertical: 10,
+                }}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                <Text
+                  color={isCancelZone ? "#FF4D4D" : "$gray9"}
+                  fontSize={11}
+                  marginBottom="$2"
+                  fontWeight={isCancelZone ? "700" : "normal"}
+                >
+                  {isCancelZone
+                    ? t("Release to cancel")
+                    : t("Release to send, slide up to cancel")}
+                </Text>
+
+                <Animated.View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    height: 24,
+                  }}
+                >
+                  {barAnimatedValues.map((val, i) => (
                     <Animated.View
+                      key={i}
                       style={{
-                        flexDirection: "row",
-                        alignItems: "center",
+                        width: i % 4 === 0 ? 1.5 : 2,
+                        height: 10,
+                        marginHorizontal: 1,
+                        backgroundColor: isCancelZone ? "#FF4D4D" : "#999",
+                        borderRadius: 50,
+                        opacity: 0.9,
+                        transform: [{ scaleY: val }],
                       }}
+                    />
+                  ))}
+                </Animated.View>
+              </Pressable>
+            ) : isTextMode ? (
+              /* Text input UI */
+              <View
+                style={{
+                  height: 44,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#F3F4F6",
+                  borderRadius: 22,
+                  paddingHorizontal: 16,
+                }}
+              >
+                <Input
+                  autoFocus
+                  placeholder={
+                    attachments.length > 0
+                      ? t("Enter text or send directly...")
+                      : t("Send a message...")
+                  }
+                  value={inputText}
+                  onChangeText={onChangeText}
+                  multiline={false}
+                  maxLength={1000}
+                  borderWidth={0}
+                  backgroundColor="transparent"
+                  padding="$0"
+                  onSubmitEditing={() => onSend()}
+                  onBlur={() => {
+                    if (!inputText) onToggleInputMode();
+                  }}
+                />
+
+                {inputText.trim().length > 0 && (
+                  <Pressable onPress={onSend} style={{ marginLeft: 4 }}>
+                    <View
+                      width={30}
+                      height={30}
+                      borderRadius={15}
+                      justifyContent="center"
+                      alignItems="center"
+                      backgroundColor="$blue8"
                     >
-                      {barAnimatedValues.map((val, i) => (
-                        <Animated.View
-                          key={i}
-                          style={{
-                            width: i % 4 === 0 ? 1.5 : 2,
-                            height: 10,
-                            marginHorizontal: 1,
-                            backgroundColor: "#999",
-                            borderRadius: 50, // 完全圆角
-                            opacity: 0.9,
-                            transform: [{ scaleY: val }],
-                          }}
-                        />
-                      ))}
-                    </Animated.View>
-                  </Animated.View>
-                </YStack>
-              ) : (
+                      <Send size={16} color="#FFFFFF" />
+                    </View>
+                  </Pressable>
+                )}
+              </View>
+            ) : (
+              /* Voice mode placeholder */
+              <Pressable
+                style={{
+                  height: 44,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#F3F4F6",
+                  borderRadius: 22,
+                  paddingHorizontal: 16,
+                  justifyContent: "space-between"
+                }}
+                onPress={onToggleInputMode}
+                onLongPress={(e: GestureResponderEvent) => {
+                  startY.current = e.nativeEvent.pageY;
+                  onStartRecording()
+                }}
+                delayLongPress={0} // 立即响应长按
+              >
                 <Text fontSize={14} color="$gray9">
                   {t("Send a message or hold to talk...")}
                 </Text>
-              )}
-            </Pressable>
-          )}
+                <Mic size={18} color="#9CA3AF" />
+              </Pressable>
+            )}
+          </View>
 
-          {/* Text mode input field */}
-          {isTextMode && !isRecording && (
-            <View
-              style={{
-                flex: 1,
-                height: 44,
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: "#F3F4F6",
-                borderRadius: 22,
-                paddingHorizontal: 16,
-                marginHorizontal: 8,
-              }}
-            >
-              <Input
-                autoFocus
-                placeholder={
-                  attachments.length > 0
-                    ? t("Enter text or send directly...")
-                    : t("Send a message...")
-                }
-                value={inputText}
-                onChangeText={onChangeText}
-                multiline={false}
-                maxLength={1000}
-                borderWidth={0}
-                backgroundColor="transparent"
-                padding="$0"
-                onSubmitEditing={() => onSend()}
-                onBlur={() => {
-                  if (!inputText) onToggleInputMode();
-                }}
-              />
-            </View>
-          )}
-
-          {/* Plus icon hidden during recording */}
+          {/* Plus button (not visible during recording) */}
           {!isRecording && (
             <Pressable onPress={() => setShowMoreOptions(!showMoreOptions)}>
               <View
@@ -247,24 +316,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </View>
 
       {/* More options modal */}
-      {
-        showMoreOptions && (
-          <MoreOptions
-            onPickImage={() => {
-              setShowMoreOptions(false);
-              onPickImage();
-            }}
-            onTakePhoto={() => {
-              setShowMoreOptions(false);
-              onTakePhoto();
-            }}
-            onFileUpload={() => {
-              setShowMoreOptions(false);
-              onFileUpload();
-            }}
-          />
-        )
-      }
-    </YStack >
+      {showMoreOptions && (
+        <MoreOptions
+          onPickImage={() => {
+            setShowMoreOptions(false);
+            onPickImage();
+          }}
+          onTakePhoto={() => {
+            setShowMoreOptions(false);
+            onTakePhoto();
+          }}
+          onFileUpload={() => {
+            setShowMoreOptions(false);
+            onFileUpload();
+          }}
+        />
+      )}
+    </YStack>
   );
 };

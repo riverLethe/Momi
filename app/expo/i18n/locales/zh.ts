@@ -471,5 +471,6 @@ export default {
     weekly: "每周",
     monthly: "每月",
     yearly: "每年",
+    "Release to cancel": "松开取消",
   },
 };
