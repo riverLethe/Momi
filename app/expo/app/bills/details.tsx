@@ -1,39 +1,29 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Alert,
   ActivityIndicator,
-  Pressable,
   Keyboard,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
-import { ChevronLeft, Trash2 } from "lucide-react-native";
-import {
-  Text,
-  Button,
-  XStack,
-  YStack,
-  Card,
-  Separator,
-  ScrollView,
-  Avatar,
-  Input,
-  Sheet,
-} from "tamagui";
+import { Text, Button, YStack } from "tamagui";
 import { useTranslation } from "react-i18next";
 
 import { Bill } from "@/types/bills.types";
-import { getCategoryById, getCategoryIcon } from "@/constants/categories";
 import { getBills } from "@/utils/bills.utils";
 import { useLocale } from "@/i18n/useLocale";
+import { useBillActions } from "@/hooks/useBillActions";
+import { useData } from "@/providers/DataProvider";
+
+// 导入拆分的组件
+import BillDetailHeader from "@/components/bills/details/BillDetailHeader";
+import BillAmountCard from "@/components/bills/details/BillAmountCard";
+import BillDetailsCard from "@/components/bills/details/BillDetailsCard";
 import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
 import AmountInputSheet from "@/components/ui/AmountInputSheet";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
-import { useBillActions } from "@/hooks/useBillActions";
-import { formatCurrency } from "@/utils/format";
-import { useData } from "@/providers/DataProvider";
 
 export default function BillDetailsScreen() {
   const router = useRouter();
@@ -42,26 +32,21 @@ export default function BillDetailsScreen() {
   const { t } = useTranslation();
   const { locale } = useLocale();
 
+  // 状态管理
   const [activeSheet, setActiveSheet] = useState<
     "date" | "category" | "amount" | null
   >(null);
   const [bill, setBill] = useState<Bill | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [editingMerchant, setEditingMerchant] = useState(false);
-  const [merchantText, setMerchantText] = useState("");
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [notesText, setNotesText] = useState("");
+  const [changeUuid, setChangeUuid] = useState(0);
+
+  // 工具函数
   const { confirmDeleteBill, updateBillField } = useBillActions();
   const { refreshData } = useData();
 
   // Track whether any field has been modified so we refresh once on exit
   const hasChangesRef = useRef(false);
-
-  // long-press handlers
-  const onMerchantLongPress = () => setEditingMerchant(true);
-  const onNotesLongPress = () => setEditingNotes(true);
-  const [changeUuid, setChangeUuid] = useState(0);
 
   // 从本地存储加载账单详情
   useEffect(() => {
@@ -91,13 +76,7 @@ export default function BillDetailsScreen() {
     }
   }, [id, t]);
 
-  useEffect(() => {
-    if (bill) {
-      setMerchantText(bill.merchant || "");
-      setNotesText(bill.notes || "");
-    }
-  }, [bill]);
-
+  // 删除账单处理
   const handleDeletePress = () => {
     if (!bill) return;
 
@@ -116,6 +95,7 @@ export default function BillDetailsScreen() {
     });
   };
 
+  // 更新分类处理
   const handleCategoryChange = async (categoryId: string) => {
     if (!bill) return;
     // 只有当分类实际变化时才更新
@@ -136,6 +116,7 @@ export default function BillDetailsScreen() {
     });
   };
 
+  // 更新字段通用处理
   const handleUpdateField = async (field: keyof Bill, value: any) => {
     if (!bill) return;
     // 只有当值实际变化时才更新
@@ -155,11 +136,6 @@ export default function BillDetailsScreen() {
     });
   };
 
-  // Memoize derived values to avoid recalculations on every render
-  const category = useMemo(() => (bill ? getCategoryById(bill!.category) : null), [bill]);
-  const CategoryIcon = useMemo(() => (bill ? getCategoryIcon(bill!.category) : () => null), [bill]);
-  const formattedAmount = useMemo(() => (bill ? formatCurrency(bill!.amount) : ""), [bill]);
-
   // On unmount, refresh global data once if needed
   useEffect(() => {
     return () => {
@@ -168,6 +144,11 @@ export default function BillDetailsScreen() {
       }
     };
   }, []);
+
+  // Sheet打开处理器
+  const handleOpenCategorySheet = () => setActiveSheet("category");
+  const handleOpenDateSheet = () => setActiveSheet("date");
+  const handleOpenAmountSheet = () => setActiveSheet("amount");
 
   if (loading) {
     return (
@@ -211,256 +192,48 @@ export default function BillDetailsScreen() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
-        <Stack.Screen
-          options={{
-            headerShown: false,
-          }}
-        />
+        <Stack.Screen options={{ headerShown: false }} />
 
         <YStack flex={1}>
-          {/* 自定义标题栏 */}
-          <XStack
-            height="$5"
-            paddingHorizontal="$4"
-            alignItems="center"
-            justifyContent="space-between"
-            backgroundColor="white"
-            borderBottomWidth={1}
-            borderBottomColor="$gray4"
-          >
-            <Button size="$3" circular chromeless onPress={() => router.back()}>
-              <ChevronLeft size={20} color="#64748B" />
-            </Button>
+          {/* 标题栏 */}
+          <BillDetailHeader
+            onBack={() => router.back()}
+            onDelete={handleDeletePress}
+            updating={updating}
+          />
 
-            <Text fontSize="$4" fontWeight="$6">
-              {t("Bill Details")}
-            </Text>
-
-            <XStack gap="$2">
-              <Button
-                size="$3"
-                circular
-                chromeless
-                onPress={handleDeletePress}
-                disabled={updating}
-              >
-                <Trash2 size={20} color={updating ? "#FCA5A5" : "#ef4444"} />
-              </Button>
-            </XStack>
-          </XStack>
           <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior="padding"
             keyboardVerticalOffset={60}
           >
-            <ScrollView flex={1} contentContainerStyle={{ padding: 16 }}>
+            {/* 内容区域 */}
+            <YStack flex={1} padding="$4">
               {/* 金额卡片 */}
-              <Card
-                padding="$5"
-                marginTop="$2"
-                marginBottom="$4"
-                backgroundColor={category!.color}
-                elevate
-              >
-                <Text
-                  fontSize="$3"
-                  fontWeight="$5"
-                  color="white"
-                  opacity={0.85}
-                >
-                  {t("Expense Amount")}
-                </Text>
-                <Button
-                  chromeless
-                  padding="$0"
-                  backgroundColor="transparent"
-                  onPress={() => setActiveSheet("amount")}
-                  disabled={updating}
-                  pressStyle={{
-                    backgroundColor: "transparent",
-                    borderColor: "transparent",
-                    opacity: 0.5,
-                  }}
-                  hitSlop={10}
-                  justifyContent="flex-start"
-                  height="auto"
+              <BillAmountCard
+                bill={bill}
+                updating={updating}
+                onUpdateField={handleUpdateField}
+                onOpenAmountSheet={handleOpenAmountSheet}
+                locale={locale}
+                changeUuid={changeUuid}
+              />
 
-                >
-                  <Text
-                    fontSize="$10"
-                    fontWeight="$8"
-                    color="white"
-                    marginTop="$2"
-                  >
-                    {formattedAmount}
-                  </Text>
-                </Button>
-                <XStack justifyContent="space-between" marginTop="$4">
-                  <Text
-                    fontSize="$3"
-                    fontWeight="$5"
-                    color="white"
-                    opacity={0.85}
-                  >
-                    {bill.merchant || t("-")}
-                  </Text>
-                  <Text
-                    fontSize="$3"
-                    fontWeight="$5"
-                    color="white"
-                    opacity={0.85}
-                  >
-                    {new Date(bill.updatedAt).toLocaleString(locale, {
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                </XStack>
-              </Card>
-
-              {/* 详细信息 */}
-              <Card backgroundColor="white" elevate>
-                <YStack padding="$4" gap="$4">
-                  <XStack justifyContent="space-between" alignItems="center">
-                    <Text color="$gray10" fontSize="$3">
-                      {t("Category")}
-                    </Text>
-                    <Button
-                      chromeless
-                      padding="$0"
-                      backgroundColor="transparent"
-                      onPress={() => setActiveSheet("category")}
-                      disabled={updating}
-                      pressStyle={{
-                        backgroundColor: "transparent",
-                        borderColor: "transparent",
-                        opacity: 0.5,
-                      }}
-                    >
-                      <XStack alignItems="center" gap="$2">
-                        <Avatar
-                          circular
-                          size="$3"
-                          backgroundColor={`${category!.color}20`}
-                        >
-                          <CategoryIcon size={14} color={category!.color} />
-                        </Avatar>
-                        <Text fontSize="$3" fontWeight="$6">
-                          {t(category!.name)}
-                        </Text>
-                      </XStack>
-                    </Button>
-                  </XStack>
-
-                  <Separator />
-
-                  <XStack
-                    justifyContent="space-between"
-                    alignItems="center"
-                    gap="$3"
-                    height="$1"
-                  >
-                    <Text color="$gray10" fontSize="$3">
-                      {t("Merchant")}
-                    </Text>
-                    {editingMerchant ? (
-                      <XStack f={1} position="absolute" right="$0">
-                        <Input
-                          autoFocus
-                          f={1}
-                          value={merchantText}
-                          onChangeText={setMerchantText}
-                          onBlur={() => {
-                            setEditingMerchant(false);
-                            handleUpdateField("merchant", merchantText);
-                          }}
-                          size="$3"
-                          placeholder={t("Enter merchant name")}
-                          width="$15"
-                        />
-                      </XStack>
-                    ) : (
-                      <Pressable onPress={onMerchantLongPress}>
-                        <Text
-                          fontSize="$3"
-                          fontWeight="$6"
-                          color={!bill.merchant ? "$gray6" : "$gray800"}
-                        >
-                          {bill.merchant || t("No content")}
-                        </Text>
-                      </Pressable>
-                    )}
-                  </XStack>
-
-                  <Separator />
-
-                  {/* Record Time (editable) */}
-                  <XStack justifyContent="space-between" alignItems="center">
-                    <Text color="$gray10" fontSize="$3">
-                      {t("Record Time")}
-                    </Text>
-                    <Button
-                      chromeless
-                      padding="$0"
-                      backgroundColor="transparent"
-                      onPress={() => setActiveSheet("date")}
-                      disabled={updating}
-                      pressStyle={{
-                        backgroundColor: "transparent",
-                        borderColor: "transparent",
-                        opacity: 0.5,
-                      }}
-                    > <Text fontSize="$3" fontWeight="$6">
-                        {new Date(bill.date).toLocaleDateString(locale, {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                        })}
-                      </Text></Button>
-                  </XStack>
-
-                  <Separator />
-
-                  <YStack gap="$2">
-                    <Text color="$gray10" fontSize="$3">
-                      {t("Notes")}
-                    </Text>
-                    {editingNotes ? (
-                      <Input
-                        autoFocus
-                        multiline={false}
-                        value={notesText}
-                        onChangeText={setNotesText}
-                        onBlur={() => {
-                          setEditingNotes(false);
-                          handleUpdateField("notes", notesText);
-                        }}
-                        size="$3"
-                        placeholder={t("Enter notes...")}
-                      />
-                    ) : (
-                      <Pressable onPress={onNotesLongPress}>
-                        <Text
-                          fontSize="$3"
-                          color={!bill.notes ? "$gray6" : "$gray800"}
-                          height="$3"
-                          lineHeight="$6"
-                        >
-                          {bill.notes || t("No content")}
-                        </Text>
-                      </Pressable>
-                    )}
-                  </YStack>
-                </YStack>
-              </Card>
-            </ScrollView>
+              {/* 详情卡片 */}
+              <BillDetailsCard
+                bill={bill}
+                updating={updating}
+                onUpdateField={handleUpdateField}
+                onOpenCategorySheet={handleOpenCategorySheet}
+                onOpenDateSheet={handleOpenDateSheet}
+                locale={locale}
+                changeUuid={changeUuid}
+              />
+            </YStack>
           </KeyboardAvoidingView>
         </YStack>
 
-
+        {/* 底部弹窗 */}
         <DatePickerSheet
           open={activeSheet === "date"}
           onOpenChange={(open: boolean) => {
@@ -470,6 +243,7 @@ export default function BillDetailsScreen() {
           onConfirm={(date) => handleUpdateField("date", date)}
           key={`date-${changeUuid}`}
         />
+
         <CategorySelectSheet
           isOpen={activeSheet === "category"}
           setIsOpen={(open: boolean) => {
