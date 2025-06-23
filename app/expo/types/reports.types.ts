@@ -50,6 +50,15 @@ export interface HealthScore {
     savingsRatePct: number;
     recurringCoverDays: number;
   };
+  volatility?: {
+    volatilityPct: number;
+    isHealthy: boolean;
+    details: {
+      score: number;
+      analysis: string;
+      tips: string[];
+    };
+  };
 }
 
 export interface PeriodSelectorData {

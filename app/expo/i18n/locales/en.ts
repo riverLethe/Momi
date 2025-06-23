@@ -501,5 +501,6 @@ export default {
     monthly: "monthly",
     yearly: "yearly",
     "Release to cancel": "Release to cancel",
+    "{{count}} Categories": "{{count}} Categories",
   },
 };

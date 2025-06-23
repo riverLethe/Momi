@@ -38,20 +38,20 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
   const SelectedCategoryName = () => {
     if (categoryFilter.length === 0)
       return (
-        <Text fontSize="$2.5" color="$gray11">
+        <Text fontSize={12} color="$gray11" pointerEvents="none">
           {t("All Categories")}
         </Text>
       );
     if (categoryFilter.length === 1) {
       const name = useTranslatedCategoryName(categoryFilter[0]);
       return (
-        <Text fontSize="$2.5" color="$gray11">
+        <Text fontSize={12} color="$gray11" pointerEvents="none">
           {name}
         </Text>
       );
     }
     return (
-      <Text fontSize="$2.5" color="$gray11">
+      <Text fontSize={12} color="$gray11" pointerEvents="none">
         {t("{{count}} Categories", { count: categoryFilter.length })}
       </Text>
     );
@@ -119,7 +119,7 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
         flex={1}
       >
         <XStack alignItems="flex-start">
-          <Text fontSize="$2.5" color="$gray9">
+          <Text fontSize={12} color="$gray9">
             {t("Total")}: {formatCurrency(totalExpense)}
           </Text>
         </XStack>
@@ -133,7 +133,7 @@ export const FilterWithTotalExpense: React.FC<FilterWithTotalExpenseProps> = ({
               >
                 <XStack gap="$1.5" alignItems="center">
                   <Calendar size={12} color="#777777" />
-                  <Text fontSize="$2.5" color="$gray11">
+                  <Text fontSize={12} color="$gray11" pointerEvents="none">
                     {getDateRangeLabel()}
                   </Text>
                 </XStack>

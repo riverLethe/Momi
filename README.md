@@ -1,7 +1,63 @@
-# MomiQ
+# MomiQ - 智能记账应用
 
-记账类应用，抹掉米饭"引申为花钱，谐音"Money"，年轻化又俏皮。
-“MomiQ” = 一个又可爱又懂你钱包的小饭团，它陪你把每一笔花销都记得清清楚楚，毫无压力。”
+MomiQ是一个基于Turbo Monorepo架构的移动记账应用，集成了AI对账、预算管理、报表分析和家庭共享等功能。
+
+## 项目架构
+
+- **前端**: Expo (React Native) + Tamagui + NativeWind
+- **后端**: Next.js API Routes
+- **数据库**: Turso (分布式SQLite)
+- **架构**: Turborepo Monorepo
+
+## 性能优化
+
+为提高应用性能，特别是本地数据加载速度，我们实现了以下优化:
+
+### 内存缓存层
+
+- 添加了高效的内存缓存(`memoryCache`)系统，位于AsyncStorage上层
+- 避免频繁的AsyncStorage读取操作，显著减少I/O开销
+- 为缓存项设置TTL(生存时间)，确保数据合理更新
+
+### 分段式数据加载
+
+- 实现了数据的分批加载机制，优先加载UI渲染所需的核心数据
+- 次要数据和计算复杂的统计信息在后台异步处理
+- 报表数据使用二阶段渲染，先显示基本图表，然后在不阻塞UI的情况下补充详细信息
+
+### 全局数据状态优化
+
+- 改进`DataProvider`实现细粒度加载状态，允许更精确的UI反馈
+- 单独追踪每种数据类型(账单、交易、预算等)的加载状态
+- 提供针对单一数据类型的刷新函数，避免全局数据重载
+
+### UI体验改进
+
+- 实现了平滑的列表加载效果，使用`FlatList`的`refreshControl`来管理刷新状态
+- 优化了骨架屏和loading状态显示时机，减少用户等待感知
+- 增强了ResponsiveUI反馈，确保即使在数据加载时也保持界面响应性
+
+## 快速开始
+
+1. 克隆项目
+
+```bash
+git clone https://github.com/your-username/momi.git
+cd momi
+```
+
+2. 安装依赖
+
+```bash
+pnpm install
+```
+
+3. 启动应用
+
+```bash
+# 开启Expo开发服务器
+pnpm dev:expo
+```
 
 ## 🏗️ 技术架构
 

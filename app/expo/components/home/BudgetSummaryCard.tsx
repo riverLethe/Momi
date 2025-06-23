@@ -77,6 +77,7 @@ interface BudgetSummaryCardProps {
     remaining: number;
     percentage: number;
     status: BudgetStatusType;
+    healthScore?: HealthScoreDetail;
   };
   bills?: Bill[];
   /** Full budgets detail object including filters */
@@ -196,6 +197,53 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
       : effectiveBudget.status === "warning"
         ? "warning"
         : "good";
+
+  // 渲染健康分数
+  const renderHealthScore = () => {
+    if (!overviewBudget || !overviewBudget.healthScore) return null;
+
+    const { score, status } = overviewBudget.healthScore;
+
+    // 确保状态值有效，并转换为小写以便匹配
+    const safeStatus = (status || 'none').toLowerCase();
+
+    // 根据状态确定颜色
+    let scoreColor = '#64748b'; // 默认灰色
+
+    // 使用明确的状态判断，避免中间状态导致的闪烁
+    switch (safeStatus) {
+      case 'good':
+        scoreColor = '#10b981'; // 绿色
+        break;
+      case 'warning':
+        scoreColor = '#f59e0b'; // 黄色
+        break;
+      case 'danger':
+        scoreColor = '#ef4444'; // 红色
+        break;
+      default:
+        scoreColor = '#64748b'; // 灰色
+    }
+
+    return (
+      <YStack alignItems="center" gap="$1">
+        <Text color="$gray11" fontSize="$3">
+          {t("Financial Health")}
+        </Text>
+        <Text
+          fontSize="$8"
+          fontWeight="bold"
+          color={scoreColor}
+          key={`health-score-${score}-${safeStatus}`} // 添加key确保重新渲染
+        >
+          {score}
+        </Text>
+        <Text color={scoreColor} fontSize="$2" textTransform="uppercase">
+          {t(status || 'none')}
+        </Text>
+      </YStack>
+    );
+  };
 
   return (
     <>

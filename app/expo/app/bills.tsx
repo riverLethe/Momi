@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { ActivityIndicator, StyleSheet, FlatList } from "react-native";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { ActivityIndicator, StyleSheet, FlatList, View } from "react-native";
 import { Text } from "tamagui";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, XStack, YStack } from "tamagui";
@@ -41,7 +41,6 @@ export default function BillsScreen() {
   const [keywordFilter, setKeywordFilter] = useState<string | null>(null);
   const [minAmount, setMinAmount] = useState<number | null>(null);
   const [maxAmount, setMaxAmount] = useState<number | null>(null);
-  const [dateField, setDateField] = useState<"date" | "createdAt" | "updatedAt">("date");
 
   // Detect AI filter params from route
   const params = useLocalSearchParams();
@@ -80,10 +79,6 @@ export default function BillsScreen() {
       if (!isNaN(v)) setMaxAmount(v);
     }
 
-    // Date field
-    if (typeof params.dateField === "string" && ["date", "createdAt", "updatedAt"].includes(params.dateField)) {
-      setDateField(params.dateField as any);
-    }
   }, []); // run once on mount
 
   // Sync with remote data if authenticated
@@ -277,7 +272,7 @@ export default function BillsScreen() {
         {
           /* When there is no data yet, show loading or empty state */
           bills.length === 0 ? (
-            isLoading || syncingRemote ? (
+            isLoading.bills || syncingRemote ? (
               <YStack flex={1} justifyContent="center" alignItems="center">
                 <ActivityIndicator size="large" color="#3B82F6" />
               </YStack>
@@ -348,6 +343,15 @@ export default function BillsScreen() {
 
 
               {/* Bills List */}
+              {
+                (categoryFilter.length > 0 || aiFilterActive || (startDate || endDate)) && filteredBills.length === 0 && (
+                  <YStack flex={1} alignItems="center" justifyContent="center" padding={16}>
+                    <Text fontSize="$6" fontWeight="bold" textAlign="center" mb="$2">
+                      {t("No Bills Found")}
+                    </Text>
+                  </YStack>
+                )
+              }
               <FlatList<(typeof billGroups)[0]>
                 data={billGroups}
                 renderItem={renderDateGroup}
@@ -356,7 +360,11 @@ export default function BillsScreen() {
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
                 onRefresh={handleRefresh}
-                refreshing={isLoading || syncingRemote}
+                refreshing={isLoading.bills || syncingRemote}
+                initialNumToRender={8}
+                maxToRenderPerBatch={5}
+                windowSize={7}
+                removeClippedSubviews={true}
               />
             </>
           )

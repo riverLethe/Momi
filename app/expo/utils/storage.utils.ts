@@ -14,14 +14,22 @@ export const STORAGE_KEYS = {
   NOTIFICATION_SETTINGS: "momiq_notification_settings",
 };
 
-//todo: remove this after migration
-// Utility: given a new-format key, derive its legacy counterpart (if any)
-const deriveLegacyKey = (key: string): string | null => {
-  if (key.startsWith("momiq_")) {
-    return key.replace("momiq_", "momi_");
-  }
-  return null;
-};
+// Legacy key mapping for backward compatibility
+function deriveLegacyKey(key: string): string | null {
+  const mapping: Record<string, string> = {
+    [STORAGE_KEYS.BILLS]: "bills",
+    [STORAGE_KEYS.TRANSACTIONS]: "transactions",
+    [STORAGE_KEYS.USER_PREFERENCES]: "user_preferences",
+    [STORAGE_KEYS.BUDGETS]: "budgets",
+  };
+  return mapping[key] || null;
+}
+
+// 内存缓存，减少对AsyncStorage的访问
+const memoryCache: Record<string, { data: any; timestamp: number }> = {};
+
+// 缓存过期时间 (毫秒)
+const CACHE_TTL = 30000; // 30秒
 
 // Regular storage for non-sensitive data
 export const storage = {
@@ -32,6 +40,12 @@ export const storage = {
     try {
       const jsonValue = JSON.stringify(value);
       await AsyncStorage.setItem(key, jsonValue);
+
+      // 同时更新内存缓存
+      memoryCache[key] = {
+        data: value,
+        timestamp: Date.now(),
+      };
     } catch (error) {
       console.error(`Error storing ${key}:`, error);
       throw error;
@@ -43,13 +57,27 @@ export const storage = {
    */
   getItem: async <T>(key: string): Promise<T | null> => {
     try {
-      // 1. Try to read using the new key
-      const jsonValue = await AsyncStorage.getItem(key);
-      if (jsonValue != null) {
-        return JSON.parse(jsonValue);
+      // 1. 检查内存缓存是否存在且未过期
+      const cachedItem = memoryCache[key];
+      if (cachedItem && Date.now() - cachedItem.timestamp < CACHE_TTL) {
+        return cachedItem.data;
       }
 
-      // 2. Fallback to legacy key if data under new key is missing
+      // 2. 如果没有缓存或已过期，尝试从AsyncStorage读取
+      const jsonValue = await AsyncStorage.getItem(key);
+      if (jsonValue != null) {
+        const parsedData = JSON.parse(jsonValue);
+
+        // 更新内存缓存
+        memoryCache[key] = {
+          data: parsedData,
+          timestamp: Date.now(),
+        };
+
+        return parsedData;
+      }
+
+      // 3. Fallback to legacy key if data under new key is missing
       const legacyKey = deriveLegacyKey(key);
       if (legacyKey) {
         const legacyValue = await AsyncStorage.getItem(legacyKey);
@@ -57,7 +85,16 @@ export const storage = {
           // Migrate data to the new key asynchronously (fire-and-forget)
           AsyncStorage.setItem(key, legacyValue).catch(() => {});
           AsyncStorage.removeItem(legacyKey).catch(() => {});
-          return JSON.parse(legacyValue);
+
+          const parsedLegacyData = JSON.parse(legacyValue);
+
+          // 更新内存缓存
+          memoryCache[key] = {
+            data: parsedLegacyData,
+            timestamp: Date.now(),
+          };
+
+          return parsedLegacyData;
         }
       }
 
@@ -74,6 +111,11 @@ export const storage = {
   removeItem: async (key: string): Promise<void> => {
     try {
       await AsyncStorage.removeItem(key);
+
+      // 同时从内存缓存中删除
+      if (key in memoryCache) {
+        delete memoryCache[key];
+      }
     } catch (error) {
       console.error(`Error removing ${key}:`, error);
       throw error;
@@ -86,23 +128,46 @@ export const storage = {
   clear: async (): Promise<void> => {
     try {
       await AsyncStorage.clear();
+
+      // 清空内存缓存
+      Object.keys(memoryCache).forEach((key) => {
+        delete memoryCache[key];
+      });
     } catch (error) {
       console.error("Error clearing storage:", error);
       throw error;
     }
+  },
+
+  /**
+   * Invalidate memory cache for a specific key
+   */
+  invalidateCache: (key: string): void => {
+    if (key in memoryCache) {
+      delete memoryCache[key];
+    }
+  },
+
+  /**
+   * Invalidate all memory caches
+   */
+  invalidateAllCaches: (): void => {
+    Object.keys(memoryCache).forEach((key) => {
+      delete memoryCache[key];
+    });
   },
 };
 
 // Secure storage for sensitive data
 export const secureStorage = {
   /**
-   * Store sensitive data in secure storage
+   * Store sensitive data securely
    */
   setItem: async (key: string, value: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(key, value);
     } catch (error) {
-      console.error(`Error storing ${key} securely:`, error);
+      console.error(`Error storing secure ${key}:`, error);
       throw error;
     }
   },
@@ -112,27 +177,9 @@ export const secureStorage = {
    */
   getItem: async (key: string): Promise<string | null> => {
     try {
-      // 1. Attempt to fetch using the new key
-      const value = await SecureStore.getItemAsync(key);
-      if (value != null) {
-        return value;
-      }
-
-      // 2. Fallback to legacy key
-      const legacyKey = deriveLegacyKey(key);
-      if (legacyKey) {
-        const legacyValue = await SecureStore.getItemAsync(legacyKey);
-        if (legacyValue != null) {
-          // Migrate to the new key (fire-and-forget)
-          SecureStore.setItemAsync(key, legacyValue).catch(() => {});
-          SecureStore.deleteItemAsync(legacyKey).catch(() => {});
-          return legacyValue;
-        }
-      }
-
-      return null;
+      return await SecureStore.getItemAsync(key);
     } catch (error) {
-      console.error(`Error retrieving ${key} securely:`, error);
+      console.error(`Error retrieving secure ${key}:`, error);
       return null;
     }
   },
@@ -144,7 +191,7 @@ export const secureStorage = {
     try {
       await SecureStore.deleteItemAsync(key);
     } catch (error) {
-      console.error(`Error removing ${key} securely:`, error);
+      console.error(`Error removing secure ${key}:`, error);
       throw error;
     }
   },

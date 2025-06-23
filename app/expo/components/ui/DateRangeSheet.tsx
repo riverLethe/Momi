@@ -143,6 +143,8 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
   const clearDates = () => {
     setStartDate(null);
     setEndDate(null);
+    onApply(null, null);
+    setIsOpen(false);
   };
 
   const setPreset = (start: Date, end: Date) => {
@@ -365,12 +367,14 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
                 {t("This Year")}
               </Button>
             </XStack> */}
-            {/* <Button theme="outline" onPress={clearDates}>
-              {t("Clear Dates")}
-            </Button> */}
-            <Button theme={"blue" as any} onPress={applyAndClose}>
-              {t("Apply")}
-            </Button>
+            <XStack space="$3">
+              <Button flex={1} theme={"gray" as any} onPress={clearDates}>
+                {t("Clear")}
+              </Button>
+              <Button flex={1} theme={"blue" as any} onPress={applyAndClose}>
+                {t("Apply")}
+              </Button>
+            </XStack>
           </YStack>
         </YStack>
       </Sheet.Frame>

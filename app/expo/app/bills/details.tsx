@@ -7,7 +7,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams, Stack } from "expo-router";
+import { useRouter, useLocalSearchParams, Stack, useFocusEffect } from "expo-router";
 import { Text, Button, YStack } from "tamagui";
 import { useTranslation } from "react-i18next";
 
@@ -25,6 +25,12 @@ import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
 import AmountInputSheet from "@/components/ui/AmountInputSheet";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
 
+// 账单详情缓存
+const billDetailsCache: Record<string, {
+  bill: Bill;
+  timestamp: number;
+}> = {};
+
 export default function BillDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -36,45 +42,99 @@ export default function BillDetailsScreen() {
   const [activeSheet, setActiveSheet] = useState<
     "date" | "category" | "amount" | null
   >(null);
-  const [bill, setBill] = useState<Bill | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(false); // 默认不显示加载状态
   const [updating, setUpdating] = useState(false);
   const [changeUuid, setChangeUuid] = useState(0);
+  const [bill, setBill] = useState<Bill | null>(null);
 
   // 工具函数
   const { confirmDeleteBill, updateBillField } = useBillActions();
-  const { refreshData } = useData();
+  const { refreshData, bills } = useData();
 
   // Track whether any field has been modified so we refresh once on exit
   const hasChangesRef = useRef(false);
+  const isMounted = useRef(true);
 
-  // 从本地存储加载账单详情
-  useEffect(() => {
-    const loadBill = async () => {
-      try {
-        setLoading(true);
-        const bills = await getBills();
-        const foundBill = bills.find((b) => b.id === id);
 
-        if (foundBill) {
-          setBill(foundBill);
-        } else {
-          // 如果找不到账单，返回上一页
-          Alert.alert(t("Error"), t("Bill not found"));
-          router.back();
+  // 优先从缓存加载数据，然后再从bills中查找
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadBillDetails = async () => {
+        if (!id) return;
+
+        // 先检查缓存
+        const cachedBill = billDetailsCache[id as string];
+        if (cachedBill && Date.now() - cachedBill.timestamp < 60000) {
+          setBill(cachedBill.bill);
+          return;
         }
-      } catch (error) {
-        console.error("Failed to load bill:", error);
-        Alert.alert(t("Error"), t("Failed to load bill"));
-      } finally {
-        setLoading(false);
+
+        // 如果没有缓存，则显示加载状态
+        if (!bill) {
+          setLoading(true);
+        }
+
+        try {
+          // 首先尝试从全局状态中查找账单
+          if (bills.length > 0) {
+            const foundBill = bills.find(b => b.id === id);
+            if (foundBill) {
+              setBill(foundBill);
+              // 更新缓存
+              billDetailsCache[id as string] = {
+                bill: foundBill,
+                timestamp: Date.now()
+              };
+              setLoading(false);
+              return;
+            }
+          }
+
+          // 如果全局状态中没有，再从存储中查找
+          const allBills = await getBills();
+          const foundBill = allBills.find((b) => b.id === id);
+          if (foundBill) {
+            setBill(foundBill);
+            // 更新缓存
+            billDetailsCache[id as string] = {
+              bill: foundBill,
+              timestamp: Date.now()
+            };
+          } else {
+            setBill(null);
+          }
+        } catch (error) {
+          console.error("Failed to fetch bill:", error);
+        } finally {
+          if (isMounted.current) {
+            setLoading(false);
+          }
+        }
+      };
+
+      loadBillDetails();
+
+      return () => {
+        // 页面失去焦点时更新缓存时间戳
+        if (bill) {
+          billDetailsCache[id as string] = {
+            bill,
+            timestamp: Date.now()
+          };
+        }
+      };
+    }, [id, bills])
+  );
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      if (hasChangesRef.current) {
+        refreshData().catch(() => { });
       }
     };
-
-    if (id) {
-      loadBill();
-    }
-  }, [id, t]);
+  }, []);
 
   // 删除账单处理
   const handleDeletePress = () => {
@@ -85,6 +145,8 @@ export default function BillDetailsScreen() {
       onSuccess: () => {
         hasChangesRef.current = true; // deletion changes list too
         setUpdating(false);
+        // 删除缓存
+        if (id) delete billDetailsCache[id as string];
         router.back();
       },
       onError: () => {
@@ -107,6 +169,13 @@ export default function BillDetailsScreen() {
     updateBillField(bill, "category", categoryId, {
       onSuccess: (updated) => {
         setBill(updated);
+        // 更新缓存
+        if (id) {
+          billDetailsCache[id as string] = {
+            bill: updated,
+            timestamp: Date.now()
+          };
+        }
         setUpdating(false);
         setChangeUuid(prev => prev + 1);
         hasChangesRef.current = true;
@@ -127,6 +196,13 @@ export default function BillDetailsScreen() {
     updateBillField(bill, field, value, {
       onSuccess: (updated) => {
         setBill(updated);
+        // 更新缓存
+        if (id) {
+          billDetailsCache[id as string] = {
+            bill: updated,
+            timestamp: Date.now()
+          };
+        }
         setUpdating(false);
         setChangeUuid(prev => prev + 1);
         hasChangesRef.current = true;
@@ -135,15 +211,6 @@ export default function BillDetailsScreen() {
       ignoreRefresh: true,
     });
   };
-
-  // On unmount, refresh global data once if needed
-  useEffect(() => {
-    return () => {
-      if (hasChangesRef.current) {
-        refreshData().catch(() => { });
-      }
-    };
-  }, []);
 
   // Sheet打开处理器
   const handleOpenCategorySheet = () => setActiveSheet("category");

@@ -202,5 +202,6 @@ export default {
     "Your weekly report is ready": "Tu informe semanal está listo",
     Or: "O",
     "Release to cancel": "Suelta para cancelar",
+    "{{count}} Categories": "{{count}} Categorías",
   },
 };

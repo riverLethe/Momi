@@ -472,5 +472,6 @@ export default {
     monthly: "每月",
     yearly: "每年",
     "Release to cancel": "松开取消",
+    "{{count}} Categories": "{{count}} 分类",
   },
 };

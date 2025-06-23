@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ScrollView,
   ActivityIndicator,
@@ -43,10 +43,9 @@ export default function HomeScreen() {
   const { t } = useTranslation();
 
   // Data -------------------------------------------------------------------
-  const { bills, transactions, refreshData, dataVersion } =
+  const { bills, transactions, refreshData } =
     useData();
   const { budgets, saveBudgetForPeriod } = useBudgets();
-
 
   // Reports & Period management -------------------------------------------
   const {
@@ -57,8 +56,8 @@ export default function HomeScreen() {
     setSelectedPeriodId,
     reportData,
     loadingReport,
-    loadReportData,
-    onLoadReportData
+    refreshReport,
+    isChangingPeriodType
   } = useReportData(viewMode);
 
   // Category filters -------------------------------------------------------
@@ -91,7 +90,7 @@ export default function HomeScreen() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refreshData();
-    await loadReportData();
+    await refreshReport();
     setIsRefreshing(false);
   };
 
@@ -109,7 +108,7 @@ export default function HomeScreen() {
       }
 
       // Refresh statistics so UI reflects latest budgets & filters
-      await onLoadReportData();
+      await refreshReport();
     } catch (error) {
       console.error("Failed to save budgets:", error);
     } finally {
@@ -144,13 +143,6 @@ export default function HomeScreen() {
 
   // Sync iOS budget widgets
   useBudgetWidgetSync(reportData, periodType, viewMode);
-
-  // Reload report when underlying data (bills/transactions) refreshes
-  useEffect(() => {
-    // Avoid initial run duplicating load; rely on hook init (already loads)
-    if (!dataVersion) return
-    loadReportData();
-  }, [dataVersion]);
 
   /* --------------------------- Swipe gestures --------------------------- */
   const periodOrder = [
@@ -191,6 +183,10 @@ export default function HomeScreen() {
 
   const swipeGesture = Gesture.Simultaneous(swipeLeft, swipeRight);
 
+  // 优化加载体验 - 只在首次加载或刷新时显示完整加载状态
+  const shouldShowFullLoading = loadingReport && !isChangingPeriodType && !reportData;
+  const shouldShowMinimalLoading = loadingReport && isChangingPeriodType;
+
   const mainContent = hasBills ? (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
       <YStack flex={1}>
@@ -218,13 +214,14 @@ export default function HomeScreen() {
             />
           }
         >
-          {loadingReport && !isRefreshing ? (
+          {/* 改进加载状态显示 */}
+          {shouldShowFullLoading ? (
             <YStack alignItems="center" justifyContent="center" paddingVertical="$4">
               <ActivityIndicator size="large" color="#3B82F6" />
               <Text marginTop="$2">{t("Loading...")}</Text>
             </YStack>
           ) : (
-            <YStack gap="$3">
+            <YStack gap="$3" opacity={shouldShowMinimalLoading ? 0.7 : 1}>
               <BudgetSummaryCard
                 budgetStatus={budgetStatus}
                 categories={categories}
@@ -246,7 +243,8 @@ export default function HomeScreen() {
                 onChatPress={handleBudgetFinancialInsights}
               />
 
-              {reportData && (
+              {/* 即使reportData不完整也显示图表，避免长时间白屏 */}
+              {reportData ? (
                 <>
                   <EnhancedDonutChart data={reportData.categoryData || []} />
                   <ExpenseTrendChart
@@ -254,6 +252,10 @@ export default function HomeScreen() {
                     averageSpending={reportData.averageSpending || 0}
                   />
                 </>
+              ) : (
+                <YStack alignItems="center" padding="$6">
+                  <Text color="$gray9">{t("No data available")}</Text>
+                </YStack>
               )}
 
               <RecentBillsList

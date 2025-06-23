@@ -13,12 +13,14 @@ export async function syncBudgetWidgets(
     viewMode?: "personal" | "family";
     currentReportData?: ReportData | null;
     currentPeriodType?: DatePeriodEnum;
+    isDarkMode?: boolean;
   } = {}
 ): Promise<void> {
   const {
     viewMode = "personal",
     currentReportData,
     currentPeriodType,
+    isDarkMode = false,
   } = options;
 
   const mappings: Array<{
@@ -35,6 +37,10 @@ export async function syncBudgetWidgets(
     if (key === "month") return i18n.t("Month Health Score");
     return i18n.t("Year Health Score"); // Same label, but kept for future localisation
   };
+
+  // Since iOS widgets typically display on light backgrounds (even in dark mode),
+  // we'll use appropriate text color based on system theme
+  const textColor = isDarkMode ? "#FFFFFF" : "#000000";
 
   await Promise.all(
     mappings.map(async ({ key, type }) => {
@@ -80,7 +86,7 @@ export async function syncBudgetWidgets(
           name: i18n.t("Total Budget"),
           amountText: formatCurrency(total),
           percent: 0,
-          color: "#000000",
+          color: textColor, // Using color based on iOS system theme
         },
         spentItem,
         remainingItem,
