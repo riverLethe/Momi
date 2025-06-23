@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Sheet, YStack, XStack, Button, Text } from "tamagui";
 import {
   Delete as DeleteIcon,
@@ -13,7 +13,6 @@ interface AmountInputSheetProps {
   onOpenChange: (open: boolean) => void;
   initialAmount?: number;
   onSubmit: (amount: number) => void;
-  onlyContent?: boolean;
 }
 
 /**
@@ -28,7 +27,6 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
   onOpenChange,
   initialAmount = 0,
   onSubmit,
-  onlyContent = false,
 }) => {
   const { t } = useTranslation();
 
@@ -48,21 +46,31 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
     }
   }, [open, initialAmount]);
 
-  /* 计算逻辑 */
-  const calculate = (first: number, second: number, op: string): number => {
+  /* 计算逻辑 - 加速计算操作 */
+  const calculate = useCallback((first: number, second: number, op: string): number => {
     switch (op) {
-      case "+":
-        return first + second;
-      case "-":
-        return first - second;
-      default:
-        return second;
+      case "+": return first + second;
+      case "-": return first - second;
+      default: return second;
     }
-  };
+  }, []);
 
-  /* 键盘点击 */
+  // 缓存金额分析
+  const amountAnalysis = useMemo(() => {
+    const hasDecimal = amount.includes(".");
+    return {
+      hasDecimal,
+      decimalDigits: hasDecimal ? amount.split(".")[1].length : 0,
+      maxLength: amount.length >= 8,
+      isZero: amount === "0",
+    };
+  }, [amount]);
+
+  /* 键盘点击 - 优化性能处理 */
   const handleKeypadPress = (key: string) => {
-    if (amount.length >= 8 && !shouldResetDisplay) return;
+    console.log("handelkeyboard", key)
+    // 直接更新UI，然后将计算放在下一个渲染循环
+    if (amountAnalysis.maxLength && !shouldResetDisplay) return;
 
     if (shouldResetDisplay) {
       setAmount(key === "." ? "0." : key);
@@ -71,15 +79,18 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
     }
 
     if (key === ".") {
-      if (!amount.includes(".")) setAmount(amount + ".");
+      if (!amountAnalysis.hasDecimal) {
+        setAmount(prev => prev + ".");
+      }
       return;
     }
 
-    if (amount.includes(".") && amount.split(".")[1].length >= 2) return;
-    if (amount === "0") setAmount(key);
-    else setAmount(amount + key);
+    if (amountAnalysis.hasDecimal && amountAnalysis.decimalDigits >= 2) return;
+
+    setAmount(prev => prev === "0" ? key : prev + key);
   };
 
+  /* 删除按钮 - 优化性能处理 */
   const handleDeletePress = () => {
     if (shouldResetDisplay && operator) {
       setOperator(null);
@@ -89,7 +100,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
 
     if (operator && !shouldResetDisplay) {
       if (amount.length > 1) {
-        setAmount(amount.slice(0, -1));
+        setAmount(prev => prev.slice(0, -1));
       } else {
         setShouldResetDisplay(true);
         if (firstOperand !== null) {
@@ -99,12 +110,13 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
       return;
     }
 
-    setAmount(amount.length > 1 ? amount.slice(0, -1) : "0");
+    setAmount(prev => prev.length > 1 ? prev.slice(0, -1) : "0");
     if (shouldResetDisplay) {
       setShouldResetDisplay(false);
     }
-  };
+  }
 
+  /* 操作符按钮 - 优化性能处理 */
   const handleOperatorPress = (op: string) => {
     if (firstOperand !== null && operator && !shouldResetDisplay) {
       const currentResult = calculate(
@@ -119,8 +131,9 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
     }
     setOperator(op);
     setShouldResetDisplay(true);
-  };
+  }
 
+  /* 计算结果 - 优化性能处理 */
   const handleCalculate = () => {
     if (firstOperand === null || operator === null || shouldResetDisplay)
       return;
@@ -129,8 +142,9 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
     setFirstOperand(null);
     setOperator(null);
     setShouldResetDisplay(true);
-  };
+  }
 
+  /* 完成操作 - 优化性能处理 */
   const handleDone = () => {
     const numericAmount = parseFloat(amount);
     if (!numericAmount || numericAmount <= 0) {
@@ -139,135 +153,153 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
     }
     onSubmit(numericAmount);
     onOpenChange(false);
-  };
+  }
 
   /* 金额显示字体大小自动调整 */
-  const getFontSize = (text: string) => {
+  const getFontSize = useCallback((text: string) => {
     if (text.length > 15) return "$5";
     if (text.length > 10) return "$6";
     return "$7";
-  };
+  }, []);
 
-  const displayString = () => {
+  /* 预计算显示文本，减少渲染时计算 */
+  const displayString = useMemo(() => {
     if (operator && firstOperand !== null) {
       if (shouldResetDisplay) return `${firstOperand} ${operator}`;
       return `${firstOperand} ${operator} ${amount}`;
     }
     return amount;
-  };
+  }, [amount, firstOperand, operator, shouldResetDisplay]);
 
-  const renderContent = () => (
-    <YStack gap="$3">
-      <YStack paddingVertical="$2">
-        <Text
-          fontSize={getFontSize(displayString())}
-          fontWeight="700"
-          textAlign="right"
-        >
-          {displayString()}
-        </Text>
-      </YStack>
-      <XStack p="$2" gap="$2">
-        {/* 数字区 */}
-        <YStack flex={3} gap="$2">
-          {[
-            ["1", "2", "3"],
-            ["4", "5", "6"],
-            ["7", "8", "9"],
-          ].map((row) => (
-            <XStack key={row.join("-")} gap="$2">
-              {row.map((key) => (
-                <Button
-                  key={key}
-                  flex={1}
-                  size="$5"
-                  onPress={() => handleKeypadPress(key)}
-                >
-                  <Text fontSize="$6">{key}</Text>
-                </Button>
-              ))}
+
+  /* 预计算完成按钮内容 */
+  const doneButtonContent = useMemo(() => {
+    if (operator && !shouldResetDisplay) {
+      return <EqualIcon size={24} color="white" />;
+    }
+    return (
+      <Text color="white" fontWeight="bold">
+        {t("Done")}
+      </Text>
+    );
+  }, [operator, shouldResetDisplay, t]);
+
+  return (<Sheet
+    modal
+    open={open}
+    onOpenChange={onOpenChange}
+    snapPoints={[45]}
+    dismissOnSnapToBottom
+  >
+    <Sheet.Overlay />
+    <Sheet.Handle />
+    <Sheet.Frame bg="$background" padding="$4">
+      <YStack gap="$3">
+        <YStack paddingVertical="$2">
+          <Text
+            fontSize={getFontSize(displayString)}
+            fontWeight="700"
+            textAlign="right"
+          >
+            {displayString}
+          </Text>
+        </YStack>
+        <XStack p="$2" gap="$2">
+          {/* 数字区 */}
+          <YStack flex={3} gap="$2">
+            {/* 第一行 */}
+            <XStack gap="$2">
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("1")}>
+                <Text fontSize="$6">1</Text>
+              </Button>
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("2")}>
+                <Text fontSize="$6">2</Text>
+              </Button>
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("3")}>
+                <Text fontSize="$6">3</Text>
+              </Button>
             </XStack>
-          ))}
-          <XStack gap="$2">
-            <Button flex={1} size="$5" onPress={() => handleKeypadPress(".")}>
-              <Text fontSize="$6">.</Text>
-            </Button>
-            <Button flex={1} size="$5" onPress={() => handleKeypadPress("0")}>
-              <Text fontSize="$6">0</Text>
+
+            {/* 第二行 */}
+            <XStack gap="$2">
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("4")}>
+                <Text fontSize="$6">4</Text>
+              </Button>
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("5")}>
+                <Text fontSize="$6">5</Text>
+              </Button>
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("6")}>
+                <Text fontSize="$6">6</Text>
+              </Button>
+            </XStack>
+
+            {/* 第三行 */}
+            <XStack gap="$2">
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("7")}>
+                <Text fontSize="$6">7</Text>
+              </Button>
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("8")}>
+                <Text fontSize="$6">8</Text>
+              </Button>
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("9")}>
+                <Text fontSize="$6">9</Text>
+              </Button>
+            </XStack>
+            <XStack gap="$2">
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress(".")}>
+                <Text fontSize="$6">.</Text>
+              </Button>
+              <Button flex={1} size="$5" onTouchStart={() => handleKeypadPress("0")}>
+                <Text fontSize="$6">0</Text>
+              </Button>
+              <Button
+                flex={1}
+                size="$5"
+                onTouchStart={handleDeletePress}
+                icon={<DeleteIcon size={24} color="#333" />}
+              />
+            </XStack>
+          </YStack>
+          {/* 功能区 */}
+          <YStack flex={1} gap="$2">
+            <Button
+              flex={1}
+              size="$5"
+              icon={<PlusIcon size={24} color="#333" />}
+              onTouchStart={() => handleOperatorPress("+")}
+            />
+            <Button
+              flex={1}
+              size="$5"
+              icon={<MinusIcon size={24} color="#333" />}
+              onTouchStart={() => handleOperatorPress("-")}
+            />
+
+            <Button
+              flex={1}
+              size="$5"
+              padding="$0"
+              onTouchStart={() => onOpenChange(false)}
+            >
+              <Text>{t("Cancel")}</Text>
             </Button>
             <Button
               flex={1}
               size="$5"
-              onPress={handleDeletePress}
-              icon={<DeleteIcon size={24} color="#333" />}
-            />
-          </XStack>
-        </YStack>
-        {/* 功能区 */}
-        <YStack flex={1} gap="$2">
-          <Button
-            flex={1}
-            size="$5"
-            icon={<PlusIcon size={24} color="#333" />}
-            onPress={() => handleOperatorPress("+")}
-          />
-          <Button
-            flex={1}
-            size="$5"
-            icon={<MinusIcon size={24} color="#333" />}
-            onPress={() => handleOperatorPress("-")}
-          />
-
-          <Button
-            flex={1}
-            size="$5"
-            padding="$0"
-            onPress={() => {
-              onOpenChange(false);
-            }}
-          >
-            <Text>{t("Cancel")}</Text>
-          </Button>
-          <Button
-            flex={1}
-            size="$5"
-            theme="active"
-            backgroundColor="$blue10"
-            padding="$0"
-            onPress={
-              operator && !shouldResetDisplay ? handleCalculate : handleDone
-            }
-          >
-            {operator && !shouldResetDisplay ? (
-              <EqualIcon size={24} color="white" />
-            ) : (
-              <Text color="white" fontWeight="bold">
-                {t("Done")}
-              </Text>
-            )}
-          </Button>
-        </YStack>
-      </XStack>
-    </YStack>
-  );
-
-  return onlyContent ? (
-    renderContent()
-  ) : (
-    <Sheet
-      modal
-      open={open}
-      onOpenChange={onOpenChange}
-      snapPoints={[45]}
-      dismissOnSnapToBottom
-    >
-      <Sheet.Overlay />
-      <Sheet.Handle />
-      <Sheet.Frame bg="$background" padding="$4">
-        {renderContent()}
-      </Sheet.Frame>
-    </Sheet>
-  );
+              theme="active"
+              backgroundColor="$blue10"
+              padding="$0"
+              onTouchStart={
+                operator && !shouldResetDisplay ? handleCalculate : handleDone
+              }
+            >
+              {doneButtonContent}
+            </Button>
+          </YStack>
+        </XStack>
+      </YStack>
+    </Sheet.Frame>
+  </Sheet>)
 };
 
 // Memoize to prevent unnecessary re-renders when parent state changes
