@@ -45,8 +45,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const { t } = useTranslation();
   const [showMoreOptions, setShowMoreOptions] = React.useState(false);
 
-  /* Waveform animation setup */
-  const BAR_COUNT = 50;
+  /* Waveform animation setup - smoother wave effect */
+  const BAR_COUNT = 50; // 增加数量以获得更连续的效果
   const barAnimatedValues = React.useRef(
     Array.from({ length: BAR_COUNT }, () => new Animated.Value(1))
   ).current;
@@ -54,26 +54,35 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   React.useEffect(() => {
     if (isRecording) {
-      // Start looping animations for each bar
-      barAnimations.current = barAnimatedValues.map((val) =>
-        Animated.loop(
+      // Start looping animations for each bar with improved timing
+      // 创建更平滑的波浪动画效果
+      barAnimations.current = barAnimatedValues.map((val, index) => {
+        // 使用正弦波形模式，使相邻的条形动画联动，形成连续波浪
+        const phaseOffset = index * (Math.PI / 10);
+        const randomFactor = 0.3 + Math.random() * 0.4; // 随机因子增加自然感
+
+        return Animated.loop(
           Animated.sequence([
             Animated.timing(val, {
-              toValue: Math.random() * 1.5 + 1.2,
-              duration: 200 + Math.random() * 150,
-              easing: Easing.linear,
+              toValue: 1.2 + Math.sin(phaseOffset) * randomFactor,
+              duration: 300 + Math.sin(phaseOffset) * 100, // 更长的时间使波浪更平滑
+              easing: Easing.inOut(Easing.sin),
               useNativeDriver: true,
             }),
             Animated.timing(val, {
-              toValue: 1,
-              duration: 200 + Math.random() * 150,
-              easing: Easing.linear,
+              toValue: 0.8 + Math.cos(phaseOffset) * randomFactor,
+              duration: 300 + Math.cos(phaseOffset) * 100,
+              easing: Easing.inOut(Easing.sin),
               useNativeDriver: true,
             }),
           ])
-        )
-      );
-      barAnimations.current.forEach((anim) => anim.start());
+        );
+      });
+
+      // 错开动画启动时间，形成完美的波浪效果
+      barAnimations.current.forEach((anim, index) => {
+        setTimeout(() => anim.start(), index * 15);
+      });
     } else {
       // Stop animations and reset bars
       barAnimations.current.forEach((anim) => anim.stop && anim.stop());
@@ -131,23 +140,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 paddingHorizontal: isRecording ? 0 : 16,
               }}
               android_disableSound
-              delayLongPress={100}
+              delayLongPress={50}
               onPress={onToggleInputMode}
               onLongPress={onStartRecording}
               onPressOut={onStopRecording}
+              pressRetentionOffset={{ top: 30, left: 30, bottom: 30, right: 30 }}
             >
               {isRecording ? (
                 <YStack flex={1} justifyContent="center" alignItems="center">
-                  <Text color="$gray9" fontSize={10} marginBottom="$2">
+                  <Text color="$gray9" fontSize={11} marginBottom="$2">
                     {t("Release to send, slide up to cancel")}
                   </Text>
-                  <View
-                    width="90%"
-                    paddingVertical={10}
-                    backgroundColor="$blue9"
-                    borderRadius={20}
-                    alignItems="center"
-                    justifyContent="center"
+                  <Animated.View
+                    style={{
+                      width: "100%",
+                      paddingVertical: 10,
+                      borderRadius: 20,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      elevation: 2,
+                    }}
                   >
                     <Animated.View
                       style={{
@@ -159,18 +171,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         <Animated.View
                           key={i}
                           style={{
-                            width: 3,
-                            height: 6,
+                            width: i % 4 === 0 ? 1.5 : 2,
+                            height: 10,
                             marginHorizontal: 1,
-                            backgroundColor: "white",
-                            borderRadius: 1,
-                            opacity: i % 5 === 0 ? 1 : 0.6,
+                            backgroundColor: "#999",
+                            borderRadius: 50, // 完全圆角
+                            opacity: 0.9,
                             transform: [{ scaleY: val }],
                           }}
                         />
                       ))}
                     </Animated.View>
-                  </View>
+                  </Animated.View>
                 </YStack>
               ) : (
                 <Text fontSize={14} color="$gray9">
@@ -235,22 +247,24 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </View>
 
       {/* More options modal */}
-      {showMoreOptions && (
-        <MoreOptions
-          onPickImage={() => {
-            setShowMoreOptions(false);
-            onPickImage();
-          }}
-          onTakePhoto={() => {
-            setShowMoreOptions(false);
-            onTakePhoto();
-          }}
-          onFileUpload={() => {
-            setShowMoreOptions(false);
-            onFileUpload();
-          }}
-        />
-      )}
-    </YStack>
+      {
+        showMoreOptions && (
+          <MoreOptions
+            onPickImage={() => {
+              setShowMoreOptions(false);
+              onPickImage();
+            }}
+            onTakePhoto={() => {
+              setShowMoreOptions(false);
+              onTakePhoto();
+            }}
+            onFileUpload={() => {
+              setShowMoreOptions(false);
+              onFileUpload();
+            }}
+          />
+        )
+      }
+    </YStack >
   );
 };

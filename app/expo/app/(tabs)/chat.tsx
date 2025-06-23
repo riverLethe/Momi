@@ -223,26 +223,15 @@ export default function ChatScreen() {
   }
 
   return (
-    <>
-      {/* 背景点击区域 */}
-      {isTextMode && (
-        <TouchableWithoutFeedback
-          onPress={() => {
-            Keyboard.dismiss();
-            setIsTextMode(false);
-          }}
-          accessible={false}
-        >
-          <View
-            height="100%"
-            width="100%"
-            position="absolute"
-            top={0}
-            left={0}
-            zIndex={1}
-          />
-        </TouchableWithoutFeedback>
-      )}
+    <TouchableWithoutFeedback
+      onPress={() => {
+        if (isTextMode) {
+          Keyboard.dismiss();
+          setIsTextMode(false);
+        }
+      }}
+      accessible={false}
+    >
       <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
         <StatusBar barStyle="dark-content" />
         <Stack.Screen
@@ -295,6 +284,6 @@ export default function ChatScreen() {
 
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </>
+    </TouchableWithoutFeedback>
   );
 }
