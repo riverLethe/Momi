@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ActivityIndicator, StyleSheet, FlatList, View } from "react-native";
+import React, { useState, useEffect, useMemo } from "react";
+import { ActivityIndicator, StyleSheet, FlatList } from "react-native";
 import { Text } from "tamagui";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, XStack, YStack } from "tamagui";
@@ -34,52 +34,58 @@ export default function BillsScreen() {
   /** Track global open bill id for swipe actions */
   const [openBillId, setOpenBillId] = useState<string | null>(null);
 
-  // Filter states
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilterType>([]);
-  const [keywordFilter, setKeywordFilter] = useState<string | null>(null);
-  const [minAmount, setMinAmount] = useState<number | null>(null);
-  const [maxAmount, setMaxAmount] = useState<number | null>(null);
-
-  // Detect AI filter params from route
+  // Detect AI filter params from route (deep link or AI search)
   const params = useLocalSearchParams();
 
+  // Whether the current navigation came from AI search / deep link
   const aiFilterActive = params.ai === "1" || params.ai === "true";
 
-  // Initialize filters only once based on params (supports both AI and manual deep link)
-  useEffect(() => {
-    // Date range
+  // -------- Filter states (initialized from params once) --------
+  const [startDate, setStartDate] = useState<Date | null>(() => {
     if (typeof params.startDate === "string") {
       const sd = new Date(params.startDate);
-      if (!isNaN(sd.getTime())) setStartDate(sd);
+      if (!isNaN(sd.getTime())) return sd;
     }
+    return null;
+  });
+
+  const [endDate, setEndDate] = useState<Date | null>(() => {
     if (typeof params.endDate === "string") {
       const ed = new Date(params.endDate);
-      if (!isNaN(ed.getTime())) setEndDate(ed);
+      if (!isNaN(ed.getTime())) return ed;
     }
+    return null;
+  });
 
-    // Category
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilterType>(() => {
     if (typeof params.category === "string" && params.category) {
-      setCategoryFilter([params.category]);
+      return [params.category];
     }
+    return [];
+  });
 
-    // Keyword
+  const [keywordFilter, setKeywordFilter] = useState<string | null>(() => {
     if (typeof params.keyword === "string" && params.keyword) {
-      setKeywordFilter(params.keyword);
+      return params.keyword;
     }
+    return null;
+  });
 
-    // Amount
+  const [minAmount, setMinAmount] = useState<number | null>(() => {
     if (typeof params.minAmount === "string") {
       const v = parseFloat(params.minAmount);
-      if (!isNaN(v)) setMinAmount(v);
+      if (!isNaN(v)) return v;
     }
+    return null;
+  });
+
+  const [maxAmount, setMaxAmount] = useState<number | null>(() => {
     if (typeof params.maxAmount === "string") {
       const v = parseFloat(params.maxAmount);
-      if (!isNaN(v)) setMaxAmount(v);
+      if (!isNaN(v)) return v;
     }
-
-  }, []); // run once on mount
+    return null;
+  });
 
   // Sync with remote data if authenticated
   useEffect(() => {

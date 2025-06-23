@@ -246,7 +246,10 @@ export default function HomeScreen() {
               {/* 即使reportData不完整也显示图表，避免长时间白屏 */}
               {reportData ? (
                 <>
-                  <EnhancedDonutChart data={reportData.categoryData || []} />
+                  <EnhancedDonutChart
+                    data={reportData.categoryData || []}
+                    onCategoryPress={handleCategoryPress}
+                  />
                   <ExpenseTrendChart
                     data={reportData.trendData || []}
                     averageSpending={reportData.averageSpending || 0}

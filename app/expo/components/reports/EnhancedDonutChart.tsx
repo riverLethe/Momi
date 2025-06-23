@@ -1,18 +1,21 @@
 import React, { useState } from "react";
-import { Dimensions } from "react-native";
+import { Dimensions, TouchableOpacity } from "react-native";
 import { useTranslation } from "react-i18next";
 import { View, Text, Card, Button, XStack, YStack } from "tamagui";
 import { ArrowDownRight, ArrowUpRight, DollarSignIcon } from "lucide-react-native";
 import Svg, { Circle as SvgCircle, Path } from "react-native-svg";
-import { CategoryData, TopSpendingCategory } from "@/types/reports.types";
+import { CategoryData } from "@/types/reports.types";
 import { formatCurrency } from "@/utils/format";
+import { EXPENSE_CATEGORIES } from "@/constants/categories";
 
 interface EnhancedDonutChartProps {
   data: CategoryData[];
+  onCategoryPress?: (categoryId: string) => void;
 }
 
 const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
   data,
+  onCategoryPress,
 }) => {
   const { t } = useTranslation();
   const [showAllCategories, setShowAllCategories] = useState(false);
@@ -79,13 +82,20 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
     return { path, color: item.color, value: item.value };
   });
 
+  const handleSegmentPress = (segment: { id?: string, label: string }) => {
+    // 如果存在ID则使用ID，否则使用标签作为ID
+    const category = EXPENSE_CATEGORIES.find(c => c.name === segment.label);
+    if (onCategoryPress && category) {
+      onCategoryPress(category.id);
+    }
+  };
+
   if (data.length === 0 || totalValue === 0) {
     return null; // Don't render anything if there's no data
   }
 
   return (
     <Card
-
       backgroundColor="white"
       marginHorizontal="$3"
       paddingVertical="$3"
@@ -148,55 +158,61 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
           const isDecrease = yearOverYearChange < 0;
 
           return (
-            <YStack key={item.label} paddingVertical="$1.5">
-              <XStack alignItems="center" justifyContent="space-between">
-                <XStack alignItems="center" gap="$2">
-                  <View
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: 3,
-                      backgroundColor: item.color,
-                    }}
-                  />
-                  <Text fontWeight="$5" fontSize="$3">
-                    {t(item.label)}
-                  </Text>
+            <TouchableOpacity
+              key={item.label}
+              onPress={() => handleSegmentPress(item)}
+              activeOpacity={0.7}
+            >
+              <YStack key={item.label} paddingVertical="$1.5">
+                <XStack alignItems="center" justifyContent="space-between">
+                  <XStack alignItems="center" gap="$2">
+                    <View
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: 3,
+                        backgroundColor: item.color,
+                      }}
+                    />
+                    <Text fontWeight="$5" fontSize="$3">
+                      {t(item.label)}
+                    </Text>
 
-                  {hasChange && (
-                    <XStack gap="$1" alignItems="center">
-                      {isIncrease ? (
-                        <>
-                          <ArrowUpRight size={10} color="#EF4444" />
-                          <Text fontSize="$2" color="#EF4444">
-                            {yearOverYearChange}%
+                    {hasChange && (
+                      <XStack gap="$1" alignItems="center">
+                        {isIncrease ? (
+                          <>
+                            <ArrowUpRight size={10} color="#EF4444" />
+                            <Text fontSize="$2" color="#EF4444">
+                              {yearOverYearChange}%
+                            </Text>
+                          </>
+                        ) : isDecrease ? (
+                          <>
+                            <ArrowDownRight size={10} color="#10B981" />
+                            <Text fontSize="$2" color="#10B981">
+                              {Math.abs(yearOverYearChange)}%
+                            </Text>
+                          </>
+                        ) : (
+                          <Text fontSize="$2" color="$gray10">
+                            -
                           </Text>
-                        </>
-                      ) : isDecrease ? (
-                        <>
-                          <ArrowDownRight size={10} color="#10B981" />
-                          <Text fontSize="$2" color="#10B981">
-                            {Math.abs(yearOverYearChange)}%
-                          </Text>
-                        </>
-                      ) : (
-                        <Text fontSize="$2" color="$gray10">
-                          -
-                        </Text>
-                      )}
-                    </XStack>
-                  )}
+                        )}
+                      </XStack>
+                    )}
+                  </XStack>
+                  <XStack alignItems="baseline" gap="$1">
+                    <Text fontWeight="$7" fontSize="$3">
+                      {formatCurrency(item.value)}
+                    </Text>
+                    <Text color="$gray10" fontSize="$2">
+                      ({((item.value / totalValue) * 100).toFixed(1)}%)
+                    </Text>
+                  </XStack>
                 </XStack>
-                <XStack alignItems="baseline" gap="$1">
-                  <Text fontWeight="$7" fontSize="$3">
-                    {formatCurrency(item.value)}
-                  </Text>
-                  <Text color="$gray10" fontSize="$2">
-                    ({((item.value / totalValue) * 100).toFixed(1)}%)
-                  </Text>
-                </XStack>
-              </XStack>
-            </YStack>
+              </YStack>
+            </TouchableOpacity>
           );
         })}
 
