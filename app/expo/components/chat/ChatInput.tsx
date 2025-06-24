@@ -285,9 +285,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 onPress={onToggleInputMode}
                 onLongPress={(e: GestureResponderEvent) => {
                   startY.current = e.nativeEvent.pageY;
-                  onStartRecording()
+                  onStartRecording();
                 }}
-                delayLongPress={0} // 立即响应长按
+                delayLongPress={80} // shorten long-press threshold for snappier UX
               >
                 <Text fontSize={14} color="$gray9">
                   {t("Send a message or hold to talk...")}
