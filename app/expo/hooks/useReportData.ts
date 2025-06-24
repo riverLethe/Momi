@@ -8,15 +8,34 @@ import { fetchReportData } from "@/utils/reports.utils";
 import { generatePeriodSelectors } from "@/utils/date.utils";
 import { useData } from "@/providers/DataProvider";
 
-export const useReportData = (viewMode: "personal" | "family") => {
+// -----------------------------------------------------------------------------
+// Prevent duplicate preloadAllPeriodTypes() executions across multiple
+// PeriodPage instances (Week / Month / Year) that mount at the same time.
+// Using a module-level map keyed by viewMode we ensure the heavy preloading
+// logic only runs once per app session per viewMode.
+// -----------------------------------------------------------------------------
+const globalPreloadStatus: Record<"personal" | "family", boolean> = {
+  personal: false,
+  family: false,
+};
+
+export const useReportData = (
+  viewMode: "personal" | "family",
+  initialPeriodType: DatePeriodEnum = DatePeriodEnum.WEEK
+) => {
   const { dataVersion } = useData();
-  const [periodType, setPeriodType] = useState<DatePeriodEnum>(
-    DatePeriodEnum.WEEK
-  );
+  const [periodType, setPeriodType] =
+    useState<DatePeriodEnum>(initialPeriodType);
   const [periodSelectors, setPeriodSelectors] = useState<PeriodSelectorData[]>(
     []
   );
-  const [selectedPeriodId, setSelectedPeriodId] = useState<string>("");
+  // Initialise selectedPeriodId to the first selector of the initial period to
+  // ensure the very first loadReportData() call uses a stable id and matches
+  // later pre-load calls, preventing double computation for the same period.
+  const initialSelectorId =
+    generatePeriodSelectors(initialPeriodType)[0]?.id ?? "";
+  const [selectedPeriodId, setSelectedPeriodId] =
+    useState<string>(initialSelectorId);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loadingReport, setLoadingReport] = useState<boolean>(false);
   const [loadingInBackground, setLoadingInBackground] =
@@ -40,11 +59,6 @@ export const useReportData = (viewMode: "personal" | "family") => {
   // 初始化周期选择器
   useEffect(() => {
     // 为所有周期类型预先生成选择器
-    const allPeriodTypes = [
-      DatePeriodEnum.WEEK,
-      DatePeriodEnum.MONTH,
-      DatePeriodEnum.YEAR,
-    ];
     const allSelectors: Record<DatePeriodEnum, PeriodSelectorData[]> = {
       [DatePeriodEnum.WEEK]: generatePeriodSelectors(DatePeriodEnum.WEEK),
       [DatePeriodEnum.MONTH]: generatePeriodSelectors(DatePeriodEnum.MONTH),
@@ -53,16 +67,12 @@ export const useReportData = (viewMode: "personal" | "family") => {
 
     // 设置当前周期类型的选择器
     setPeriodSelectors(allSelectors[periodType]);
-
-    // 如果没有选定ID，默认选择第一个
-    if (!selectedPeriodId && allSelectors[periodType].length > 0) {
-      setSelectedPeriodId(allSelectors[periodType][0].id);
-    }
   }, [periodType]);
 
   // 预加载所有周期类型的报表数据
   const preloadAllPeriodTypes = useCallback(async () => {
-    if (hasPreloadedRef.current) return;
+    // Make sure we only preload once globally for the given viewMode.
+    if (globalPreloadStatus[viewMode] || hasPreloadedRef.current) return;
 
     const allPeriodTypes = [
       DatePeriodEnum.WEEK,
@@ -81,6 +91,7 @@ export const useReportData = (viewMode: "personal" | "family") => {
     }
 
     hasPreloadedRef.current = true;
+    globalPreloadStatus[viewMode] = true;
   }, [periodType, viewMode]);
 
   // 加载特定周期类型的数据

@@ -3,6 +3,7 @@ import { fetchReportData } from "./reports.utils";
 import { updateBudgetWidgetForPeriod, BudgetSegment } from "./widgetData.utils";
 import { formatCurrency } from "./format";
 import i18n from "@/i18n";
+import { generatePeriodSelectors } from "./date.utils";
 
 /**
  * Fetches report data for week / month / year and updates the Budget widgets.
@@ -14,6 +15,7 @@ export async function syncBudgetWidgets(
     currentReportData?: ReportData | null;
     currentPeriodType?: DatePeriodEnum;
     isDarkMode?: boolean;
+    dataVersion?: number;
   } = {}
 ): Promise<void> {
   const {
@@ -21,6 +23,7 @@ export async function syncBudgetWidgets(
     currentReportData,
     currentPeriodType,
     isDarkMode = false,
+    dataVersion,
   } = options;
 
   const mappings: Array<{
@@ -48,7 +51,13 @@ export async function syncBudgetWidgets(
       if (currentPeriodType === type && currentReportData) {
         report = currentReportData;
       } else {
-        report = await fetchReportData(type, viewMode);
+        const firstSelectorId = generatePeriodSelectors(type)[0]?.id;
+        report = await fetchReportData(
+          type,
+          viewMode,
+          firstSelectorId,
+          dataVersion
+        );
       }
 
       const budget = report.budget;

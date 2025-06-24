@@ -40,6 +40,16 @@ import i18n from "@/i18n";
 import { enUS, zhCN, es as esLocale } from "date-fns/locale";
 import { Locale } from "date-fns";
 
+// ------------ Global singleton typings (avoid TS errors) ---------------
+declare global {
+  // Using `var` to allow re-assignment across modules
+  // eslint-disable-next-line no-var
+  var __momiqReportInflight:
+    | Record<string, Promise<ReportData> | undefined>
+    | undefined;
+}
+// ----------------------------------------------------------------------
+
 // 根据类别ID获取类别颜色
 const getCategoryColor = (categoryId: string): string => {
   const category = EXPENSE_CATEGORIES.find((cat) => cat.id === categoryId);
@@ -666,14 +676,24 @@ function getReportFromCache(
 ): ReportData | null {
   const entry = reportCache[key];
 
-  // 如果有数据版本号，则检查缓存的数据版本是否匹配
-  if (dataVersion && entry && entry.dataVersion !== dataVersion) {
+  // 1️⃣ 如果调用方提供了 dataVersion，并且缓存中的 dataVersion 与之匹配，
+  //    则直接返回缓存数据，**忽略 TTL**。
+  //    这样当账单 / 预算数据没有实际变化时，不会因为时间导致重复计算。
+  if (dataVersion && entry) {
+    if (entry.dataVersion === dataVersion) {
+      // 版本一致，直接返回缓存，避免不必要的重新加载
+      console.log("使用报表缓存数据（版本匹配）");
+      return entry.data;
+    }
+
+    // 版本不一致，说明底层数据已更新，需要重新生成报表
     console.log("数据版本已变化，缓存失效");
     return null;
   }
 
+  // 2️⃣ 如果没有传入 dataVersion（降级场景），则继续使用基于时间的 TTL 策略
   if (entry && Date.now() - entry.timestamp < REPORT_CACHE_TTL) {
-    console.log("使用报表缓存数据");
+    console.log("使用报表缓存数据（TTL 未过期）");
     return entry.data;
   }
   return null;
@@ -692,242 +712,285 @@ function cacheReport(
   };
 }
 
+// -----------------------------------------------------------------------------
+// Cache-key helper to ensure consistency across in-flight de-duplication,
+// memory caching and inner computation. Using a single function avoids subtle
+// typos (periodType/viewMode order, "default" vs "latest" etc.) that led to
+// multiple "报表数据计算完成" logs.
+// -----------------------------------------------------------------------------
+function buildReportCacheKey(
+  periodType: DatePeriodEnum,
+  viewMode: "personal" | "family",
+  selectedPeriodId?: string
+): string {
+  return `report_${viewMode}_${periodType}_${selectedPeriodId ?? "default"}`;
+}
+
 // 主要的报表数据获取函数
 export async function fetchReportData(
   periodType: DatePeriodEnum,
   viewMode: "personal" | "family",
   selectedPeriodId?: string,
-  dataVersion?: number, // 添加数据版本参数
-  forceRefresh = false // 添加强制刷新参数
+  dataVersion?: number,
+  forceRefresh = false
 ): Promise<ReportData> {
-  // 构建缓存键
-  const cacheKey = `report_${periodType}_${viewMode}_${selectedPeriodId || "default"}`;
+  // ---- 1. 并发请求去重 --------------------------------------------------
+  const cacheKey = buildReportCacheKey(periodType, viewMode, selectedPeriodId);
 
-  // 如果强制刷新，跳过缓存
-  if (!forceRefresh) {
-    // 尝试从缓存获取
-    const cachedData = getReportFromCache(cacheKey, dataVersion);
-    if (cachedData) return cachedData;
+  if (!globalThis.__momiqReportInflight) globalThis.__momiqReportInflight = {};
+  const inFlight = globalThis.__momiqReportInflight;
+
+  const existingPromise = inFlight[cacheKey];
+  if (!forceRefresh && existingPromise) {
+    return existingPromise;
   }
 
-  // 以下是原有的数据获取逻辑...
+  // ---- 2. 读取缓存 ------------------------------------------------------
+  if (!forceRefresh) {
+    const cached = getReportFromCache(cacheKey, dataVersion);
+    if (cached) return Promise.resolve(cached);
+  }
 
-  try {
-    // 设置超时机制，确保不会无限挂起
-    const TIMEOUT_MS = 10000; // 10秒超时
-    let timeoutId: NodeJS.Timeout;
+  // ---- 3. 真正生成报表 --------------------------------------------------
+  const promise: Promise<ReportData> = (async () => {
+    // 以下是原有的数据获取逻辑...
 
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error("报表数据加载超时"));
-      }, TIMEOUT_MS);
-    });
+    try {
+      // 设置超时机制，确保不会无限挂起
+      const TIMEOUT_MS = 10000; // 10秒超时
+      let timeoutId: NodeJS.Timeout;
 
-    const fetchPromise = (async () => {
-      // 生成缓存key
-      const cacheKey = `report_${viewMode}_${periodType}_${selectedPeriodId || "latest"}`;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error("报表数据加载超时"));
+        }, TIMEOUT_MS);
+      });
 
-      // 尝试从内存缓存中获取报告数据
-      const cachedReport = getReportFromCache(cacheKey, dataVersion);
-      if (cachedReport) {
-        console.log("使用报表缓存数据");
-        return cachedReport;
-      }
-
-      const periodSelectors = generatePeriodSelectors(periodType);
-      const selectedPeriod = periodSelectors.find(
-        (p) => p.id === selectedPeriodId
-      );
-
-      let startDate: Date;
-      let endDate: Date;
-
-      if (selectedPeriod) {
-        startDate = selectedPeriod.startDate;
-        endDate = selectedPeriod.endDate;
-      } else {
-        const latestPeriod = periodSelectors[0];
-        if (latestPeriod) {
-          startDate = latestPeriod.startDate;
-          endDate = latestPeriod.endDate;
-        } else {
-          const range = getDateRangeForPeriod(periodType);
-          startDate = range.start;
-          endDate = range.end;
-        }
-      }
-
-      // 第一部分：快速获取账单和交易数据 (核心数据)
-      let bills: Bill[], transactions: Transaction[], budgets: Budgets;
-
-      try {
-        [bills, transactions, budgets] = await Promise.all([
-          getBills(),
-          getTransactions(),
-          getBudgets(),
-        ]);
-      } catch (error) {
-        console.error("获取基础数据失败:", error);
-        // 使用空数组作为默认值继续执行
-        bills = [];
-        transactions = [];
-        budgets = { weekly: undefined, monthly: undefined, yearly: undefined };
-      }
-
-      // 根据实际数据生成类别支出数据（核心指标，立即需要的）
-      let categoryData: CategoryData[] = [];
-      try {
-        categoryData = await generateCategoryDataFromRawData(
-          bills,
-          transactions,
-          startDate,
-          endDate,
-          viewMode
+      const fetchPromise = (async () => {
+        // 生成缓存key
+        const cacheKey = buildReportCacheKey(
+          periodType,
+          viewMode,
+          selectedPeriodId
         );
-      } catch (error) {
-        console.error("生成类别数据失败:", error);
-        // 使用空数组继续执行
-      }
 
-      // 初始化返回的报表结构
-      const initialReport: Partial<ReportData> = {
-        categoryData,
-        periodSelectors,
-        viewMode,
-        periodType,
-      };
+        // 尝试从内存缓存中获取报告数据
+        const cachedReport = getReportFromCache(cacheKey, dataVersion);
+        if (cachedReport) {
+          console.log("使用报表缓存数据");
+          return cachedReport;
+        }
 
-      // 创建一个基础的报表对象并立即缓存它
-      // 这允许UI快速显示基本信息，而不必等待完整的数据计算
-      cacheReport(cacheKey, initialReport as ReportData, dataVersion);
+        const periodSelectors = generatePeriodSelectors(periodType);
+        const selectedPeriod = periodSelectors.find(
+          (p) => p.id === selectedPeriodId
+        );
 
-      // 第二部分：异步计算其他指标 (不阻塞UI渲染)
-      // 使用Promise.all并行计算其余的数据，但添加超时和错误处理
-      const defaultTrendData: TrendData[] = [];
-      const defaultInsights: Insight[] = [];
-      const defaultHealthScore: HealthScore = {
-        score: 50,
-        status: "Fair",
-        categories: [],
-      };
-      const defaultTopCategories: TopSpendingCategory[] = [];
-      const defaultBudgetStatus: ReportData["budget"] = {
-        amount: null,
-        spent: 0,
-        remaining: 0,
-        percentage: 0,
-        status: "none",
-      };
+        let startDate: Date;
+        let endDate: Date;
 
-      let trendData = defaultTrendData;
-      let insights = defaultInsights;
-      let healthScore = defaultHealthScore;
-      let topSpendingCategories = defaultTopCategories;
-      let budgetStatus = defaultBudgetStatus;
+        if (selectedPeriod) {
+          startDate = selectedPeriod.startDate;
+          endDate = selectedPeriod.endDate;
+        } else {
+          const latestPeriod = periodSelectors[0];
+          if (latestPeriod) {
+            startDate = latestPeriod.startDate;
+            endDate = latestPeriod.endDate;
+          } else {
+            const range = getDateRangeForPeriod(periodType);
+            startDate = range.start;
+            endDate = range.end;
+          }
+        }
 
-      try {
-        // 使用Promise.allSettled保证即使部分计算失败也能继续
-        const results = await Promise.allSettled([
-          generateTrendData(
-            periodType,
-            viewMode,
+        // 第一部分：快速获取账单和交易数据 (核心数据)
+        let bills: Bill[], transactions: Transaction[], budgets: Budgets;
+
+        try {
+          [bills, transactions, budgets] = await Promise.all([
+            getBills(),
+            getTransactions(),
+            getBudgets(),
+          ]);
+        } catch (error) {
+          console.error("获取基础数据失败:", error);
+          // 使用空数组作为默认值继续执行
+          bills = [];
+          transactions = [];
+          budgets = {
+            weekly: undefined,
+            monthly: undefined,
+            yearly: undefined,
+          };
+        }
+
+        // 根据实际数据生成类别支出数据（核心指标，立即需要的）
+        let categoryData: CategoryData[] = [];
+        try {
+          categoryData = await generateCategoryDataFromRawData(
+            bills,
+            transactions,
             startDate,
             endDate,
-            bills,
-            transactions
-          ),
-          generateInsights(viewMode, categoryData),
-          generateHealthScore(viewMode, categoryData, []),
-          Promise.resolve(generateTopSpendingCategories(categoryData)),
-          calculateBudgetStatus(bills, budgets, periodType, startDate, endDate),
-        ]);
+            viewMode
+          );
+        } catch (error) {
+          console.error("生成类别数据失败:", error);
+          // 使用空数组继续执行
+        }
 
-        // 处理各个Promise的结果
-        if (results[0].status === "fulfilled") trendData = results[0].value;
-        if (results[1].status === "fulfilled") insights = results[1].value;
-        if (results[2].status === "fulfilled") healthScore = results[2].value;
-        if (results[3].status === "fulfilled")
-          topSpendingCategories = results[3].value;
-        if (results[4].status === "fulfilled")
-          budgetStatus = results[4].value || defaultBudgetStatus;
-      } catch (error) {
-        console.error("计算报表指标失败:", error);
-        // 继续使用默认值
-      }
+        // 初始化返回的报表结构
+        const initialReport: Partial<ReportData> = {
+          categoryData,
+          periodSelectors,
+          viewMode,
+          periodType,
+        };
 
-      // 计算平均支出
-      const averageSpending =
-        trendData.length > 0
-          ? trendData.reduce((sum, item) => sum + item.value, 0) /
-            trendData.length
-          : 0;
+        // 创建一个基础的报表对象并立即缓存它
+        // 这允许UI快速显示基本信息，而不必等待完整的数据计算
+        cacheReport(cacheKey, initialReport as ReportData, dataVersion);
 
-      // 使用真实趋势数据更新健康评分
-      const healthMetrics = {
-        budgetUsagePct:
-          budgetStatus && budgetStatus.percentage != null
-            ? Math.round(budgetStatus.percentage)
-            : 0,
-        volatilityPct: calculateVolatilityPercentage(trendData),
-        // TODO: improve savingsRatePct once income / savings data pipeline ready
-        savingsRatePct: 0,
-        recurringCoverDays: 0,
-      } as const;
+        // 第二部分：异步计算其他指标 (不阻塞UI渲染)
+        // 使用Promise.all并行计算其余的数据，但添加超时和错误处理
+        const defaultTrendData: TrendData[] = [];
+        const defaultInsights: Insight[] = [];
+        const defaultHealthScore: HealthScore = {
+          score: 50,
+          status: "Fair",
+          categories: [],
+        };
+        const defaultTopCategories: TopSpendingCategory[] = [];
+        const defaultBudgetStatus: ReportData["budget"] = {
+          amount: null,
+          spent: 0,
+          remaining: 0,
+          percentage: 0,
+          status: "none",
+        };
 
-      // 完整的报表数据
-      const completeReport: ReportData = {
-        categoryData,
-        trendData,
-        insights,
+        let trendData = defaultTrendData;
+        let insights = defaultInsights;
+        let healthScore = defaultHealthScore;
+        let topSpendingCategories = defaultTopCategories;
+        let budgetStatus = defaultBudgetStatus;
+
+        try {
+          // 使用Promise.allSettled保证即使部分计算失败也能继续
+          const results = await Promise.allSettled([
+            generateTrendData(
+              periodType,
+              viewMode,
+              startDate,
+              endDate,
+              bills,
+              transactions
+            ),
+            generateInsights(viewMode, categoryData),
+            generateHealthScore(viewMode, categoryData, []),
+            Promise.resolve(generateTopSpendingCategories(categoryData)),
+            calculateBudgetStatus(
+              bills,
+              budgets,
+              periodType,
+              startDate,
+              endDate
+            ),
+          ]);
+
+          // 处理各个Promise的结果
+          if (results[0].status === "fulfilled") trendData = results[0].value;
+          if (results[1].status === "fulfilled") insights = results[1].value;
+          if (results[2].status === "fulfilled") healthScore = results[2].value;
+          if (results[3].status === "fulfilled")
+            topSpendingCategories = results[3].value;
+          if (results[4].status === "fulfilled")
+            budgetStatus = results[4].value || defaultBudgetStatus;
+        } catch (error) {
+          console.error("计算报表指标失败:", error);
+          // 继续使用默认值
+        }
+
+        // 计算平均支出
+        const averageSpending =
+          trendData.length > 0
+            ? trendData.reduce((sum, item) => sum + item.value, 0) /
+              trendData.length
+            : 0;
+
+        // 使用真实趋势数据更新健康评分
+        const healthMetrics = {
+          budgetUsagePct:
+            budgetStatus && budgetStatus.percentage != null
+              ? Math.round(budgetStatus.percentage)
+              : 0,
+          volatilityPct: calculateVolatilityPercentage(trendData),
+          // TODO: improve savingsRatePct once income / savings data pipeline ready
+          savingsRatePct: 0,
+          recurringCoverDays: 0,
+        } as const;
+
+        // 完整的报表数据
+        const completeReport: ReportData = {
+          categoryData,
+          trendData,
+          insights,
+          healthScore: {
+            ...healthScore,
+            metrics: healthMetrics,
+          },
+          periodSelectors,
+          averageSpending,
+          topSpendingCategories,
+          viewMode,
+          periodType,
+          budget: budgetStatus,
+        };
+
+        // 更新缓存
+        cacheReport(cacheKey, completeReport, dataVersion);
+
+        console.log("报表数据计算完成");
+        return completeReport;
+      })();
+
+      // 竞态Promise，确保超时控制
+      const result = await Promise.race([fetchPromise, timeoutPromise]);
+      clearTimeout(timeoutId!);
+
+      return result as ReportData;
+    } catch (error) {
+      console.error("Error generating report data:", error);
+      // 返回基本报表数据以避免UI崩溃
+      return {
+        categoryData: [],
+        trendData: [],
+        insights: [],
         healthScore: {
-          ...healthScore,
-          metrics: healthMetrics,
+          score: 0,
+          status: "Fair" as const,
+          categories: [],
         },
-        periodSelectors,
-        averageSpending,
-        topSpendingCategories,
+        periodSelectors: [],
+        averageSpending: 0,
         viewMode,
         periodType,
-        budget: budgetStatus,
+        budget: {
+          amount: null,
+          spent: 0,
+          remaining: 0,
+          percentage: 0,
+          status: "none" as const,
+        },
       };
+    }
+  })();
 
-      // 更新缓存
-      cacheReport(cacheKey, completeReport, dataVersion);
+  // 将生成的 Promise 加入 inFlight map
+  inFlight[cacheKey] = promise;
 
-      console.log("报表数据计算完成");
-      return completeReport;
-    })();
-
-    // 竞态Promise，确保超时控制
-    const result = await Promise.race([fetchPromise, timeoutPromise]);
-    clearTimeout(timeoutId!);
-
-    return result as ReportData;
-  } catch (error) {
-    console.error("Error generating report data:", error);
-    // 返回基本报表数据以避免UI崩溃
-    return {
-      categoryData: [],
-      trendData: [],
-      insights: [],
-      healthScore: {
-        score: 0,
-        status: "Fair" as const,
-        categories: [],
-      },
-      periodSelectors: [],
-      averageSpending: 0,
-      viewMode,
-      periodType,
-      budget: {
-        amount: null,
-        spent: 0,
-        remaining: 0,
-        percentage: 0,
-        status: "none" as const,
-      },
-    };
-  }
+  return promise;
 }
 
 // 使用已经获取的原始账单和交易数据生成类别数据

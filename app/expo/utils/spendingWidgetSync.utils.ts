@@ -7,6 +7,7 @@ import { fetchReportData } from "./reports.utils";
 import { updateSpendingWidgetForPeriod } from "./widgetData.utils";
 import { formatCurrency } from "./format";
 import i18n from "@/i18n";
+import { generatePeriodSelectors } from "./date.utils";
 
 /**
  * Fetches report data for week / month / year and pushes it to the corresponding
@@ -21,12 +22,15 @@ export async function syncSpendingWidgets(
     currentReportData?: ReportData | null;
     /** Period type of the currentReportData */
     currentPeriodType?: DatePeriodEnum;
+    /** Data version to leverage long-lived cache */
+    dataVersion?: number;
   } = {}
 ): Promise<void> {
   const {
     viewMode = "personal",
     currentReportData,
     currentPeriodType,
+    dataVersion,
   } = options;
 
   const mappings: Array<{
@@ -55,7 +59,13 @@ export async function syncSpendingWidgets(
       if (currentPeriodType === type && currentReportData) {
         report = currentReportData;
       } else {
-        report = await fetchReportData(type, viewMode);
+        const firstSelectorId = generatePeriodSelectors(type)[0]?.id;
+        report = await fetchReportData(
+          type,
+          viewMode,
+          firstSelectorId,
+          dataVersion
+        );
       }
 
       const catData = report.categoryData || [];
