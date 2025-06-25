@@ -48,7 +48,7 @@ export const SpendingAnalysisPreview: React.FC<SpendingAnalysisPreviewProps> = (
           chromeless
           padding="$1.5"
           height="auto"
-          onPress={() => router.push("/reports")}
+          onPress={() => router.push("/(tabs)")}
           pressStyle={{ opacity: 0.7 }}
         >
           <XStack alignItems="center" space="$1">
@@ -66,7 +66,7 @@ export const SpendingAnalysisPreview: React.FC<SpendingAnalysisPreviewProps> = (
         animation="bouncy"
         scale={1}
         pressStyle={{ scale: 0.98 }}
-        onPress={() => router.push("/reports")}
+        onPress={() => router.push("/(tabs)")}
         backgroundColor="white"
       >
         <XStack alignItems="center" justifyContent="space-between" marginBottom="$2">

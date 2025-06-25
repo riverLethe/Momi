@@ -1,11 +1,9 @@
 import React from "react";
 import { XStack, YStack, Text, Card, Separator } from "tamagui";
 import { Message } from "@/utils/api";
-import Markdown from "react-native-markdown-display";
 import { ExpenseList } from "./ExpenseList";
-import { Pressable } from "react-native";
-import { Audio } from "expo-av";
-import { Play, File as FileIcon, TerminalIcon } from "lucide-react-native";
+import { StyleSheet } from "react-native";
+import { File as FileIcon, TerminalIcon } from "lucide-react-native";
 import { SingleImage } from "@/components/ui/SingleImage";
 import i18n from "@/i18n";
 import { formatCurrency } from "@/utils/format";
@@ -17,6 +15,9 @@ interface MessageBubbleProps {
 }
 
 const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message }) => {
+  // Memoize to avoid recomputation on re-renders of the same message
+  const content = React.useMemo(() => renderMessageContent(message), [message]);
+
   return (
     <XStack
       width="100%"
@@ -33,7 +34,7 @@ const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message }) => {
         borderBottomRightRadius={message.isUser ? 4 : 18}
         borderBottomLeftRadius={message.isUser ? 18 : 4}
       >
-        {renderMessageContent(message)}
+        {content}
       </YStack>
     </XStack>
   );
@@ -52,29 +53,6 @@ const renderMessageContent = (message: Message) => {
     return <SingleImage uri={message.data.uri} />;
   }
 
-  if (message.type === "voice" && message.data?.uri) {
-    const handlePlay = async () => {
-      try {
-        const { sound } = await Audio.Sound.createAsync({
-          uri: message.data.uri,
-        });
-        await sound.playAsync();
-      } catch (err) {
-        console.error("Failed to play audio", err);
-      }
-    };
-
-    return (
-      <XStack alignItems="center">
-        <Pressable onPress={handlePlay} style={{ marginRight: 8 }}>
-          <Play size={20} color="#3B82F6" />
-        </Pressable>
-        <Text fontSize={14} color="$gray800">
-          {message.text || i18n.t("Voice message")}
-        </Text>
-      </XStack>
-    );
-  }
 
   if (message.type === "file" && message.data?.mimeType) {
     return (
@@ -193,6 +171,7 @@ const renderMessageContent = (message: Message) => {
     }
 
     if (message.data.type === "markdown" && message.data.content) {
+      const Markdown = getMarkdownRenderer();
       return (
         <Card
           borderRadius="$4"
@@ -324,3 +303,14 @@ const renderMessageContent = (message: Message) => {
     </YStack>
   );
 };
+
+// Lazy load markdown renderer to reduce initial bundle size
+let MarkdownRenderer: any;
+const getMarkdownRenderer = () => {
+  if (!MarkdownRenderer) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    MarkdownRenderer = require("react-native-markdown-display").default;
+  }
+  return MarkdownRenderer;
+};
+

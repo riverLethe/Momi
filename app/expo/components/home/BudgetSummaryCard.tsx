@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { View, Pressable } from "react-native";
 import {
@@ -8,7 +8,6 @@ import {
   Text,
   Button,
   Separator,
-  Spinner,
 } from "tamagui";
 import {
   BotIcon,
@@ -17,13 +16,11 @@ import {
 } from "lucide-react-native";
 import { formatCurrency } from "@/utils/format";
 import BudgetHealthCard from "@/components/reports/BudgetHealthCard";
-import { summariseBills } from "@/utils/abi-summary.utils";
-import { computeHealthScore } from "@/utils/health-score.utils";
 import type { Bill } from "@/types/bills.types";
 import type { Budgets } from "@/utils/budget.utils";
 import {
   DatePeriodEnum,
-  HealthScoreDetail,
+  HealthScore,
 } from "@/types/reports.types";
 
 // 预算状态类型
@@ -69,16 +66,7 @@ interface BudgetSummaryCardProps {
   onCategoryPress?: (categoryId: string) => void;
   onEditBudgetPress?: () => void;
   isLoading?: boolean;
-  /* -------------------- merged from BudgetInsightsPanel -------------------- */
-  /** Overall budget overview object (typically from reports screen) */
-  overviewBudget?: {
-    amount: number | null;
-    spent: number;
-    remaining: number;
-    percentage: number;
-    status: BudgetStatusType;
-    healthScore?: HealthScoreDetail;
-  };
+
   bills?: Bill[];
   /** Full budgets detail object including filters */
   budgetsDetail?: Budgets;
@@ -86,8 +74,8 @@ interface BudgetSummaryCardProps {
   periodStart?: Date;
   periodEnd?: Date;
   /** Triggered when user needs to set a budget (used to open modal) */
-  onSetBudget?: () => void;
   onChatPress?: () => void;
+  healthScore?: HealthScore;
 }
 
 export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
@@ -97,14 +85,13 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   onCategoryPress,
   onEditBudgetPress,
   isLoading = false,
-  overviewBudget,
   bills,
   budgetsDetail,
   periodType,
   periodStart,
   periodEnd,
-  onSetBudget,
   onChatPress,
+  healthScore,
 }) => {
   const { t } = useTranslation();
 
@@ -147,7 +134,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   const periodBudget = budgets[periodKey] ?? null;
 
   // Choose the effective budget overview: prefer explicit overviewBudget (from reports)
-  const effectiveBudget = overviewBudget || {
+  const effectiveBudget = {
     amount: periodBudget,
     spent: budgetStatus.spent,
     remaining: budgetStatus.remaining,
@@ -157,39 +144,11 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
 
   const isBudgetSet = effectiveBudget.amount != null;
 
-  const summary = useMemo(() => {
-    if (!bills || !budgetsDetail || !periodStart || !periodEnd || !periodType) {
-      return null;
-    }
-    try {
-      return summariseBills(
-        bills,
-        budgetsDetail,
-        periodType,
-        periodStart,
-        periodEnd,
-        0
-      );
-    } catch (err) {
-      console.error("Failed to summarise bills", err);
-      return null;
-    }
-  }, [bills, budgetsDetail, periodStart, periodEnd, periodType]);
-
-  const healthScore: HealthScoreDetail | undefined = useMemo(() => {
-    if (!summary) return undefined;
-    try {
-      return computeHealthScore(summary);
-    } catch (e) {
-      console.error("Failed to compute health score", e);
-      return undefined;
-    }
-  }, [summary]);
   // Determine severity primarily from health-score, otherwise from budget status
   const severity: "good" | "warning" | "danger" = healthScore
-    ? healthScore.status === "Danger"
+    ? healthScore.status === "Poor"
       ? "danger"
-      : healthScore.status === "Warning"
+      : healthScore.status === "Fair"
         ? "warning"
         : "good"
     : effectiveBudget.status === "danger"
@@ -197,53 +156,6 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
       : effectiveBudget.status === "warning"
         ? "warning"
         : "good";
-
-  // 渲染健康分数
-  const renderHealthScore = () => {
-    if (!overviewBudget || !overviewBudget.healthScore) return null;
-
-    const { score, status } = overviewBudget.healthScore;
-
-    // 确保状态值有效，并转换为小写以便匹配
-    const safeStatus = (status || 'none').toLowerCase();
-
-    // 根据状态确定颜色
-    let scoreColor = '#64748b'; // 默认灰色
-
-    // 使用明确的状态判断，避免中间状态导致的闪烁
-    switch (safeStatus) {
-      case 'good':
-        scoreColor = '#10b981'; // 绿色
-        break;
-      case 'warning':
-        scoreColor = '#f59e0b'; // 黄色
-        break;
-      case 'danger':
-        scoreColor = '#ef4444'; // 红色
-        break;
-      default:
-        scoreColor = '#64748b'; // 灰色
-    }
-
-    return (
-      <YStack alignItems="center" gap="$1">
-        <Text color="$gray11" fontSize="$3">
-          {t("Financial Health")}
-        </Text>
-        <Text
-          fontSize="$8"
-          fontWeight="bold"
-          color={scoreColor}
-          key={`health-score-${score}-${safeStatus}`} // 添加key确保重新渲染
-        >
-          {score}
-        </Text>
-        <Text color={scoreColor} fontSize="$2" textTransform="uppercase">
-          {t(status || 'none')}
-        </Text>
-      </YStack>
-    );
-  };
 
   return (
     <>
@@ -290,31 +202,14 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
             </XStack>
           </XStack>
 
-
           {isLoading ? (
-            <YStack alignItems="center" justifyContent="center" height={120}>
-              <Spinner size="large" color="#3B82F6" />
-              <Text marginTop="$2" color="$gray9">
-                {t("Loading...")}
-              </Text>
-            </YStack>
+            null
           ) : !isBudgetSet ? (
             <YStack gap="$4" alignItems="center" paddingVertical="$4">
               <YStack alignItems="center" gap="$2">
                 <Text fontWeight="$7" fontSize="$4" color="$gray12" textAlign="center">
                   {t("Set up a budget for this period to unlock detailed insights")}
                 </Text>
-                {/* {onSetBudget && (
-                  <Button
-                    size="$3"
-                    backgroundColor="$blue9"
-                    color="white"
-                    pressStyle={{ opacity: 0.8 }}
-                    onPress={onSetBudget}
-                  >
-                    {t("Set Budget")}
-                  </Button>
-                )} */}
               </YStack>
             </YStack>
           ) : (

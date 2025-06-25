@@ -33,12 +33,12 @@ import {
 import { useAuth } from "@/providers/AuthProvider";
 import { useViewStore } from "@/stores/viewStore";
 import { FamilySpace } from "@/types/family.types";
-import { 
-  getFamilySpaces, 
-  createFamilySpace, 
-  joinFamilySpace, 
-  deleteFamilySpace, 
-  getUserFamilySpaces 
+import {
+  getFamilySpaces,
+  createFamilySpace,
+  joinFamilySpace,
+  deleteFamilySpace,
+  getUserFamilySpaces
 } from "@/utils/family.utils";
 
 export default function FamilySpacesScreen() {
@@ -73,7 +73,7 @@ export default function FamilySpacesScreen() {
   // 加载家庭空间
   const loadFamilySpaces = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       const userSpaces = await getUserFamilySpaces(user.id);
@@ -89,7 +89,7 @@ export default function FamilySpacesScreen() {
   // 创建家庭空间
   const handleCreateFamily = async () => {
     if (!user) return;
-    
+
     if (!newFamilyName.trim()) {
       Alert.alert("错误", "请输入家庭名称");
       return;
@@ -98,7 +98,7 @@ export default function FamilySpacesScreen() {
     try {
       setIsProcessing(true);
       const newFamilySpace = await createFamilySpace(newFamilyName.trim(), user);
-      
+
       setFamilySpaces([...familySpaces, newFamilySpace]);
       setNewFamilyName("");
       setShowCreateForm(false);
@@ -118,7 +118,7 @@ export default function FamilySpacesScreen() {
   // 加入家庭空间
   const handleJoinFamily = async () => {
     if (!user) return;
-    
+
     if (!inviteCode.trim()) {
       Alert.alert("错误", "请输入邀请码");
       return;
@@ -127,20 +127,20 @@ export default function FamilySpacesScreen() {
     try {
       setIsProcessing(true);
       const joinedSpace = await joinFamilySpace(inviteCode.trim(), user);
-      
+
       if (!joinedSpace) {
         Alert.alert("错误", "无效的邀请码");
         return;
       }
-      
+
       // 检查空间是否已经在列表中
       if (!familySpaces.some(space => space.id === joinedSpace.id)) {
         setFamilySpaces([...familySpaces, joinedSpace]);
       }
-      
+
       setInviteCode("");
       setShowJoinForm(false);
-      
+
       Alert.alert("成功", `你已加入家庭空间"${joinedSpace.name}"！`);
     } catch (error) {
       console.error("Failed to join family space:", error);
@@ -165,7 +165,7 @@ export default function FamilySpacesScreen() {
   // 删除家庭空间
   const handleDeleteFamily = async (familySpace: FamilySpace) => {
     if (!user) return;
-    
+
     Alert.alert(
       "确认删除",
       `确定要删除"${familySpace.name}"吗？此操作无法撤销。`,
@@ -178,14 +178,14 @@ export default function FamilySpacesScreen() {
             try {
               setIsProcessing(true);
               const success = await deleteFamilySpace(familySpace.id);
-              
+
               if (success) {
                 setFamilySpaces(familySpaces.filter(f => f.id !== familySpace.id));
-                
+
                 if (familySpace.id === currentFamilySpace?.id) {
                   setCurrentFamilySpace(null);
                 }
-                
+
                 Alert.alert("成功", "家庭空间已删除");
               } else {
                 Alert.alert("错误", "删除家庭空间失败");
@@ -208,15 +208,15 @@ export default function FamilySpacesScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
-      <XStack 
-        alignItems="center" 
-        padding="$4" 
-        borderBottomWidth={1} 
+      <XStack
+        alignItems="center"
+        padding="$4"
+        borderBottomWidth={1}
         borderBottomColor="$gray4"
       >
-        <Button 
+        <Button
           chromeless
-          onPress={() => router.back()} 
+          onPress={() => router.back()}
           marginRight="$4"
         >
           <ArrowLeft size={24} color="#1F2937" />
@@ -326,7 +326,7 @@ export default function FamilySpacesScreen() {
 
         {loading ? (
           <YStack alignItems="center" paddingVertical="$8">
-            <ActivityIndicator size="large" color="#3B82F6" />
+            <ActivityIndicator size="small" color="#3B82F6" />
             <Text marginTop="$2" color="$gray10">加载家庭空间中...</Text>
           </YStack>
         ) : familySpaces.length === 0 ? (
@@ -369,7 +369,7 @@ export default function FamilySpacesScreen() {
                     <Text fontWeight="$6" marginRight="$2">
                       {family.inviteCode}
                     </Text>
-                    <Button 
+                    <Button
                       chromeless
                       onPress={() => copyInviteCode(family.inviteCode)}
                       disabled={isProcessing}

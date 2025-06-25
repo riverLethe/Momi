@@ -41,7 +41,7 @@ const YoYComparison: React.FC<YoYComparisonProps> = ({ topCategories }) => {
       shadowOffset={{ width: 0, height: 1 }}
       elevation={1}
     >
-      <Text fontSize="$3.5" fontWeight="$7" marginBottom="$3" color="$gray12">
+      <Text fontSize={20} fontWeight="$7" marginBottom="$3" color="$gray12">
         {t("Top Spending Categories")}
       </Text>
 
@@ -76,19 +76,19 @@ const YoYComparison: React.FC<YoYComparisonProps> = ({ topCategories }) => {
                   {isIncrease ? (
                     <>
                       <ArrowUpRight size={14} color="#EF4444" />
-                      <Text fontSize="$2.5" color="#EF4444">
+                      <Text fontSize={12} color="#EF4444">
                         {category.changePercentage}% {t("from last year")}
                       </Text>
                     </>
                   ) : isDecrease ? (
                     <>
                       <ArrowDownRight size={14} color="#10B981" />
-                      <Text fontSize="$2.5" color="#10B981">
+                      <Text fontSize={12} color="#10B981">
                         {Math.abs(category.changePercentage!)}% {t("from last year")}
                       </Text>
                     </>
                   ) : (
-                    <Text fontSize="$2.5" color="$gray10">
+                    <Text fontSize={12} color="$gray10">
                       {t("No change from last year")}
                     </Text>
                   )}
@@ -122,7 +122,7 @@ const YoYComparison: React.FC<YoYComparisonProps> = ({ topCategories }) => {
         onPress={() => {
           // Navigate to bills screen with filters
           router.push({
-            pathname: "/(tabs)/bills",
+            pathname: "/bills",
             params: { category: topCategories[0].category }
           });
         }}

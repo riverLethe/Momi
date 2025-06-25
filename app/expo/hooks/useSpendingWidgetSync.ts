@@ -7,11 +7,11 @@ import { useData } from "@/providers/DataProvider";
  * Syncs the iOS Total Spending widgets (week/month/year) with the latest numbers.
  * Centralised here so multiple screens可以重用, keeping UI components clean.
  */
-export function useSpendingWidgetSync(
-  reportData: ReportData | null,
+export const useSpendingWidgetSync = (
+  reportData: (ReportData & { budget?: any }) | null,
   periodType: DatePeriodEnum,
   viewMode: "personal" | "family"
-) {
+) => {
   const { dataVersion } = useData();
   useEffect(() => {
     syncSpendingWidgets({
@@ -21,4 +21,4 @@ export function useSpendingWidgetSync(
       dataVersion,
     }).catch((err) => console.warn("Failed to sync spending widgets:", err));
   }, [reportData, periodType, viewMode, dataVersion]);
-}
+};

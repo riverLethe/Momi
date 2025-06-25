@@ -4,7 +4,6 @@ export interface BillDetailProps {
   bill: Bill;
   updating: boolean;
   onUpdateField: (field: keyof Bill, value: any) => Promise<void>;
-  changeUuid: number;
 }
 
 export interface BillDetailHeaderProps {

@@ -5,7 +5,7 @@ import {
   useTranslatedCategoryName,
 } from "@/constants/categories";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useMemo, useCallback } from "react";
 import { TouchableOpacity } from "react-native";
 import { Avatar, Text, XStack, YStack } from "tamagui";
 import { useLocale } from "@/i18n/useLocale";
@@ -44,29 +44,59 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
   const router = useRouter();
   const { locale } = useLocale();
 
-  const category = getCategoryById(item.category);
-  const CategoryIcon = getCategoryIcon(item.category);
+  // 使用useMemo缓存计算结果
+  const categoryInfo = useMemo(() => {
+    const category = getCategoryById(item.category);
+    const CategoryIcon = getCategoryIcon(item.category);
+    return { category, CategoryIcon };
+  }, [item.category]);
+
   const categoryName = useTranslatedCategoryName(item.category);
 
-  const handlePress = () => {
+  // 缓存日期格式化结果
+  const formattedDateTime = useMemo(() => {
+    return new Date(item.date).toLocaleTimeString(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  }, [item.date, locale]);
+
+  // 缓存格式化金额
+  const formattedAmount = useMemo(() => {
+    return formatCurrency(item.amount);
+  }, [item.amount]);
+
+  const handlePress = useCallback(() => {
     onSwipeClose?.();
     router.push({
       pathname: "/bills/details",
       params: { id: item.id },
     });
-  };
+  }, [onSwipeClose, router, item.id]);
+
+  const handleDelete = useCallback(() => {
+    if (onDelete) {
+      onDelete(item);
+    }
+  }, [onDelete, item]);
+
+  const { category, CategoryIcon } = categoryInfo;
 
   return (
     <SwipeableRow
       disabled={disabled}
-      onDelete={onDelete ? () => onDelete(item) : undefined}
+      onDelete={handleDelete}
       isOpen={isOpen}
       onSwipeOpen={onSwipeOpen}
       onSwipeClose={onSwipeClose}
       onSwipeStart={onSwipeStart}
     >
       <TouchableOpacity
-        activeOpacity={1}
+        activeOpacity={0.7}
         onPress={handlePress}
         disabled={disabled}
         style={{
@@ -87,14 +117,7 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
                 {categoryName}
               </Text>
               <Text fontSize="$2" color="$gray9" lineHeight={16}>
-                {new Date(item.date).toLocaleTimeString(locale, {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                })}
+                {formattedDateTime}
                 {item.merchant && ` | ${item.merchant}`}
               </Text>
             </YStack>
@@ -106,7 +129,7 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
               fontWeight="500"
               color={disabled ? "$gray9" : "$red10"}
             >
-              -{formatCurrency(item.amount)}
+              -{formattedAmount}
             </Text>
           </YStack>
         </XStack>
@@ -115,11 +138,18 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
   );
 };
 
-// Memoize to avoid unnecessary re-renders
+// 优化memo比较函数，只比较必要的属性
 export const BillListItem = React.memo(
   BillListItemComponent,
-  (prevProps, nextProps) =>
-    prevProps.item === nextProps.item &&
-    prevProps.isOpen === nextProps.isOpen &&
-    prevProps.disabled === nextProps.disabled
+  (prevProps, nextProps) => {
+    return (
+      prevProps.item.id === nextProps.item.id &&
+      prevProps.item.amount === nextProps.item.amount &&
+      prevProps.item.category === nextProps.item.category &&
+      prevProps.item.date === nextProps.item.date &&
+      prevProps.item.merchant === nextProps.item.merchant &&
+      prevProps.isOpen === nextProps.isOpen &&
+      prevProps.disabled === nextProps.disabled
+    );
+  }
 );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Alert,
   ActivityIndicator,
@@ -25,11 +25,14 @@ import CategorySelectSheet from "@/components/ui/CategorySelectSheet";
 import AmountInputSheet from "@/components/ui/AmountInputSheet";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
 
-// 账单详情缓存
+// 账单详情缓存 - 优化缓存策略
 const billDetailsCache: Record<string, {
   bill: Bill;
   timestamp: number;
 }> = {};
+
+// 缓存有效期设置为5分钟
+const CACHE_DURATION = 5 * 60 * 1000;
 
 export default function BillDetailsScreen() {
   const router = useRouter();
@@ -42,7 +45,7 @@ export default function BillDetailsScreen() {
   const [activeSheet, setActiveSheet] = useState<
     "date" | "category" | "amount" | null
   >(null);
-  const [loading, setLoading] = useState<boolean>(false); // 默认不显示加载状态
+  const [loading, setLoading] = useState<boolean>(false);
   const [updating, setUpdating] = useState(false);
   const [changeUuid, setChangeUuid] = useState(0);
   const [bill, setBill] = useState<Bill | null>(null);
@@ -55,42 +58,48 @@ export default function BillDetailsScreen() {
   const hasChangesRef = useRef(false);
   const isMounted = useRef(true);
 
-
-  // 优先从缓存加载数据，然后再从bills中查找
+  // 优化数据加载逻辑
   useFocusEffect(
     React.useCallback(() => {
       const loadBillDetails = async () => {
         if (!id) return;
 
-        // 先检查缓存
+        // 优先从全局状态中查找账单 - 最快的方式
+        if (bills.length > 0) {
+          const foundBill = bills.find((b) => b.id === id);
+          if (foundBill) {
+            // 当本地 bill 不存在或全局 bill 更新更晚时才覆盖
+            const localUpdatedAt = bill ? new Date(bill.updatedAt).getTime() : 0;
+            const globalUpdatedAt = foundBill.updatedAt
+              ? new Date(foundBill.updatedAt).getTime()
+              : 0;
+
+            if (!bill || globalUpdatedAt >= localUpdatedAt) {
+              setBill(foundBill);
+              // 更新缓存
+              billDetailsCache[id as string] = {
+                bill: foundBill,
+                timestamp: Date.now(),
+              };
+            }
+            return;
+          }
+        }
+
+        // 检查缓存是否有效
         const cachedBill = billDetailsCache[id as string];
-        if (cachedBill && Date.now() - cachedBill.timestamp < 60000) {
+        if (cachedBill && Date.now() - cachedBill.timestamp < CACHE_DURATION) {
           setBill(cachedBill.bill);
           return;
         }
 
-        // 如果没有缓存，则显示加载状态
+        // 只在没有数据时显示loading
         if (!bill) {
           setLoading(true);
         }
 
         try {
-          // 首先尝试从全局状态中查找账单
-          if (bills.length > 0) {
-            const foundBill = bills.find(b => b.id === id);
-            if (foundBill) {
-              setBill(foundBill);
-              // 更新缓存
-              billDetailsCache[id as string] = {
-                bill: foundBill,
-                timestamp: Date.now()
-              };
-              setLoading(false);
-              return;
-            }
-          }
-
-          // 如果全局状态中没有，再从存储中查找
+          // 从存储中查找
           const allBills = await getBills();
           const foundBill = allBills.find((b) => b.id === id);
           if (foundBill) {
@@ -116,7 +125,7 @@ export default function BillDetailsScreen() {
 
       return () => {
         // 页面失去焦点时更新缓存时间戳
-        if (bill) {
+        if (bill && id) {
           billDetailsCache[id as string] = {
             bill,
             timestamp: Date.now()
@@ -131,19 +140,22 @@ export default function BillDetailsScreen() {
     return () => {
       isMounted.current = false;
       if (hasChangesRef.current) {
-        refreshData().catch(() => { });
+        // 延迟刷新以避免阻塞导航
+        setTimeout(() => {
+          refreshData().catch(() => { });
+        }, 100);
       }
     };
-  }, []);
+  }, [refreshData]);
 
-  // 删除账单处理
-  const handleDeletePress = () => {
+  // 删除账单处理 - 优化删除操作
+  const handleDeletePress = useCallback(() => {
     if (!bill) return;
 
     setUpdating(true);
     confirmDeleteBill(bill, {
       onSuccess: () => {
-        hasChangesRef.current = true; // deletion changes list too
+        hasChangesRef.current = true;
         setUpdating(false);
         // 删除缓存
         if (id) delete billDetailsCache[id as string];
@@ -155,10 +167,10 @@ export default function BillDetailsScreen() {
       },
       ignoreRefresh: true,
     });
-  };
+  }, [bill, confirmDeleteBill, id, router, t]);
 
-  // 更新分类处理
-  const handleCategoryChange = async (categoryId: string) => {
+  // 更新分类处理 - 优化更新操作
+  const handleCategoryChange = useCallback(async (categoryId: string) => {
     if (!bill) return;
     // 只有当分类实际变化时才更新
     if (bill.category === categoryId) {
@@ -183,10 +195,10 @@ export default function BillDetailsScreen() {
       onError: () => setUpdating(false),
       ignoreRefresh: true,
     });
-  };
+  }, [bill, updateBillField, id]);
 
-  // 更新字段通用处理
-  const handleUpdateField = async (field: keyof Bill, value: any) => {
+  // 更新字段通用处理 - 优化字段更新
+  const handleUpdateField = useCallback(async (field: keyof Bill, value: any) => {
     if (!bill) return;
     // 只有当值实际变化时才更新
     if (bill[field] === value) {
@@ -210,12 +222,12 @@ export default function BillDetailsScreen() {
       onError: () => setUpdating(false),
       ignoreRefresh: true,
     });
-  };
+  }, [bill, updateBillField, id]);
 
   // Sheet打开处理器
-  const handleOpenCategorySheet = () => setActiveSheet("category");
-  const handleOpenDateSheet = () => setActiveSheet("date");
-  const handleOpenAmountSheet = () => setActiveSheet("amount");
+  const handleOpenCategorySheet = useCallback(() => setActiveSheet("category"), []);
+  const handleOpenDateSheet = useCallback(() => setActiveSheet("date"), []);
+  const handleOpenAmountSheet = useCallback(() => setActiveSheet("amount"), []);
 
   if (loading) {
     return (
@@ -223,8 +235,8 @@ export default function BillDetailsScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
           <Stack.Screen options={{ headerShown: false }} />
           <YStack flex={1} justifyContent="center" alignItems="center">
-            <ActivityIndicator size="large" color="#3B82F6" />
-            <Text marginTop="$4" color="$gray10">
+            <ActivityIndicator size="small" color="#3B82F6" />
+            <Text marginTop="$3" color="$gray10" fontSize="$3">
               {t("Loading bill information...")}
             </Text>
           </YStack>
@@ -283,7 +295,6 @@ export default function BillDetailsScreen() {
                 onUpdateField={handleUpdateField}
                 onOpenAmountSheet={handleOpenAmountSheet}
                 locale={locale}
-                changeUuid={changeUuid}
               />
 
               {/* 详情卡片 */}
@@ -294,7 +305,6 @@ export default function BillDetailsScreen() {
                 onOpenCategorySheet={handleOpenCategorySheet}
                 onOpenDateSheet={handleOpenDateSheet}
                 locale={locale}
-                changeUuid={changeUuid}
               />
             </YStack>
           </KeyboardAvoidingView>

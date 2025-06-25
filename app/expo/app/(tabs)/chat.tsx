@@ -55,9 +55,16 @@ export default function ChatScreen() {
 
   const scrollViewRef = useRef<FlatList<Message>>(null);
 
-  // Helper: scroll chat to bottom (used by many hooks)
+  // Helper: scroll chat to bottom (used by many hooks) - 优化滚动操作
+  const scrollToBottomRef = useRef<NodeJS.Timeout | null>(null);
   function scrollToBottom() {
-    scrollViewRef.current?.scrollToOffset({ offset: 0, animated: true });
+    // 使用防抖来减少频繁滚动调用
+    if (scrollToBottomRef.current) {
+      clearTimeout(scrollToBottomRef.current);
+    }
+    scrollToBottomRef.current = setTimeout(() => {
+      scrollViewRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }, 100);
   }
 
   const { messages, setMessages, clearMessages, loadMoreMessages, isLoadingMore, hasMoreMessages } = useChatMessages({
@@ -147,8 +154,8 @@ export default function ChatScreen() {
         // Build current month summary for context
         const today = new Date();
         const summary = summariseBills(
-          bills,
-          budgets,
+          bills || [],
+          budgets || {},
           DatePeriodEnum.MONTH,
           startOfMonth(today),
           endOfMonth(today)

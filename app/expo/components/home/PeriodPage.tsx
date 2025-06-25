@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
     ScrollView,
     ActivityIndicator,
@@ -18,12 +18,12 @@ import { useBudgets } from "@/hooks/useBudgets";
 // New hooks (logic extracted) ---------------------------------------------
 import { useCategoryFilters } from "@/hooks/useCategoryFilters";
 import { useBudgetStatus } from "@/hooks/useBudgetStatus";
-import { useReportData } from "@/hooks/useReportData";
+import { useSplitReportData } from "@/hooks/useReportData";
 import { useSpendingWidgetSync } from "@/hooks/useSpendingWidgetSync";
 import { useBudgetWidgetSync } from "@/hooks/useBudgetWidgetSync";
+import { syncBudgetWidgets } from "@/utils/budgetWidgetSync.utils";
 
 // UI Components ------------------------------------------------------------
-import DateFilter from "@/components/reports/DateFilter";
 import BudgetSummaryCard from "@/components/home/BudgetSummaryCard";
 import EnhancedDonutChart from "@/components/reports/EnhancedDonutChart";
 import ExpenseTrendChart from "@/components/reports/ExpenseTrendChart";
@@ -37,6 +37,12 @@ import {
     Budgets,
 } from "@/utils/budget.utils";
 import { DatePeriodEnum } from "@/types/reports.types";
+
+// Subcomponents memo optimization
+const MemoizedBudgetSummaryCard = React.memo(BudgetSummaryCard);
+const MemoizedEnhancedDonutChart = React.memo(EnhancedDonutChart);
+const MemoizedExpenseTrendChart = React.memo(ExpenseTrendChart);
+const MemoizedRecentBillsList = React.memo(RecentBillsList);
 
 interface PeriodPageProps {
     periodType: DatePeriodEnum;
@@ -56,7 +62,6 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
     onSelectedPeriodChange,
 }) => {
     const router = useRouter();
-    const { viewMode } = useViewStore();
     const { t } = useTranslation();
 
     // Data -------------------------------------------------------------------
@@ -65,17 +70,23 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
 
     // Reports ----------------------------------------------------------------
     const {
-        periodType: currentPeriodType,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        handlePeriodTypeChange, // keep from hook but not used for cross-page switch
         periodSelectors,
         selectedPeriodId,
-        setSelectedPeriodId,
-        reportData,
-        loadingReport,
-        refreshReport,
-        isChangingPeriodType,
-    } = useReportData(viewMode, periodType);
+        setSelectedPeriodId: handlePeriodChange,
+        coreReport,
+        budgetReport,
+        loadingCore,
+        loadingBudget,
+        refreshCoreReport,
+        refreshBudgetReport,
+        refreshBothReports,
+    } = useSplitReportData("personal", periodType);
+
+    // 缓存周期选择器查找
+    const currentSelector = useMemo(() =>
+        periodSelectors.find((p) => p.id === selectedPeriodId),
+        [periodSelectors, selectedPeriodId]
+    );
 
     // Category filters -------------------------------------------------------
     const { includedCategories, excludedCategories } = useCategoryFilters(
@@ -84,60 +95,89 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
     );
 
     // Budget status & categories --------------------------------------------
-    const { budgetStatus, categories } = useBudgetStatus({
+    const budgetStatusData = useMemo(() => ({
         bills,
         transactions,
         periodType,
         budgets,
         includedCategories,
         excludedCategories,
-        periodStart: periodSelectors.find((p) => p.id === selectedPeriodId)?.startDate,
-        periodEnd: periodSelectors.find((p) => p.id === selectedPeriodId)?.endDate,
-    });
+        periodStart: currentSelector?.startDate,
+        periodEnd: currentSelector?.endDate,
+    }), [bills, transactions, periodType, budgets, includedCategories, excludedCategories, currentSelector]);
+
+    const { budgetStatus, categories } = useBudgetStatus(budgetStatusData);
 
     // Local UI states --------------------------------------------------------
-    const hasBills = bills.length > 0 || transactions.length > 0;
+    const hasBills = useMemo(() =>
+        bills.length > 0 || transactions.length > 0,
+        [bills.length, transactions.length]
+    );
+
     const [isBudgetModalOpen, setBudgetModalOpen] = useState(false);
     const [savingBudget, setSavingBudget] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isManuallyUpdatingWidget, setIsManuallyUpdatingWidget] = useState(false);
 
     /* ------------------------------- Actions ------------------------------- */
-    const handleRefresh = async () => {
+    const handleRefresh = useCallback(async () => {
         setIsRefreshing(true);
-        await refreshData();
-        await refreshReport();
-        setIsRefreshing(false);
-    };
+        try {
+            await Promise.all([refreshData(), refreshBothReports()]);
+        } catch (error) {
+            console.error("Failed to refresh data:", error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [refreshData, refreshBothReports]);
 
-    const handleSaveBudgets = async (nextBudgets: Budgets) => {
+    const handleSaveBudgets = useCallback(async (nextBudgets: Budgets) => {
         setSavingBudget(true);
+        setIsManuallyUpdatingWidget(true);
         try {
             const periods: BudgetPeriod[] = ["weekly", "monthly", "yearly"];
 
+            // 顺序保存预算，避免并发写导致覆盖问题
             for (const p of periods) {
                 const detail = nextBudgets[p as keyof Budgets];
                 if (detail) {
+                    // eslint-disable-next-line no-await-in-loop
                     await saveBudgetForPeriod(p, detail);
                 }
             }
 
-            await refreshReport();
+            // 预算更新后重新计算报表数据，确保 healthScore 及时刷新
+            await refreshBudgetReport();
+
+            // 等待一个微任务，确保 reportData 状态已更新
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            // Sync iOS widgets once after budgets are updated with the latest report
+            syncBudgetWidgets({
+                viewMode: "personal",
+                currentBudgetData: budgetReport,
+                currentPeriodType: periodType,
+                budgetVersion: Date.now()
+            }).catch(() => { });
         } catch (error) {
             console.error("Failed to save budgets:", error);
         } finally {
             setSavingBudget(false);
+            // 延迟恢复自动同步，确保手动同步完成
+            setTimeout(() => setIsManuallyUpdatingWidget(false), 1000);
         }
-    };
+    }, [saveBudgetForPeriod, refreshBudgetReport, budgetReport, periodType]);
 
-    const handleStartChat = () => router.push("/chat");
-    const handleBudgetFinancialInsights = () => {
+    const handleStartChat = useCallback(() => router.push("/chat"), [router]);
+
+    const handleBudgetFinancialInsights = useCallback(() => {
         router.push(`/chat?insightsPeriod=${periodType}&ts=${Date.now()}`);
-    };
+    }, [router, periodType]);
 
-    const currentSelector = periodSelectors.find((p) => p.id === selectedPeriodId);
+    const openBudgetModal = useCallback(() => setBudgetModalOpen(true), []);
 
     /* --------------------------- Category navigation --------------------------- */
-    const handleCategoryPress = (categoryId: string) => {
+    const handleCategoryPress = useCallback((categoryId: string) => {
         const start = currentSelector?.startDate;
         const end = currentSelector?.endDate;
 
@@ -148,109 +188,158 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
         if (end) params.endDate = format(end, "yyyy-MM-dd");
 
         router.push({ pathname: "/bills", params });
-    };
+    }, [currentSelector, router]);
 
     // Sync iOS widgets --------------------------------------------------------
-    useSpendingWidgetSync(reportData, periodType, viewMode);
-    useBudgetWidgetSync(reportData, periodType, viewMode);
+    // 合并报表数据用于 Widget 同步
+    const combinedReportData = useMemo(() => {
+        if (!coreReport || !budgetReport) return null;
+        return {
+            ...coreReport,
+            healthScore: budgetReport.healthScore,
+            budget: budgetReport.budget,
+        };
+    }, [coreReport, budgetReport]);
+
+    useSpendingWidgetSync(combinedReportData, periodType, "personal");
+    useBudgetWidgetSync(budgetReport, periodType, "personal", isManuallyUpdatingWidget);
 
     // Sync external selectedId -> internal
     useEffect(() => {
         if (externalSelectedId && externalSelectedId !== selectedPeriodId) {
-            setSelectedPeriodId(externalSelectedId);
+            handlePeriodChange(externalSelectedId);
         }
-    }, [externalSelectedId]);
+    }, [externalSelectedId, selectedPeriodId, handlePeriodChange]);
 
     // Sync internal -> parent
     useEffect(() => {
         if (selectedPeriodId !== externalSelectedId) {
             onSelectedPeriodChange(selectedPeriodId);
         }
-    }, [selectedPeriodId]);
+    }, [selectedPeriodId, externalSelectedId, onSelectedPeriodChange]);
 
     /* ---------------------------- UI 渲染逻辑 ---------------------------- */
-    const shouldShowFullLoading =
-        loadingReport && !isChangingPeriodType && !reportData;
-    const shouldShowMinimalLoading = loadingReport && isChangingPeriodType;
-
-    const mainContent = hasBills ? (
-        <View style={{ flex: 1, backgroundColor: "#eee" }}>
-            <YStack flex={1}>
-                {/* Header removed; DateFilter handled by parent */}
-
-                <ScrollView
-                    style={{ flex: 1 }}
-                    contentContainerStyle={{ paddingBottom: 20 }}
-                    showsVerticalScrollIndicator={false}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={isRefreshing}
-                            onRefresh={handleRefresh}
-                            colors={["#3B82F6"]}
-                        />
-                    }
-                >
-                    {shouldShowFullLoading ? (
-                        <YStack alignItems="center" justifyContent="center" paddingVertical="$4">
-                            <ActivityIndicator size="large" color="#3B82F6" />
-                            <Text marginTop="$2">{t("Loading...")}</Text>
-                        </YStack>
-                    ) : (
-                        <YStack gap="$3" opacity={shouldShowMinimalLoading ? 0.7 : 1}>
-                            <BudgetSummaryCard
-                                budgetStatus={budgetStatus}
-                                categories={categories}
-                                isLoading={savingBudget}
-                                budgets={{
-                                    weekly: budgets.weekly?.amount ?? null,
-                                    monthly: budgets.monthly?.amount ?? null,
-                                    yearly: budgets.yearly?.amount ?? null,
-                                }}
-                                onEditBudgetPress={() => setBudgetModalOpen(true)}
-                                onCategoryPress={handleCategoryPress}
-                                overviewBudget={reportData?.budget}
-                                bills={bills}
-                                budgetsDetail={budgets}
-                                periodType={periodType}
-                                periodStart={currentSelector?.startDate}
-                                periodEnd={currentSelector?.endDate}
-                                onSetBudget={() => setBudgetModalOpen(true)}
-                                onChatPress={handleBudgetFinancialInsights}
-                            />
-
-                            {reportData ? (
-                                <>
-                                    <EnhancedDonutChart
-                                        data={reportData.categoryData || []}
-                                        onCategoryPress={handleCategoryPress}
-                                    />
-                                    <ExpenseTrendChart
-                                        data={reportData.trendData || []}
-                                        averageSpending={reportData.averageSpending || 0}
-                                    />
-                                </>
-                            ) : (
-                                <YStack alignItems="center" padding="$6">
-                                    <Text color="$gray9">{t("No data available")}</Text>
-                                </YStack>
-                            )}
-
-                            <RecentBillsList
-                                bills={bills}
-                                periodStart={currentSelector?.startDate}
-                                periodEnd={currentSelector?.endDate}
-                                maxItems={5}
-                            />
-                        </YStack>
-                    )}
-                </ScrollView>
-            </YStack>
-        </View>
-    ) : (
-        <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-            <WelcomeScreen onStartChatPress={handleStartChat} />
-        </View>
+    // 优化loading逻辑：只在真正需要时显示
+    const shouldShowLoading = useMemo(() =>
+        (loadingCore || loadingBudget) && (!coreReport || !budgetReport) && hasBills,
+        [loadingCore, loadingBudget, coreReport, budgetReport, hasBills]
     );
+
+    // 缓存预算数据
+    const budgetSummaryProps = useMemo(() => ({
+        budgetStatus,
+        categories,
+        isLoading: false,
+        budgets: {
+            weekly: budgets.weekly?.amount ?? null,
+            monthly: budgets.monthly?.amount ?? null,
+            yearly: budgets.yearly?.amount ?? null,
+        },
+        onEditBudgetPress: openBudgetModal,
+        onCategoryPress: handleCategoryPress,
+        bills,
+        budgetsDetail: budgets,
+        periodType,
+        periodStart: currentSelector?.startDate,
+        periodEnd: currentSelector?.endDate,
+        onSetBudget: openBudgetModal,
+        onChatPress: handleBudgetFinancialInsights,
+        healthScore: budgetReport?.healthScore,
+    }), [
+        budgetStatus,
+        categories,
+        budgets,
+        openBudgetModal,
+        handleCategoryPress,
+        bills,
+        periodType,
+        currentSelector?.startDate,
+        currentSelector?.endDate,
+        handleBudgetFinancialInsights,
+        budgetReport?.healthScore,
+    ]);
+
+    // 缓存图表数据
+    const chartData = useMemo(() => ({
+        categoryData: coreReport?.categoryData || [],
+        trendData: coreReport?.trendData || [],
+        averageSpending: coreReport?.averageSpending || 0,
+    }), [coreReport]);
+
+    const mainContent = useMemo(() => {
+        if (!hasBills) {
+            return (
+                <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+                    <WelcomeScreen onStartChatPress={handleStartChat} />
+                </View>
+            );
+        }
+
+        return (
+            <View style={{ flex: 1, backgroundColor: "#eee" }}>
+                <YStack flex={1}>
+                    <ScrollView
+                        style={{ flex: 1 }}
+                        contentContainerStyle={{ paddingBottom: 20 }}
+                        showsVerticalScrollIndicator={false}
+                        removeClippedSubviews={true}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isRefreshing}
+                                onRefresh={handleRefresh}
+                                colors={["#3B82F6"]}
+                            />
+                        }
+                    >
+                        {shouldShowLoading ? (
+                            <YStack alignItems="center" justifyContent="center" paddingVertical="$4">
+                                <ActivityIndicator size="small" color="#3B82F6" />
+                                <Text marginTop="$2">{t("Loading...")}</Text>
+                            </YStack>
+                        ) : (
+                            <YStack gap="$3">
+                                <MemoizedBudgetSummaryCard {...budgetSummaryProps} />
+
+                                {coreReport && (
+                                    <>
+                                        <MemoizedEnhancedDonutChart
+                                            data={chartData.categoryData}
+                                            onCategoryPress={handleCategoryPress}
+                                        />
+                                        <MemoizedExpenseTrendChart
+                                            data={chartData.trendData}
+                                            averageSpending={chartData.averageSpending}
+                                        />
+                                    </>
+                                )}
+
+                                <MemoizedRecentBillsList
+                                    bills={bills}
+                                    periodStart={currentSelector?.startDate}
+                                    periodEnd={currentSelector?.endDate}
+                                    maxItems={5}
+                                />
+                            </YStack>
+                        )}
+                    </ScrollView>
+                </YStack>
+            </View>
+        );
+    }, [
+        hasBills,
+        handleStartChat,
+        isRefreshing,
+        handleRefresh,
+        shouldShowLoading,
+        t,
+        budgetSummaryProps,
+        coreReport,
+        chartData,
+        handleCategoryPress,
+        bills,
+        currentSelector?.startDate,
+        currentSelector?.endDate,
+    ]);
 
     return (
         <>

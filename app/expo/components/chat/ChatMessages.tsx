@@ -136,29 +136,34 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         }
     }, [loadMoreMessages, isLoadingMore, hasMoreMessages]);
 
-    // Reverse messages so newest is first (for inverted list)
-    const reversedData = useMemo(() => [...messages].reverse(), [messages]);
+    // 修复重复计算问题 - 使用消息ID数组来优化检测变化
+    const messageIds = useMemo(() => messages.map(m => m.id).join(','), [messages]);
+
+    // 优化数组反转操作，基于ID变化而不是整个数组
+    const reversedData = useMemo(() => {
+        if (messages.length === 0) return [];
+        // 只有当消息ID序列真正变化时才重新反转
+        return [...messages].reverse();
+    }, [messageIds, messages.length]);
 
     return (
-        <FlatList
-            ref={scrollViewRef as any}
+        <FlatList<Message>
+            ref={scrollViewRef}
             data={reversedData}
-            inverted
             renderItem={renderItem}
             keyExtractor={keyExtractor}
-            contentContainerStyle={{
-                paddingTop: 16,
-                paddingHorizontal: 0,
-                paddingBottom: 20,
-            }}
+            inverted
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16 }}
             ListHeaderComponent={ListHeaderComponent}
             ListFooterComponent={ListFooterComponent}
             onEndReached={handleLoadMore}
-            onEndReachedThreshold={0.2}
-            initialNumToRender={20}
-            maxToRenderPerBatch={20}
-            windowSize={21}
-            removeClippedSubviews
+            onEndReachedThreshold={0.1}
+            initialNumToRender={12} // 减少初始渲染数量
+            maxToRenderPerBatch={8} // 减少批次渲染数量
+            windowSize={8} // 减少窗口大小
+            removeClippedSubviews={true}
+            getItemLayout={undefined} // 让FlatList自动优化
         />
     );
 }; 

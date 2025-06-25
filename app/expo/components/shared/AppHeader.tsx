@@ -1,11 +1,11 @@
 import React from "react";
 import { useRouter } from "expo-router";
 import { Bell, Plus, Search } from "lucide-react-native";
-import { 
-  View, 
-  Text, 
-  Button, 
-  XStack, 
+import {
+  View,
+  Text,
+  Button,
+  XStack,
   YStack,
   Avatar,
   useTheme,
@@ -32,12 +32,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const router = useRouter();
   const { viewMode, setViewMode } = useViewStore();
-  const { isLoggedIn, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const theme = useTheme();
 
   // Toggle between personal and family view
   const toggleViewMode = () => {
-    if (!isLoggedIn && viewMode === "personal") {
+    if (!isAuthenticated && viewMode === "personal") {
       // If user is not logged in and tries to switch to family view, prompt to login
       router.push("/auth/login");
       return;
@@ -48,10 +48,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <YStack>
-      <XStack 
-        alignItems="center" 
+      <XStack
+        alignItems="center"
         justifyContent="space-between"
-        paddingHorizontal="$4" 
+        paddingHorizontal="$4"
         paddingVertical="$3"
         backgroundColor="$background"
         borderBottomWidth={1}
@@ -60,22 +60,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <XStack alignItems="center" space="$2">
           <Avatar circular size="$4">
             <Avatar.Fallback delayMs={600}>
-              <View backgroundColor={isLoggedIn ? "$blue5" : "$gray5"} width="100%" height="100%" alignItems="center" justifyContent="center">
-                <Text color={isLoggedIn ? "$blue11" : "$gray11"} fontSize="$6" fontWeight="bold">
-                  {isLoggedIn && user?.username ? user.username.charAt(0).toUpperCase() : "G"}
+              <View backgroundColor={isAuthenticated ? "$blue5" : "$gray5"} width="100%" height="100%" alignItems="center" justifyContent="center">
+                <Text color={isAuthenticated ? "$blue11" : "$gray11"} fontSize="$6" fontWeight="bold">
+                  {isAuthenticated && user?.name ? user.name.charAt(0).toUpperCase() : "G"}
                 </Text>
               </View>
             </Avatar.Fallback>
           </Avatar>
           <Text fontSize="$4" fontWeight="$6" color="$color">
-            {isLoggedIn ? user?.username : "Guest"}
+            {isAuthenticated ? user?.name : "Guest"}
           </Text>
         </XStack>
 
         <XStack alignItems="center" space="$3">
           {showAddButton && (
-            <Button 
-              size="$2" 
+            <Button
+              size="$2"
               circular
               backgroundColor="$backgroundHover"
               pressStyle={{ scale: 0.92 }}
@@ -84,7 +84,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <Plus size={18} color={theme?.color?.get()} />
             </Button>
           )}
-          
+
           {/* <Button
             size="$2"
             backgroundColor={viewMode === "personal" ? "$blue5" : "$orange5"}
@@ -109,12 +109,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </Button> */}
         </XStack>
       </XStack>
-      
+
       {/* Search bar */}
       {showSearch && (
-        <XStack 
-          paddingHorizontal="$4" 
-          paddingVertical="$2" 
+        <XStack
+          paddingHorizontal="$4"
+          paddingVertical="$2"
           backgroundColor="$background"
         >
           <Input

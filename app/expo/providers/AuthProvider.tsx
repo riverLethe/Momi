@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Platform, Alert } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -13,6 +13,8 @@ import {
   getMockUser
 } from '@/utils/userPreferences.utils';
 import { apiClient } from '@/utils/api';
+import { smartSync } from '@/utils/sync.utils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure Google Sign-In
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -145,9 +147,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [appleResponse]);
 
   /**
+   * Sync data with server
+   */
+  const syncData = useCallback(async (): Promise<void> => {
+    if (!authState.isAuthenticated || !authState.user) return;
+
+    try {
+      // 使用智能同步策略，非阻塞
+      await smartSync(authState.user.id, "app_start");
+      setLastSyncTime(new Date());
+    } catch (error) {
+      console.error('Data sync error:', error);
+      // 不阻塞用户流程，静默处理错误
+    }
+  }, [authState.isAuthenticated, authState.user]);
+
+  /**
    * Email/Password login function
    */
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
@@ -165,7 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
 
         // Trigger initial data sync
-        setTimeout(() => syncData(), 1000);
+        syncData();
 
         return true;
       }
@@ -180,12 +198,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }));
       return false;
     }
-  };
+  }, [syncData]);
 
   /**
    * Google Sign In
    */
-  const loginWithGoogle = async (): Promise<boolean> => {
+  const loginWithGoogle = useCallback(async (): Promise<boolean> => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
@@ -214,7 +232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           });
 
           // Trigger initial data sync
-          setTimeout(() => syncData(), 1000);
+          syncData();
 
           return true;
         }
@@ -236,12 +254,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }));
       return false;
     }
-  };
+  }, [syncData]);
 
   /**
    * Apple Sign In
    */
-  const loginWithApple = async (): Promise<boolean> => {
+  const loginWithApple = useCallback(async (): Promise<boolean> => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
@@ -268,12 +286,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }));
       return false;
     }
-  };
+  }, [applePromptAsync]);
 
   /**
    * Handle Apple Sign In response
    */
-  const handleAppleSignInResponse = async (response: AuthSession.AuthSessionResult): Promise<boolean> => {
+  const handleAppleSignInResponse = useCallback(async (response: AuthSession.AuthSessionResult): Promise<boolean> => {
     try {
       if (response.type === 'success' && response.params.code) {
         // Send Apple authorization code to backend
@@ -293,7 +311,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           });
 
           // Trigger initial data sync
-          setTimeout(() => syncData(), 1000);
+          syncData();
 
           return true;
         }
@@ -309,12 +327,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }));
       return false;
     }
-  };
+  }, [syncData]);
 
   /**
    * Logout function
    */
-  const logout = async (): Promise<void> => {
+  const logout = useCallback(async (): Promise<void> => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
@@ -343,12 +361,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         error: 'Logout failed',
       }));
     }
-  };
+  }, []);
 
   /**
    * Update user data
    */
-  const updateUser = (userData: Partial<User>): void => {
+  const updateUser = useCallback((userData: Partial<User>): void => {
     if (!authState.user) return;
 
     setAuthState(prev => ({
@@ -358,25 +376,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ...userData,
       },
     }));
-  };
-
-  /**
-   * Sync data with server
-   */
-  const syncData = async (): Promise<void> => {
-    if (!authState.isAuthenticated || !authState.user) return;
-
-    try {
-      const token = await getAuthToken();
-      if (!token) return;
-
-      // Call data sync API
-      await apiClient.sync.syncData(token);
-      setLastSyncTime(new Date());
-    } catch (error) {
-      console.error('Data sync failed:', error);
-    }
-  };
+  }, [authState.user]);
 
   // Context value
   const contextValue: AuthContextType = {

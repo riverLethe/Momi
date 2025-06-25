@@ -3,21 +3,11 @@ import {
   DatePeriodEnum,
   PeriodSelectorData,
   ReportData,
+  BudgetReportData,
 } from "@/types/reports.types";
-import { fetchReportData } from "@/utils/reports.utils";
+import { fetchReportData, fetchBudgetReportData } from "@/utils/reports.utils";
 import { generatePeriodSelectors } from "@/utils/date.utils";
 import { useData } from "@/providers/DataProvider";
-
-// -----------------------------------------------------------------------------
-// Prevent duplicate preloadAllPeriodTypes() executions across multiple
-// PeriodPage instances (Week / Month / Year) that mount at the same time.
-// Using a module-level map keyed by viewMode we ensure the heavy preloading
-// logic only runs once per app session per viewMode.
-// -----------------------------------------------------------------------------
-const globalPreloadStatus: Record<"personal" | "family", boolean> = {
-  personal: false,
-  family: false,
-};
 
 export const useReportData = (
   viewMode: "personal" | "family",
@@ -38,267 +28,73 @@ export const useReportData = (
     useState<string>(initialSelectorId);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loadingReport, setLoadingReport] = useState<boolean>(false);
-  const [loadingInBackground, setLoadingInBackground] =
-    useState<boolean>(false);
 
   // 跟踪组件是否已挂载
   const isMounted = useRef<boolean>(true);
-  // 跟踪最后一次加载请求的时间戳
-  const lastLoadRequestTime = useRef<number>(0);
   // 防止递归加载
   const isLoadingRef = useRef<boolean>(false);
-  // 添加一个引用来跟踪已处理的数据版本
-  const processedDataVersionRef = useRef<number | null>(null);
-  // 跟踪每个周期类型的报表数据
-  const reportDataCache = useRef<Record<string, ReportData>>({});
-  // 跟踪周期类型切换
-  const isChangingPeriodType = useRef<boolean>(false);
-  // 预加载所有周期类型的数据
-  const hasPreloadedRef = useRef<boolean>(false);
+  // 用于防止老旧请求覆盖新数据的递增 ID
+  const requestIdRef = useRef<number>(0);
 
   // 初始化周期选择器
   useEffect(() => {
-    // 为所有周期类型预先生成选择器
-    const allSelectors: Record<DatePeriodEnum, PeriodSelectorData[]> = {
-      [DatePeriodEnum.WEEK]: generatePeriodSelectors(DatePeriodEnum.WEEK),
-      [DatePeriodEnum.MONTH]: generatePeriodSelectors(DatePeriodEnum.MONTH),
-      [DatePeriodEnum.YEAR]: generatePeriodSelectors(DatePeriodEnum.YEAR),
-    };
-
-    // 设置当前周期类型的选择器
-    setPeriodSelectors(allSelectors[periodType]);
+    setPeriodSelectors(generatePeriodSelectors(periodType));
   }, [periodType]);
 
-  // 预加载所有周期类型的报表数据
-  const preloadAllPeriodTypes = useCallback(async () => {
-    // Make sure we only preload once globally for the given viewMode.
-    if (globalPreloadStatus[viewMode] || hasPreloadedRef.current) return;
+  // 加载报表数据，带loading状态
+  const loadReportData = useCallback(
+    async (forceRefresh = false) => {
+      // 防止重复加载；若 forceRefresh 为 true 则允许在加载中强制刷新
+      if (isLoadingRef.current && !forceRefresh) return;
 
-    const allPeriodTypes = [
-      DatePeriodEnum.WEEK,
-      DatePeriodEnum.MONTH,
-      DatePeriodEnum.YEAR,
-    ];
-
-    // 先加载当前周期类型
-    await loadPeriodTypeData(periodType);
-
-    // 然后后台加载其他周期类型
-    for (const type of allPeriodTypes) {
-      if (type !== periodType) {
-        loadPeriodTypeData(type, true);
-      }
-    }
-
-    hasPreloadedRef.current = true;
-    globalPreloadStatus[viewMode] = true;
-  }, [periodType, viewMode]);
-
-  // 加载特定周期类型的数据
-  const loadPeriodTypeData = useCallback(
-    async (type: DatePeriodEnum, isBackground = false) => {
-      try {
-        // 生成该周期类型的选择器
-        const selectors = generatePeriodSelectors(type);
-        if (selectors.length === 0) return;
-
-        // 使用第一个选择器ID
-        const firstSelectorId = selectors[0].id;
-
-        // 构建缓存键
-        const cacheKey = `${type}_${viewMode}_${firstSelectorId}`;
-
-        // 如果已有缓存，不重复加载
-        if (reportDataCache.current[cacheKey]) return;
-
-        // 获取数据
-        const data = await fetchReportData(
-          type,
-          viewMode,
-          firstSelectorId,
-          dataVersion,
-          false
-        );
-
-        // 缓存数据
-        reportDataCache.current[cacheKey] = data;
-
-        // 如果是当前周期类型，更新UI
-        if (type === periodType && !isBackground) {
-          setReportData(data);
-        }
-      } catch (error) {
-        console.error(`预加载 ${type} 数据失败:`, error);
-      }
-    },
-    [viewMode, dataVersion]
-  );
-
-  // 报告加载的主要函数
-  const onLoadReportData = useCallback(
-    async (onDone?: () => void, forceRefresh = false) => {
-      // 防止递归调用
-      if (isLoadingRef.current) {
-        console.log("已有加载进行中，跳过");
-        onDone?.();
-        return;
-      }
-
-      // 记录请求时间
-      const requestTime = Date.now();
-      lastLoadRequestTime.current = requestTime;
       isLoadingRef.current = true;
+      setLoadingReport(true);
 
       try {
-        // 构建缓存键
-        const cacheKey = `${periodType}_${viewMode}_${selectedPeriodId || "default"}`;
+        // 记录此次请求编号
+        const currentRequestId = ++requestIdRef.current;
 
-        // 检查缓存中是否有该周期类型的报表数据
-        if (!forceRefresh && reportDataCache.current[cacheKey]) {
-          console.log("使用内存中的报表数据缓存");
-          setReportData(reportDataCache.current[cacheKey]);
-          isLoadingRef.current = false;
-          onDone?.();
-          return;
-        }
-
-        // 如果没有缓存，才设置加载状态
-        setLoadingInBackground(true);
-        console.log("开始加载报表数据");
-
-        // 获取数据，包括缓存机制，传递数据版本和强制刷新参数
         const data = await fetchReportData(
           periodType,
           viewMode,
           selectedPeriodId,
           dataVersion,
           forceRefresh
-        ).catch((error) => {
-          console.error("fetchReportData失败:", error);
-          // 创建基本的报表数据，以防止UI崩溃
-          return {
-            categoryData: [],
-            trendData: [],
-            insights: [],
-            healthScore: {
-              score: 0,
-              status: "Fair",
-              categories: [],
-            },
-            periodSelectors: [],
-            averageSpending: 0,
-            viewMode,
-            periodType,
-          } as ReportData;
-        });
+        );
 
-        // 确保不是过时的请求响应
-        if (lastLoadRequestTime.current !== requestTime || !isMounted.current) {
-          console.log("丢弃过时的报表数据响应");
-          onDone?.();
-          return;
+        // 仅当该请求仍然是最新时才更新状态，避免旧请求覆盖新数据
+        if (isMounted.current && currentRequestId === requestIdRef.current) {
+          setReportData(data);
         }
-
-        // 缓存报表数据
-        reportDataCache.current[cacheKey] = data;
-
-        // 设置报表数据
-        console.log("报表数据加载完成");
-        setReportData(data);
       } catch (error) {
         console.error("Error fetching report data:", error);
-      } finally {
-        // 确保组件仍然挂载且不是过时的请求
-        if (isMounted.current && lastLoadRequestTime.current === requestTime) {
-          setLoadingInBackground(false);
-          isLoadingRef.current = false;
-          onDone?.();
-          console.log("报表加载状态已重置");
-        } else {
-          isLoadingRef.current = false;
-        }
-      }
-    },
-    [periodType, viewMode, selectedPeriodId, dataVersion]
-  );
-
-  // 加载报表数据，带loading状态
-  const loadReportData = useCallback(
-    async (forceRefresh = false) => {
-      // 防止重复加载
-      if (isLoadingRef.current) return;
-
-      // 构建缓存键
-      const cacheKey = `${periodType}_${viewMode}_${selectedPeriodId || "default"}`;
-
-      // 如果有缓存数据，不显示加载状态
-      if (!forceRefresh && reportDataCache.current[cacheKey]) {
-        await onLoadReportData(undefined, forceRefresh);
-        return;
-      }
-
-      // 没有缓存数据，显示加载状态
-      setLoadingReport(true);
-
-      try {
-        await onLoadReportData(undefined, forceRefresh);
       } finally {
         // 确保在任何情况下都重置加载状态
         if (isMounted.current) {
           setLoadingReport(false);
         }
+        isLoadingRef.current = false;
       }
     },
-    [onLoadReportData, periodType, viewMode, selectedPeriodId]
+    [periodType, viewMode, selectedPeriodId, dataVersion]
   );
 
-  // 初始加载 - 只在组件挂载时执行一次
+  // 初始加载和数据变化时的重新加载
   useEffect(() => {
     loadReportData();
-
-    // 预加载所有周期类型的数据
-    setTimeout(() => {
-      preloadAllPeriodTypes();
-    }, 1000); // 延迟1秒，让当前视图先加载完成
-
-    // 空依赖数组，确保只在挂载时执行一次
-  }, []);
+  }, [loadReportData]);
 
   // 处理周期类型变化
   const handlePeriodTypeChange = useCallback(
     (newPeriodType: DatePeriodEnum) => {
       if (newPeriodType === periodType) return;
 
-      // 设置切换标志
-      isChangingPeriodType.current = true;
-
-      // 构建缓存键 - 使用新周期类型的第一个选择器
       const selectors = generatePeriodSelectors(newPeriodType);
       const firstSelectorId = selectors.length > 0 ? selectors[0].id : "";
-      const cacheKey = `${newPeriodType}_${viewMode}_${firstSelectorId}`;
-
-      // 检查是否有缓存
-      if (reportDataCache.current[cacheKey]) {
-        // 有缓存，先更新周期类型，但不立即更新UI
-        // 使用批量更新，确保UI一次性更新，避免闪烁
-        setTimeout(() => {
-          // 批量更新状态，避免中间状态导致的闪烁
-          setPeriodType(newPeriodType);
-          setSelectedPeriodId(firstSelectorId);
-          setReportData(reportDataCache.current[cacheKey]);
-        }, 0);
-      } else {
-        // 无缓存，先更新周期类型，然后触发加载
-        setPeriodType(newPeriodType);
-        setSelectedPeriodId("");
-      }
-
-      // 延迟重置切换标志
-      setTimeout(() => {
-        isChangingPeriodType.current = false;
-      }, 300);
+      setPeriodType(newPeriodType);
+      setSelectedPeriodId(firstSelectorId);
     },
-    [periodType, viewMode]
+    [periodType]
   );
 
   // 处理选定周期变化
@@ -306,52 +102,9 @@ export const useReportData = (
     (periodId: string) => {
       if (periodId === selectedPeriodId) return;
       setSelectedPeriodId(periodId);
-
-      // 构建缓存键
-      const cacheKey = `${periodType}_${viewMode}_${periodId}`;
-
-      // 检查是否有缓存
-      if (reportDataCache.current[cacheKey]) {
-        // 有缓存，立即更新数据
-        setReportData(reportDataCache.current[cacheKey]);
-      }
-      // 无论是否有缓存，都在后台加载最新数据
-      loadReportData(false);
     },
-    [selectedPeriodId, periodType, viewMode, loadReportData]
+    [selectedPeriodId]
   );
-
-  // 当数据版本变化时，强制刷新报表
-  useEffect(() => {
-    // 避免初始加载或空数据版本
-    if (!dataVersion) return;
-
-    // 避免重复处理相同的数据版本
-    if (processedDataVersionRef.current === dataVersion) {
-      console.log("相同数据版本，跳过刷新:", dataVersion);
-      return;
-    }
-
-    // 避免初始加载和正在加载时触发
-    if (isLoadingRef.current) {
-      console.log("正在加载中，暂存数据版本:", dataVersion);
-      processedDataVersionRef.current = dataVersion;
-      return;
-    }
-
-    console.log("数据版本变化，强制刷新报表:", dataVersion);
-    processedDataVersionRef.current = dataVersion;
-
-    // 数据变化时，清空缓存以确保获取最新数据
-    reportDataCache.current = {};
-    hasPreloadedRef.current = false; // 重置预加载标志
-    loadReportData(true);
-
-    // 预加载所有周期类型的数据
-    setTimeout(() => {
-      preloadAllPeriodTypes();
-    }, 1000);
-  }, [dataVersion, preloadAllPeriodTypes]);
 
   // 组件卸载时清理
   useEffect(() => {
@@ -360,51 +113,10 @@ export const useReportData = (
     };
   }, []);
 
-  // 加载状态保护机制 - 确保加载状态不会永远存在
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-
-    if (loadingReport || loadingInBackground) {
-      // 设置安全超时，最长10秒
-      timer = setTimeout(() => {
-        console.log("强制重置加载状态 - 安全机制触发");
-        setLoadingReport(false);
-        setLoadingInBackground(false);
-        isLoadingRef.current = false;
-      }, 10000);
-    }
-
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [loadingReport, loadingInBackground]);
-
   // 手动刷新报表
   const refreshReport = useCallback(async () => {
-    // 防止重复加载
-    if (isLoadingRef.current) {
-      console.log("已有刷新进行中，跳过");
-      return;
-    }
-
-    try {
-      // 清空缓存以确保获取最新数据
-      reportDataCache.current = {};
-      hasPreloadedRef.current = false; // 重置预加载标志
-
-      // 强制刷新当前数据
-      await loadReportData(true);
-
-      // 预加载所有周期类型的数据
-      setTimeout(() => {
-        preloadAllPeriodTypes();
-      }, 1000);
-    } catch (error) {
-      console.error("刷新报表数据失败:", error);
-      setLoadingReport(false); // 确保重置加载状态
-      isLoadingRef.current = false;
-    }
-  }, [loadReportData, preloadAllPeriodTypes]);
+    await loadReportData(true);
+  }, [loadReportData]);
 
   return {
     periodType,
@@ -414,9 +126,173 @@ export const useReportData = (
     setSelectedPeriodId: handlePeriodChange,
     reportData,
     loadingReport,
-    loadingInBackground,
     handlePeriodTypeChange,
     refreshReport,
-    isChangingPeriodType: isChangingPeriodType.current,
+    isChangingPeriodType: false,
+  };
+};
+
+// 新的拆分报表 Hook
+export const useSplitReportData = (
+  viewMode: "personal" | "family",
+  initialPeriodType: DatePeriodEnum = DatePeriodEnum.WEEK
+) => {
+  const { dataVersion, budgetVersion } = useData();
+  const [periodType, setPeriodType] =
+    useState<DatePeriodEnum>(initialPeriodType);
+  const [periodSelectors, setPeriodSelectors] = useState<PeriodSelectorData[]>(
+    []
+  );
+
+  const initialSelectorId =
+    generatePeriodSelectors(initialPeriodType)[0]?.id ?? "";
+  const [selectedPeriodId, setSelectedPeriodId] =
+    useState<string>(initialSelectorId);
+
+  const [coreReport, setCoreReport] = useState<ReportData | null>(null);
+  const [budgetReport, setBudgetReport] = useState<BudgetReportData | null>(
+    null
+  );
+  const [loadingCore, setLoadingCore] = useState<boolean>(false);
+  const [loadingBudget, setLoadingBudget] = useState<boolean>(false);
+
+  const isMounted = useRef<boolean>(true);
+  const coreRequestIdRef = useRef<number>(0);
+  const budgetRequestIdRef = useRef<number>(0);
+
+  // 初始化周期选择器
+  useEffect(() => {
+    setPeriodSelectors(generatePeriodSelectors(periodType));
+  }, [periodType]);
+
+  // 加载核心报表数据
+  const loadCoreReport = useCallback(
+    async (forceRefresh = false) => {
+      setLoadingCore(true);
+      const currentRequestId = ++coreRequestIdRef.current;
+
+      try {
+        const data = await fetchReportData(
+          periodType,
+          viewMode,
+          selectedPeriodId,
+          dataVersion,
+          forceRefresh
+        );
+
+        if (
+          isMounted.current &&
+          currentRequestId === coreRequestIdRef.current
+        ) {
+          setCoreReport(data);
+        }
+      } catch (error) {
+        console.error("Error fetching core report data:", error);
+      } finally {
+        if (isMounted.current) {
+          setLoadingCore(false);
+        }
+      }
+    },
+    [periodType, viewMode, selectedPeriodId, dataVersion]
+  );
+
+  // 加载预算报表数据
+  const loadBudgetReport = useCallback(
+    async (forceRefresh = false) => {
+      setLoadingBudget(true);
+      const currentRequestId = ++budgetRequestIdRef.current;
+
+      try {
+        const data = await fetchBudgetReportData(
+          periodType,
+          viewMode,
+          selectedPeriodId,
+          budgetVersion,
+          forceRefresh
+        );
+
+        if (
+          isMounted.current &&
+          currentRequestId === budgetRequestIdRef.current
+        ) {
+          setBudgetReport(data);
+        }
+      } catch (error) {
+        console.error("Error fetching budget report data:", error);
+      } finally {
+        if (isMounted.current) {
+          setLoadingBudget(false);
+        }
+      }
+    },
+    [periodType, viewMode, selectedPeriodId, budgetVersion]
+  );
+
+  // 核心报表数据变化时重新加载
+  useEffect(() => {
+    loadCoreReport();
+  }, [loadCoreReport]);
+
+  // 预算版本变化或核心报表更新时重新加载预算报表
+  useEffect(() => {
+    loadBudgetReport();
+  }, [loadBudgetReport]);
+
+  // 刷新函数
+  const refreshCoreReport = useCallback(async () => {
+    await loadCoreReport(true);
+  }, [loadCoreReport]);
+
+  const refreshBudgetReport = useCallback(async () => {
+    await loadBudgetReport(true);
+  }, [loadBudgetReport]);
+
+  const refreshBothReports = useCallback(async () => {
+    await Promise.all([refreshCoreReport(), refreshBudgetReport()]);
+  }, [refreshCoreReport, refreshBudgetReport]);
+
+  // 周期处理函数
+  const handlePeriodTypeChange = useCallback(
+    (newPeriodType: DatePeriodEnum) => {
+      if (newPeriodType === periodType) return;
+
+      const selectors = generatePeriodSelectors(newPeriodType);
+      const firstSelectorId = selectors.length > 0 ? selectors[0].id : "";
+      setPeriodType(newPeriodType);
+      setSelectedPeriodId(firstSelectorId);
+    },
+    [periodType]
+  );
+
+  const handlePeriodChange = useCallback(
+    (periodId: string) => {
+      if (periodId === selectedPeriodId) return;
+      setSelectedPeriodId(periodId);
+    },
+    [selectedPeriodId]
+  );
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  return {
+    periodType,
+    setPeriodType,
+    periodSelectors,
+    selectedPeriodId,
+    setSelectedPeriodId: handlePeriodChange,
+    coreReport,
+    budgetReport,
+    loadingCore,
+    loadingBudget,
+    handlePeriodTypeChange,
+    refreshCoreReport,
+    refreshBudgetReport,
+    refreshBothReports,
   };
 };

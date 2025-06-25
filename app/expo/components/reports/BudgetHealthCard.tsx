@@ -5,7 +5,7 @@ import { YStack, XStack, Text } from "tamagui";
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 
 import { formatCurrency } from "@/utils/format";
-import type { HealthScoreDetail } from "@/types/reports.types";
+import type { HealthScore } from "@/types/reports.types";
 import { getSeverityColor } from "@/types/budget.types";
 
 /**
@@ -22,7 +22,7 @@ interface BudgetOverview {
 interface BudgetHealthCardProps {
     budget: BudgetOverview;
     /** Computed health-score detail. May be undefined while loading. */
-    health?: HealthScoreDetail | null;
+    health?: HealthScore | null;
     severity: "good" | "warning" | "danger";
 }
 
@@ -156,18 +156,18 @@ const BudgetHealthCard: React.FC<BudgetHealthCardProps> = ({ budget, health, sev
                     <YStack gap="$2">
                         <Text color="$gray10">{t("Volatility")}</Text>
                         <Text fontWeight="$6" color={getSeverityToken(health ? analyseMetric(
-                            health.subScores.volatility.pct,
+                            health.metrics?.volatilityPct ?? 0,
                             (v) => v >= 60,
                             (v) => v >= 40
-                        ).severity : "good")}>{health?.subScores.volatility.pct}%</Text>
+                        ).severity : "good")}>{health?.metrics?.volatilityPct ?? 0}%</Text>
                     </YStack>
                     <YStack alignItems="flex-end" gap="$2">
                         <Text color="$gray10">{t("Recurring cover")}</Text>
                         <Text fontWeight="$6" color={getSeverityToken(health ? analyseMetric(
-                            health.subScores.recurring.days,
+                            health.metrics?.recurringCoverDays ?? 0,
                             (v) => v < 7,
                             (v) => v < 14
-                        ).severity : "good")}>{health?.subScores.recurring.days}d</Text>
+                        ).severity : "good")}>{health?.metrics?.recurringCoverDays ?? 0}d</Text>
                     </YStack>
                 </XStack>
             </YStack>

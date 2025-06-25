@@ -48,40 +48,52 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  // Consume any pending deep link (iOS ≤16 fallback) whenever the app becomes active.
+  // Consume any pending deep link (iOS ≤16 fallback) once resources are ready,
+  // then hide the splash screen. This ensures we navigate **before** the first
+  // frame of the main UI becomes visible, eliminating the flash of the home
+  // screen when the app is launched from a Shortcut.
   useEffect(() => {
     if (!loaded) return;
 
-    const handlePendingDeepLink = () => {
-      const bridge = (NativeModules as any)?.PendingLinkBridge;
-      if (bridge?.consumePendingDeepLink) {
-        bridge
-          .consumePendingDeepLink()
-          .then((url: string | null) => {
+    const handleInitialDeepLinkAndHide = async () => {
+      try {
+        const bridge = (NativeModules as any)?.PendingLinkBridge;
+        if (bridge?.consumePendingDeepLink) {
+          try {
+            const url: string | null = await bridge.consumePendingDeepLink();
             if (url && typeof url === "string" && url.length > 0) {
-              // Give navigation tree a tick to mount before navigating
-              setTimeout(() => Linking.openURL(url).catch(() => { }), 200);
+              await Linking.openURL(url).catch(() => { });
             }
-          })
-          .catch((e: any) => {
+          } catch (e) {
             console.warn("Failed to consume pending deep link", e);
-          });
+          }
+        }
+      } finally {
+        // Always hide splash once we're done so the first frame shown to the
+        // user is already the correct screen (or home when no link).
+        SplashScreen.hideAsync();
       }
     };
 
-    // Initial check after resources are loaded
-    handlePendingDeepLink();
+    // Run once after fonts/assets are ready.
+    handleInitialDeepLinkAndHide();
 
-    // Listen for app returning to foreground to re-check
+    // Listen for app returning to foreground to re-check (no splash here)
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        handlePendingDeepLink();
+        const bridge = (NativeModules as any)?.PendingLinkBridge;
+        if (bridge?.consumePendingDeepLink) {
+          bridge
+            .consumePendingDeepLink()
+            .then((url: string | null) => {
+              if (url && typeof url === "string" && url.length > 0) {
+                Linking.openURL(url).catch(() => { });
+              }
+            })
+            .catch((e: any) => {
+              console.warn("Failed to consume pending deep link", e);
+            });
+        }
       }
     });
 

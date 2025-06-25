@@ -1,10 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import {
   Pressable,
-  Animated,
-  Easing,
   GestureResponderEvent,
-  LayoutChangeEvent
 } from "react-native";
 import { XStack, YStack, Text, View, Input } from "tamagui";
 import {
@@ -16,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { MoreOptions } from "./MoreOptions";
 import { AttachmentPreview, Attachment } from "./AttachmentPreview";
+import { VoiceWaveform } from "./VoiceWaveform";
 
 interface ChatInputProps {
   isTextMode: boolean;
@@ -60,28 +58,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const currentY = useRef<number>(0);
   const startY = useRef<number>(0);
 
-  // 处理布局变化
-  const handleLayout = (event: LayoutChangeEvent) => {
-    // 保留这个方法，以兼容现有代码
-  };
-
-  // 移除handleTouchStart，因为我们已经在长按事件中记录初始位置
-
-  const handleTouchMove = (e: GestureResponderEvent) => {
+  // 只对高频调用的函数使用useCallback
+  const handleTouchMove = useCallback((e: GestureResponderEvent) => {
     if (!isRecording) return;
 
-    currentY.current = e.nativeEvent.pageY;
-    const diff = currentY.current - startY.current;
-
-    // 上滑超过20像素就进入取消模式
+    const newY = e.nativeEvent.pageY;
+    const diff = newY - startY.current;
     const shouldCancel = diff < -20;
 
+    // 避免不必要的状态更新
     if (shouldCancel !== isCancelZone) {
+      currentY.current = newY;
       setIsCancelZone(shouldCancel);
     }
-  };
+  }, [isRecording, isCancelZone]);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     if (!isRecording) return;
 
     const diff = currentY.current - startY.current;
@@ -93,51 +85,45 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
 
     setIsCancelZone(false);
+  }, [isRecording, isCancelZone, onCancelRecording, onStopRecording]);
+
+  // 关键：长按立即响应，减少到60ms
+  const handleLongPressStart = useCallback((e: GestureResponderEvent) => {
+    startY.current = e.nativeEvent.pageY;
+    currentY.current = e.nativeEvent.pageY;
+    // 立即同步调用，避免任何延迟
+    onStartRecording();
+  }, [onStartRecording]);
+
+  // 动画逻辑已移至 VoiceWaveform 组件
+
+  // 移除不必要的useCallback - 这些函数很简单且调用频率不高
+  const toggleMoreOptions = () => {
+    setShowMoreOptions(prev => !prev);
   };
 
-  /* Waveform animation setup - smoother wave effect */
-  const BAR_COUNT = 50;
-  const barAnimatedValues = React.useRef(
-    Array.from({ length: BAR_COUNT }, () => new Animated.Value(1))
-  ).current;
-  const barAnimations = React.useRef<Animated.CompositeAnimation[]>([]);
+  const hideMoreOptions = () => {
+    setShowMoreOptions(false);
+  };
 
-  React.useEffect(() => {
-    if (isRecording) {
-      barAnimations.current = barAnimatedValues.map((val, index) => {
-        const phaseOffset = index * (Math.PI / 10);
-        const randomFactor = 0.3 + Math.random() * 0.4;
+  const handlePickImage = () => {
+    hideMoreOptions();
+    onPickImage();
+  };
 
-        return Animated.loop(
-          Animated.sequence([
-            Animated.timing(val, {
-              toValue: 1.2 + Math.sin(phaseOffset) * randomFactor,
-              duration: 300 + Math.sin(phaseOffset) * 100,
-              easing: Easing.inOut(Easing.sin),
-              useNativeDriver: true,
-            }),
-            Animated.timing(val, {
-              toValue: 0.8 + Math.cos(phaseOffset) * randomFactor,
-              duration: 300 + Math.cos(phaseOffset) * 100,
-              easing: Easing.inOut(Easing.sin),
-              useNativeDriver: true,
-            }),
-          ])
-        );
-      });
+  const handleTakePhoto = () => {
+    hideMoreOptions();
+    onTakePhoto();
+  };
 
-      barAnimations.current.forEach((anim, index) => {
-        setTimeout(() => anim.start(), index * 15);
-      });
-    } else {
-      barAnimations.current.forEach((anim) => anim.stop && anim.stop());
-      barAnimatedValues.forEach((v) => v.setValue(1));
-    }
+  const handleFileUpload = () => {
+    hideMoreOptions();
+    onFileUpload();
+  };
 
-    return () => {
-      barAnimations.current.forEach((anim) => anim.stop && anim.stop());
-    };
-  }, [isRecording]);
+  const handleSend = () => {
+    onSend();
+  };
 
   return (
     <YStack>
@@ -173,7 +159,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <View
             flex={1}
             marginHorizontal="$2"
-            onLayout={handleLayout}
           >
             {/* Voice recording UI */}
             {isRecording ? (
@@ -200,28 +185,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     : t("Release to send, slide up to cancel")}
                 </Text>
 
-                <Animated.View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    height: 24,
-                  }}
-                >
-                  {barAnimatedValues.map((val, i) => (
-                    <Animated.View
-                      key={i}
-                      style={{
-                        width: i % 4 === 0 ? 1.5 : 2,
-                        height: 10,
-                        marginHorizontal: 1,
-                        backgroundColor: isCancelZone ? "#FF4D4D" : "#999",
-                        borderRadius: 50,
-                        opacity: 0.9,
-                        transform: [{ scaleY: val }],
-                      }}
-                    />
-                  ))}
-                </Animated.View>
+                {/* 高性能波形动画 */}
+                <VoiceWaveform
+                  isRecording={isRecording}
+                  isCancelZone={isCancelZone}
+                  color="#999"
+                  cancelColor="#FF4D4D"
+                />
               </Pressable>
             ) : isTextMode ? (
               /* Text input UI */
@@ -249,14 +219,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   borderWidth={0}
                   backgroundColor="transparent"
                   padding="$0"
-                  onSubmitEditing={() => onSend()}
+                  onSubmitEditing={handleSend}
                   onBlur={() => {
                     if (!inputText) onToggleInputMode();
                   }}
                 />
 
                 {inputText.trim().length > 0 && (
-                  <Pressable onPress={onSend} style={{ marginLeft: 4 }}>
+                  <Pressable onPress={handleSend} style={{ marginLeft: 4 }}>
                     <View
                       width={30}
                       height={30}
@@ -271,7 +241,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 )}
               </View>
             ) : (
-              /* Voice mode placeholder */
+              /* Voice mode placeholder - 优化长按响应到60ms */
               <Pressable
                 style={{
                   height: 44,
@@ -283,11 +253,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   justifyContent: "space-between"
                 }}
                 onPress={onToggleInputMode}
-                onLongPress={(e: GestureResponderEvent) => {
-                  startY.current = e.nativeEvent.pageY;
-                  onStartRecording();
-                }}
-                delayLongPress={80} // shorten long-press threshold for snappier UX
+                onLongPress={handleLongPressStart}
+                delayLongPress={60} // 从80ms减少到60ms
               >
                 <Text fontSize={14} color="$gray9">
                   {t("Send a message or hold to talk...")}
@@ -299,7 +266,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           {/* Plus button (not visible during recording) */}
           {!isRecording && (
-            <Pressable onPress={() => setShowMoreOptions(!showMoreOptions)}>
+            <Pressable onPress={toggleMoreOptions}>
               <View
                 width={40}
                 height={40}
@@ -318,18 +285,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       {/* More options modal */}
       {showMoreOptions && (
         <MoreOptions
-          onPickImage={() => {
-            setShowMoreOptions(false);
-            onPickImage();
-          }}
-          onTakePhoto={() => {
-            setShowMoreOptions(false);
-            onTakePhoto();
-          }}
-          onFileUpload={() => {
-            setShowMoreOptions(false);
-            onFileUpload();
-          }}
+          onPickImage={handlePickImage}
+          onTakePhoto={handleTakePhoto}
+          onFileUpload={handleFileUpload}
         />
       )}
     </YStack>

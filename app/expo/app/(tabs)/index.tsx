@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, View } from "react-native";
+import React, { useRef, useState, Suspense } from "react";
+import { useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, View, ActivityIndicator } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -8,8 +8,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Text } from "tamagui";
 
-import PeriodPage from "@/components/home/PeriodPage";
+// 懒加载PeriodPage组件，避免阻塞初始渲染
+import PeriodPage from "@/components/home/PeriodPage"
 
 // UI Components ------------------------------------------------------------
 import DateFilter from "@/components/reports/DateFilter";
@@ -17,6 +19,14 @@ import DateFilter from "@/components/reports/DateFilter";
 // Utils & Types ------------------------------------------------------------
 import { DatePeriodEnum } from "@/types/reports.types";
 import { generatePeriodSelectors } from "@/utils/date.utils";
+
+// 简单的加载组件，避免复杂渲染
+const LoadingFallback = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+    <ActivityIndicator size="small" color="#3B82F6" />
+    <Text marginTop="$2" color="$gray600">Loading...</Text>
+  </View>
+);
 
 export default function HomeScreenPager() {
   const router = useRouter();
@@ -124,14 +134,16 @@ export default function HomeScreenPager() {
       >
         {periodOrder.map((p) => (
           <View key={p} style={{ width }}>
-            <PeriodPage
-              periodType={p}
-              onPeriodTypeChange={handleExternalPeriodChange}
-              selectedPeriodId={selectedIds[p]}
-              onSelectedPeriodChange={(id: string) =>
-                setSelectedIds((prev) => ({ ...prev, [p]: id }))
-              }
-            />
+            <Suspense fallback={<LoadingFallback />}>
+              <PeriodPage
+                periodType={p}
+                onPeriodTypeChange={handleExternalPeriodChange}
+                selectedPeriodId={selectedIds[p]}
+                onSelectedPeriodChange={(id: string) =>
+                  setSelectedIds((prev) => ({ ...prev, [p]: id }))
+                }
+              />
+            </Suspense>
           </View>
         ))}
       </Animated.ScrollView>

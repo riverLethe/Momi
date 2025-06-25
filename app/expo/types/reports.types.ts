@@ -86,13 +86,19 @@ export interface ReportData {
   topSpendingCategories?: TopSpendingCategory[];
   viewMode?: "personal" | "family";
   periodType?: DatePeriodEnum;
-  budget?: {
+}
+
+export interface BudgetReportData {
+  healthScore: HealthScore;
+  budget: {
     amount: number | null;
     spent: number;
     remaining: number;
     percentage: number;
     status: "good" | "warning" | "danger" | "none";
   };
+  periodType: DatePeriodEnum;
+  viewMode: "personal" | "family";
 }
 
 // --- ABI (Advanced Budget Insights) specific types ---

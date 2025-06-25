@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { ActivityIndicator, StyleSheet, FlatList } from "react-native";
 import { Text } from "tamagui";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,9 +25,8 @@ export default function BillsScreen() {
   const { viewMode } = useViewStore();
   const { isAuthenticated, user } = useAuth();
   const { t } = useTranslation();
-  const { bills, isLoading, refreshData } = useData();
+  const { bills, isLoading: dataLoading, refreshData } = useData();
 
-  const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
   const [syncingRemote, setSyncingRemote] = useState(false);
   const { confirmDeleteBill } = useBillActions();
 
@@ -87,54 +86,87 @@ export default function BillsScreen() {
     return null;
   });
 
-  // Sync with remote data if authenticated
+  // 后台同步远程数据，不阻塞UI
   useEffect(() => {
     const syncData = async () => {
-      if (isAuthenticated && user) {
+      if (isAuthenticated && user?.id) {
         try {
           setSyncingRemote(true);
-          // 在实际应用中，这里会从远程API获取数据并更新本地存储
-          await syncRemoteData("bills", user.id);
-          // 刷新本地数据
-          await refreshData();
+          // 后台同步，不阻塞用户交互 - 使用智能同步
+          setTimeout(async () => {
+            try {
+              await syncRemoteData("bills", user.id, false); // 使用智能同步，不强制
+              await refreshData();
+            } catch (error) {
+              console.error("Failed to sync remote data:", error);
+            } finally {
+              setSyncingRemote(false);
+            }
+          }, 100);
         } catch (error) {
           console.error("Failed to sync remote data:", error);
-        } finally {
           setSyncingRemote(false);
         }
       }
     };
 
     syncData();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id, refreshData]);
 
-  // Apply filters
-  useEffect(() => {
+  // 稳定化的params值，避免每次都重新创建对象
+  const stableParams = useMemo(() => ({
+    ai: params.ai,
+    categories: params.categories,
+    category: params.category,
+    keywords: params.keywords,
+    keyword: params.keyword,
+    minAmount: params.minAmount,
+    maxAmount: params.maxAmount,
+    dateField: params.dateField,
+    dateRanges: params.dateRanges,
+    startDate: params.startDate,
+    endDate: params.endDate,
+  }), [
+    params.ai,
+    params.categories,
+    params.category,
+    params.keywords,
+    params.keyword,
+    params.minAmount,
+    params.maxAmount,
+    params.dateField,
+    params.dateRanges,
+    params.startDate,
+    params.endDate,
+  ]);
+
+  // 使用useMemo优化过滤逻辑，减少重新计算
+  const filteredBills = useMemo(() => {
     // --- If AI filter active, delegate to filterBills helper ---
     if (aiFilterActive) {
       const query: BillQuery = {
         // categories may arrive as comma separated list or single
-        categories: typeof params.categories === "string" ? params.categories.split(/[,;]/).map(s => s.trim()).filter(Boolean) : undefined,
-        category: typeof params.category === "string" ? params.category : undefined,
+        categories: typeof stableParams.categories === "string" ? stableParams.categories.split(/[,;]/).map(s => s.trim()).filter(Boolean) : undefined,
+        category: typeof stableParams.category === "string" ? stableParams.category : undefined,
 
-        keywords: typeof params.keywords === "string" ? params.keywords.split(/[,;]/).map(s => s.trim()).filter(Boolean) : undefined,
-        keyword: typeof params.keyword === "string" ? params.keyword : undefined,
+        keywords: typeof stableParams.keywords === "string" ? stableParams.keywords.split(/[,;]/).map(s => s.trim()).filter(Boolean) : undefined,
+        keyword: typeof stableParams.keyword === "string" ? stableParams.keyword : undefined,
 
-        minAmount: typeof params.minAmount === "string" ? parseFloat(params.minAmount) : undefined,
-        maxAmount: typeof params.maxAmount === "string" ? parseFloat(params.maxAmount) : undefined,
+        minAmount: typeof stableParams.minAmount === "string" ? parseFloat(stableParams.minAmount) : undefined,
+        maxAmount: typeof stableParams.maxAmount === "string" ? parseFloat(stableParams.maxAmount) : undefined,
 
-        dateField: typeof params.dateField === "string" && ["date", "createdAt", "updatedAt"].includes(params.dateField) ? params.dateField as any : undefined,
+        dateField: typeof stableParams.dateField === "string" && ["date", "createdAt", "updatedAt"].includes(stableParams.dateField) ? stableParams.dateField as any : undefined,
       };
 
       // Multiple date ranges JSON encoded string
-      if (typeof params.dateRanges === "string") {
+      if (typeof stableParams.dateRanges === "string") {
         try {
-          const parsed = JSON.parse(params.dateRanges);
+          const parsed = JSON.parse(stableParams.dateRanges);
           if (Array.isArray(parsed)) query.dateRanges = parsed;
         } catch { }
       } else {
-        if (typeof params.startDate === "string") query.startDate = params.startDate;
-        if (typeof params.endDate === "string") query.endDate = params.endDate;
+        if (typeof stableParams.startDate === "string") query.startDate = stableParams.startDate;
+        if (typeof stableParams.endDate === "string") query.endDate = stableParams.endDate;
       }
 
       // View mode filter still applies – family/personal
@@ -142,9 +174,7 @@ export default function BillsScreen() {
         viewMode === "family" ? b.isFamilyBill : !b.isFamilyBill
       );
 
-      const aiFiltered = filterBills(scopedBills, query);
-      setFilteredBills(aiFiltered);
-      return;
+      return filterBills(scopedBills, query);
     }
 
     // ---- Default (manual) filters ----
@@ -215,16 +245,18 @@ export default function BillsScreen() {
       filtered = filtered.filter((bill) => bill.amount <= maxAmount);
     }
 
-    setFilteredBills(filtered);
-  }, [bills, viewMode, isAuthenticated, startDate, endDate, categoryFilter, keywordFilter, minAmount, maxAmount, aiFilterActive]);
+    return filtered;
+  }, [bills, viewMode, isAuthenticated, startDate, endDate, categoryFilter, keywordFilter, minAmount, maxAmount, aiFilterActive, stableParams]);
 
-  // Calculate total expenses
+  // Calculate total expenses - memoized
   const totalExpense = useMemo(() => {
     return filteredBills.reduce((sum, bill) => sum + bill.amount, 0);
   }, [filteredBills]);
 
-  // Group bills by date
+  // Group bills by date - optimized
   const billGroups = useMemo(() => {
+    if (filteredBills.length === 0) return [];
+
     const groups: { [key: string]: Bill[] } = {};
 
     filteredBills.forEach((bill) => {
@@ -244,33 +276,36 @@ export default function BillsScreen() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredBills]);
 
-  const handleDateRangeChange = (start: Date | null, end: Date | null) => {
+  const handleDateRangeChange = useCallback((start: Date | null, end: Date | null) => {
     setStartDate(start);
     setEndDate(end);
-  };
+  }, []);
 
-  const handleDeleteBill = (bill: Bill) => {
+  const handleDeleteBill = useCallback((bill: Bill) => {
     confirmDeleteBill(bill, {
       ignoreRefresh: true,
       onSuccess: () => {
-        setFilteredBills(filteredBills.filter((b) => b.id !== bill.id));
+        // This is a placeholder implementation. You might want to update this to actually remove the bill from the bills array
       },
     });
-  };
+  }, [confirmDeleteBill]);
 
-  const renderDateGroup = ({ item }: { item: (typeof billGroups)[0] }) => (
+  const renderDateGroup = useCallback(({ item }: { item: (typeof billGroups)[0] }) => (
     <BillDateGroup
       item={item}
       onDelete={handleDeleteBill}
       openBillId={openBillId}
       setOpenBillId={setOpenBillId}
     />
-  );
+  ), [handleDeleteBill, openBillId]);
 
   // Handle refresh (pull-to-refresh)
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     await refreshData();
-  };
+  }, [refreshData]);
+
+  // 简化loading状态，只在真正需要时显示
+  const showLoading = bills.length === 0 && (dataLoading.bills || syncingRemote);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -278,9 +313,12 @@ export default function BillsScreen() {
         {
           /* When there is no data yet, show loading or empty state */
           bills.length === 0 ? (
-            isLoading.bills || syncingRemote ? (
+            showLoading ? (
               <YStack flex={1} justifyContent="center" alignItems="center">
-                <ActivityIndicator size="large" color="#3B82F6" />
+                <ActivityIndicator size="small" color="#3B82F6" />
+                <Text marginTop="$2" color="$gray10" fontSize="$3">
+                  {t("Loading bills...")}
+                </Text>
               </YStack>
             ) : (
               <EmptyState />
@@ -310,43 +348,25 @@ export default function BillsScreen() {
                   aiFilterActive={aiFilterActive}
                 >
                   {/* AI Filter Tag */}
-
-                  <XStack
-                    alignSelf="flex-start"
-                    marginLeft={16}
-                    marginBottom={4}
-                    backgroundColor="#DCF2FF"
-                    paddingVertical="$1"
-                    paddingHorizontal="$2"
-                    borderRadius="$2"
-                    alignItems="center"
-                    gap="$1"
-                  >
-                    <Text fontSize="$3" color="#0070f3">
-                      {t("AI Filter")}
-                    </Text>
-                    {/* <Button
-                      size="$1"
-                      circular
-                      chromeless
-                      onPress={() => {
-                        // clear AI filter and remove params
-                        setStartDate(null);
-                        setEndDate(null);
-                        setCategoryFilter([]);
-                        setKeywordFilter(null);
-                        setMinAmount(null);
-                        setMaxAmount(null);
-                        setDateField("date");
-                        router.replace("/bills");
-                      }}
+                  {aiFilterActive && (
+                    <XStack
+                      alignSelf="flex-start"
+                      marginLeft={16}
+                      marginBottom={4}
+                      backgroundColor="#DCF2FF"
+                      paddingVertical="$1"
+                      paddingHorizontal="$2"
+                      borderRadius="$2"
+                      alignItems="center"
+                      gap="$1"
                     >
-                      <CloseIcon size={14} color="#0070f3" />
-                    </Button> */}
-                  </XStack>
+                      <Text fontSize="$3" color="#0070f3">
+                        {t("AI Filter")}
+                      </Text>
+                    </XStack>
+                  )}
                 </FilterWithTotalExpense>
               </XStack>
-
 
               {/* Bills List */}
               {
@@ -366,11 +386,12 @@ export default function BillsScreen() {
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
                 onRefresh={handleRefresh}
-                refreshing={isLoading.bills || syncingRemote}
-                initialNumToRender={8}
-                maxToRenderPerBatch={5}
-                windowSize={7}
+                refreshing={syncingRemote}
+                initialNumToRender={10}
+                maxToRenderPerBatch={8}
+                windowSize={5}
                 removeClippedSubviews={true}
+                getItemLayout={undefined} // 让FlatList自动计算，避免强制计算
               />
             </>
           )

@@ -17,6 +17,17 @@ export const BillAmountCard: React.FC<BillAmountCardProps> = React.memo(({
     const category = useMemo(() => getCategoryById(bill.category), [bill.category]);
     const formattedAmount = useMemo(() => formatCurrency(bill.amount), [bill.amount]);
 
+    // 缓存格式化的更新时间
+    const formattedUpdateTime = useMemo(() => {
+        return new Date(bill.updatedAt).toLocaleString(locale, {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+        });
+    }, [bill.updatedAt, locale]);
+
     return (
         <Card
             padding="$5"
@@ -72,13 +83,7 @@ export const BillAmountCard: React.FC<BillAmountCardProps> = React.memo(({
                     color="white"
                     opacity={0.85}
                 >
-                    {new Date(bill.updatedAt).toLocaleString(locale, {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                    })}
+                    {formattedUpdateTime}
                 </Text>
             </XStack>
         </Card>

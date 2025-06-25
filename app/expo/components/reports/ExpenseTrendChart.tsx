@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo, useCallback } from "react";
 import { Dimensions, ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Card, XStack, Text, Button, View } from "tamagui";
@@ -18,18 +18,128 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
 }) => {
   const { t } = useTranslation();
   const scrollViewRef = useRef<ScrollView>(null);
-  const screenWidth = Dimensions.get("window").width - 40;
-  const chartWidth = Math.max(screenWidth, data.length * 60);
 
-  // 默认滚动到最新数据位置
-  useEffect(() => {
+  // 缓存屏幕宽度和图表配置
+  const screenConfig = useMemo(() => {
+    const screenWidth = Dimensions.get("window").width - 40;
+    const chartWidth = Math.max(screenWidth, data.length * 60);
+    return { screenWidth, chartWidth };
+  }, [data.length]);
+
+  // 缓存图表数据
+  const chartData = useMemo(() => ({
+    labels: data.map((item) => item.label),
+    datasets: [
+      {
+        data: data.map((item) => Number(item.value.toFixed(2))),
+        color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+        strokeWidth: 2,
+      },
+      {
+        data: Array(data.length).fill(averageSpending),
+        color: (opacity = 1) => `rgba(59, 130, 246, ${opacity * 0.7})`,
+        strokeWidth: 1,
+        strokeDashArray: [5, 5],
+        withDots: false,
+      },
+    ],
+  }), [data, averageSpending]);
+
+  // 缓存图表配置
+  const chartConfig = useMemo(() => ({
+    backgroundColor: "white",
+    backgroundGradientFrom: "white",
+    backgroundGradientTo: "white",
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+    propsForDots: {
+      r: "5",
+      strokeWidth: "2",
+      stroke: "#fff",
+    },
+    propsForBackgroundLines: {
+      strokeDasharray: "",
+      strokeWidth: 1,
+      stroke: "rgba(230, 235, 245, 1)",
+    },
+    formatYLabel: (value: string) => {
+      const num = parseFloat(value);
+      const rounded = Math.round(num * 100) / 100;
+      return formatCurrency(rounded);
+    },
+  }), []);
+
+  // 防抖滚动到末尾
+  const scrollToEndDebounced = useCallback(() => {
     if (data.length > 0 && scrollViewRef.current) {
-      // 延迟以确保 ScrollView 完成渲染和布局计算
+      // 减少延迟时间
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      }, 50);
     }
-  }, [data]); // 仅当数据更新时执行
+  }, [data.length]);
+
+  // 优化数据更新时的滚动
+  useEffect(() => {
+    scrollToEndDebounced();
+  }, [scrollToEndDebounced]);
+
+  // 优化滚动操作
+  const scrollToStart = useCallback(() => {
+    scrollViewRef.current?.scrollTo({ x: 0, animated: true });
+  }, []);
+
+  const scrollToEnd = useCallback(() => {
+    scrollViewRef.current?.scrollTo({ x: screenConfig.chartWidth, animated: true });
+  }, [screenConfig.chartWidth]);
+
+  // 缓存渲染的点内容
+  const renderDotContent = useCallback(({
+    x,
+    y,
+    index,
+  }: {
+    x: number;
+    y: number;
+    index: number;
+    indexData: number;
+  }) => {
+    if (index >= data.length || !data[index]) return null;
+
+    const value = data[index].value;
+    if (typeof value !== 'number' || isNaN(value)) return null;
+
+    const roundedValue = Math.round(value * 100) / 100;
+    const isHigherThanAvg = value > averageSpending;
+
+    return (
+      <View
+        key={`dot-label-${index}`}
+        style={{
+          position: "absolute",
+          top: y - 24,
+          left: x - 18,
+        }}
+      >
+        <Text
+          style={{
+            color: isHigherThanAvg ? "#EF4444" : "#10B981",
+            fontWeight: "bold",
+            fontSize: 10,
+          }}
+        >
+          {formatCurrency(roundedValue)}
+        </Text>
+      </View>
+    );
+  }, [data, averageSpending]);
+
+  // 缓存平均支出格式化
+  const formattedAverageSpending = useMemo(() =>
+    formatCurrency(averageSpending),
+    [averageSpending]
+  );
 
   return (
     <Card
@@ -52,10 +162,8 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
             <ChartNoAxesCombinedIcon size={24} color="#6366F1" />
             <Text fontSize="$4" fontWeight="$8" color="$gray12">
               {t("Expense Trends")}
-
             </Text>
           </XStack>
-
         </XStack>
         <XStack gap="$3" alignItems="center">
           <XStack gap="$1" alignItems="center">
@@ -83,7 +191,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
               }}
             />
             <Text fontSize="$2" color="$gray10">
-              {t("Average")}: {formatCurrency(averageSpending)}
+              {t("Average")}: {formattedAverageSpending}
             </Text>
           </XStack>
         </XStack>
@@ -94,9 +202,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
           size="$2"
           circular
           backgroundColor="$gray2"
-          onPress={() => {
-            scrollViewRef.current?.scrollTo({ x: 0, animated: true });
-          }}
+          onPress={scrollToStart}
         >
           <ChevronLeft size={16} color="#64748B" />
         </Button>
@@ -105,115 +211,34 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 10 }}
+          removeClippedSubviews={true}
         >
           <LineChart
-            data={{
-              labels: data.map((item) => item.label),
-              datasets: [
-                {
-                  data: data.map((item) => Number(item.value.toFixed(2))),
-                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                  strokeWidth: 2,
-                },
-                {
-                  data: Array(data.length).fill(averageSpending),
-                  color: (opacity = 1) =>
-                    `rgba(59, 130, 246, ${opacity * 0.7})`,
-                  strokeWidth: 1,
-                  strokeDashArray: [5, 5],
-                  withDots: false,
-                },
-              ],
-            }}
-            width={chartWidth}
+            data={chartData}
+            width={screenConfig.chartWidth}
             height={220}
             withInnerLines={true}
             fromZero={false}
-            chartConfig={{
-              backgroundColor: "white",
-              backgroundGradientFrom: "white",
-              backgroundGradientTo: "white",
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
-              propsForDots: {
-                r: "5",
-                strokeWidth: "2",
-                stroke: "#fff",
-              },
-              propsForBackgroundLines: {
-                strokeDasharray: "",
-                strokeWidth: 1,
-                stroke: "rgba(230, 235, 245, 1)",
-              },
-              formatYLabel: (value: string) => {
-                const num = parseFloat(value);
-                const rounded = Math.round(num * 100) / 100;
-                return formatCurrency(rounded);
-              },
-            }}
+            chartConfig={chartConfig}
             bezier
             style={{
               marginVertical: 8,
               borderRadius: 8,
             }}
-            renderDotContent={({
-              x,
-              y,
-              index,
-              indexData,
-            }: {
-              x: number;
-              y: number;
-              index: number;
-              indexData: number;
-            }) => {
-              if (index >= data.length) return null;
-
-              const value = data[index].value;
-              const roundedValue = Math.round(value * 100) / 100;
-              const isHigherThanAvg = value > averageSpending;
-
-              return (
-                <View
-                  key={`dot-label-${index}`}
-                  style={{
-                    position: "absolute",
-                    top: y - 24,
-                    left: x - 18,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: isHigherThanAvg ? "#EF4444" : "#10B981",
-                      fontWeight: "bold",
-                      fontSize: 10,
-                    }}
-                  >
-                    {formatCurrency(roundedValue)}
-                  </Text>
-                </View>
-              );
-            }}
+            renderDotContent={renderDotContent}
           />
         </ScrollView>
         <Button
           size="$2"
           circular
           backgroundColor="$gray2"
-          onPress={() => {
-            scrollViewRef.current?.scrollTo({ x: chartWidth, animated: true });
-          }}
+          onPress={scrollToEnd}
         >
           <ChevronRight size={16} color="#64748B" />
         </Button>
       </XStack>
-
-      <Text fontSize="$2" color="$gray10" textAlign="center">
-        {t("Swipe to see more data")}
-      </Text>
     </Card>
   );
 };
 
-export default ExpenseTrendChart;
+export default React.memo(ExpenseTrendChart);

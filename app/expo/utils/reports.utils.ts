@@ -4,6 +4,7 @@ import {
   HealthScore,
   Insight,
   ReportData,
+  BudgetReportData,
   TopSpendingCategory,
   TrendData,
   PeriodSelectorData,
@@ -36,6 +37,7 @@ import {
 import { EXPENSE_CATEGORIES } from "@/constants/categories";
 import { getBudgets, BudgetPeriod, Budgets } from "@/utils/budget.utils";
 import { summariseBills } from "@/utils/abi-summary.utils";
+import { computeHealthScore } from "@/utils/health-score.utils";
 import i18n from "@/i18n";
 import { enUS, zhCN, es as esLocale } from "date-fns/locale";
 import { Locale } from "date-fns";
@@ -578,27 +580,52 @@ export const generateHealthScore = async (
     status = "Poor";
   }
 
-  return {
-    score: totalScore,
-    status,
-    categories: [
-      {
-        name: i18n.t("Spending Discipline"),
-        score: Math.round(spendingDisciplineScore),
-        color: "#3B82F6",
-      },
-      {
-        name: i18n.t("Budget Adherence"),
-        score: Math.round(budgetAdherenceScore),
-        color: totalScore >= 70 ? "#10B981" : "#F59E0B",
-      },
-      {
-        name: i18n.t("Savings Rate"),
-        score: Math.round(savingsRateScore),
-        color: "#3B82F6",
-      },
-    ],
-  };
+  // Map detailed status (Good/Warning/Danger) -> simplified (Good/Fair/Poor)
+  const mappedStatus: "Good" | "Fair" | "Poor" =
+    status === "Good" ? "Good" : status === "Fair" ? "Fair" : "Poor";
+
+  // 合并基础分数（含预算权重）与详细分数，使预算调整能实时影响最终得分。
+  const mergedScore = Math.round(
+    (spendingDisciplineScore + budgetAdherenceScore + savingsRateScore) / 3
+  );
+
+  const healthScore: HealthScore = {
+    ...{
+      score: mergedScore,
+      status: mappedStatus,
+      categories: [
+        {
+          name: i18n.t("Spending Discipline"),
+          score: Math.round(spendingDisciplineScore),
+          color: "#3B82F6",
+        },
+        {
+          name: i18n.t("Budget Adherence"),
+          score: Math.round(budgetAdherenceScore),
+          color: totalScore >= 70 ? "#10B981" : "#F59E0B",
+        },
+        {
+          name: i18n.t("Savings Rate"),
+          score: Math.round(savingsRateScore),
+          color: "#3B82F6",
+        },
+      ],
+    },
+    metrics: {
+      budgetUsagePct: 0,
+      volatilityPct: 0,
+      recurringCoverDays: 0,
+      savingsRatePct: 0,
+    },
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore legacy extension
+    subScores: {
+      volatility: { pct: 0 },
+      recurring: { days: 0 },
+    },
+  } as any;
+
+  return healthScore;
 };
 
 // 生成顶部支出类别
@@ -666,6 +693,12 @@ const reportCache: Record<
   { data: ReportData; timestamp: number; dataVersion?: number }
 > = {};
 
+// 预算报表缓存
+const budgetReportCache: Record<
+  string,
+  { data: BudgetReportData; timestamp: number; budgetVersion?: number }
+> = {};
+
 // 缓存有效期 (毫秒)
 const REPORT_CACHE_TTL = 30000; // 30秒
 
@@ -712,6 +745,39 @@ function cacheReport(
   };
 }
 
+// 从预算缓存获取报告
+function getBudgetReportFromCache(
+  key: string,
+  budgetVersion?: number
+): BudgetReportData | null {
+  const entry = budgetReportCache[key];
+
+  if (budgetVersion && entry) {
+    if (entry.budgetVersion === budgetVersion) {
+      return entry.data;
+    }
+    return null;
+  }
+
+  if (entry && Date.now() - entry.timestamp < REPORT_CACHE_TTL) {
+    return entry.data;
+  }
+  return null;
+}
+
+// 缓存预算报告
+function cacheBudgetReport(
+  key: string,
+  data: BudgetReportData,
+  budgetVersion?: number
+): void {
+  budgetReportCache[key] = {
+    data,
+    timestamp: Date.now(),
+    budgetVersion,
+  };
+}
+
 // -----------------------------------------------------------------------------
 // Cache-key helper to ensure consistency across in-flight de-duplication,
 // memory caching and inner computation. Using a single function avoids subtle
@@ -724,6 +790,15 @@ function buildReportCacheKey(
   selectedPeriodId?: string
 ): string {
   return `report_${viewMode}_${periodType}_${selectedPeriodId ?? "default"}`;
+}
+
+// 构建预算报表缓存key
+function buildBudgetReportCacheKey(
+  periodType: DatePeriodEnum,
+  viewMode: "personal" | "family",
+  selectedPeriodId?: string
+): string {
+  return `budget_${viewMode}_${periodType}_${selectedPeriodId ?? "default"}`;
 }
 
 // 主要的报表数据获取函数
@@ -749,217 +824,192 @@ export async function fetchReportData(
   if (!forceRefresh) {
     const cached = getReportFromCache(cacheKey, dataVersion);
     if (cached) return Promise.resolve(cached);
+  } else {
+    // forceRefresh=true时，清除对应的缓存条目，确保重新计算
+    console.log("Clearing report cache for key:", cacheKey);
+    delete reportCache[cacheKey];
   }
 
-  // ---- 3. 真正生成报表 --------------------------------------------------
+  // ---- 3. 简化的报表生成 --------------------------------------------------
   const promise: Promise<ReportData> = (async () => {
-    // 以下是原有的数据获取逻辑...
-
     try {
-      // 设置超时机制，确保不会无限挂起
-      const TIMEOUT_MS = 10000; // 10秒超时
-      let timeoutId: NodeJS.Timeout;
+      // 生成缓存key
+      const cacheKey = buildReportCacheKey(
+        periodType,
+        viewMode,
+        selectedPeriodId
+      );
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error("报表数据加载超时"));
-        }, TIMEOUT_MS);
-      });
-
-      const fetchPromise = (async () => {
-        // 生成缓存key
-        const cacheKey = buildReportCacheKey(
-          periodType,
-          viewMode,
-          selectedPeriodId
-        );
-
-        // 尝试从内存缓存中获取报告数据
+      // 尝试从内存缓存中获取报告数据
+      if (!forceRefresh) {
         const cachedReport = getReportFromCache(cacheKey, dataVersion);
         if (cachedReport) {
-          console.log("使用报表缓存数据");
           return cachedReport;
         }
+      }
 
-        const periodSelectors = generatePeriodSelectors(periodType);
-        const selectedPeriod = periodSelectors.find(
-          (p) => p.id === selectedPeriodId
-        );
+      const periodSelectors = generatePeriodSelectors(periodType);
+      const selectedPeriod = periodSelectors.find(
+        (p) => p.id === selectedPeriodId
+      );
 
-        let startDate: Date;
-        let endDate: Date;
+      let startDate: Date;
+      let endDate: Date;
 
-        if (selectedPeriod) {
-          startDate = selectedPeriod.startDate;
-          endDate = selectedPeriod.endDate;
+      if (selectedPeriod) {
+        startDate = selectedPeriod.startDate;
+        endDate = selectedPeriod.endDate;
+      } else {
+        const latestPeriod = periodSelectors[0];
+        if (latestPeriod) {
+          startDate = latestPeriod.startDate;
+          endDate = latestPeriod.endDate;
         } else {
-          const latestPeriod = periodSelectors[0];
-          if (latestPeriod) {
-            startDate = latestPeriod.startDate;
-            endDate = latestPeriod.endDate;
-          } else {
-            const range = getDateRangeForPeriod(periodType);
-            startDate = range.start;
-            endDate = range.end;
-          }
+          const range = getDateRangeForPeriod(periodType);
+          startDate = range.start;
+          endDate = range.end;
         }
+      }
 
-        // 第一部分：快速获取账单和交易数据 (核心数据)
-        let bills: Bill[], transactions: Transaction[], budgets: Budgets;
+      // 快速获取本地数据 - 并行加载但使用缓存
+      let bills: Bill[], transactions: Transaction[], budgets: Budgets;
 
-        try {
-          [bills, transactions, budgets] = await Promise.all([
-            getBills(),
-            getTransactions(),
-            getBudgets(),
-          ]);
-        } catch (error) {
-          console.error("获取基础数据失败:", error);
-          // 使用空数组作为默认值继续执行
-          bills = [];
-          transactions = [];
-          budgets = {
-            weekly: undefined,
-            monthly: undefined,
-            yearly: undefined,
-          };
-        }
-
-        // 根据实际数据生成类别支出数据（核心指标，立即需要的）
-        let categoryData: CategoryData[] = [];
-        try {
-          categoryData = await generateCategoryDataFromRawData(
-            bills,
-            transactions,
-            startDate,
-            endDate,
-            viewMode
-          );
-        } catch (error) {
-          console.error("生成类别数据失败:", error);
-          // 使用空数组继续执行
-        }
-
-        // 初始化返回的报表结构
-        const initialReport: Partial<ReportData> = {
-          categoryData,
-          periodSelectors,
-          viewMode,
-          periodType,
+      try {
+        [bills, transactions, budgets] = await Promise.all([
+          getBills(),
+          getTransactions(),
+          getBudgets(),
+        ]);
+      } catch (error) {
+        console.error("获取基础数据失败:", error);
+        // 使用空数组作为默认值继续执行
+        bills = [];
+        transactions = [];
+        budgets = {
+          weekly: undefined,
+          monthly: undefined,
+          yearly: undefined,
         };
+      }
 
-        // 创建一个基础的报表对象并立即缓存它
-        // 这允许UI快速显示基本信息，而不必等待完整的数据计算
-        cacheReport(cacheKey, initialReport as ReportData, dataVersion);
+      // 快速生成核心数据
+      const categoryData = await generateCategoryDataFromRawData(
+        bills,
+        transactions,
+        startDate,
+        endDate,
+        viewMode
+      );
 
-        // 第二部分：异步计算其他指标 (不阻塞UI渲染)
-        // 使用Promise.all并行计算其余的数据，但添加超时和错误处理
-        const defaultTrendData: TrendData[] = [];
-        const defaultInsights: Insight[] = [];
-        const defaultHealthScore: HealthScore = {
-          score: 50,
-          status: "Fair",
-          categories: [],
-        };
-        const defaultTopCategories: TopSpendingCategory[] = [];
-        const defaultBudgetStatus: ReportData["budget"] = {
-          amount: null,
-          spent: 0,
-          remaining: 0,
-          percentage: 0,
-          status: "none",
-        };
+      // 简化的趋势数据 - 只计算必要的点
+      const trendData = await generateSimplifiedTrendData(
+        periodType,
+        viewMode,
+        startDate,
+        endDate,
+        bills,
+        transactions
+      );
 
-        let trendData = defaultTrendData;
-        let insights = defaultInsights;
-        let healthScore = defaultHealthScore;
-        let topSpendingCategories = defaultTopCategories;
-        let budgetStatus = defaultBudgetStatus;
+      // 计算预算状态（用于健康评分、卡片及小组件）
+      const budgetStatus = await calculateBudgetStatus(
+        bills,
+        budgets,
+        periodType,
+        startDate,
+        endDate
+      );
 
-        try {
-          // 使用Promise.allSettled保证即使部分计算失败也能继续
-          const results = await Promise.allSettled([
-            generateTrendData(
-              periodType,
-              viewMode,
-              startDate,
-              endDate,
-              bills,
-              transactions
-            ),
-            generateInsights(viewMode, categoryData),
-            generateHealthScore(viewMode, categoryData, []),
-            Promise.resolve(generateTopSpendingCategories(categoryData)),
-            calculateBudgetStatus(
-              bills,
-              budgets,
-              periodType,
-              startDate,
-              endDate
-            ),
-          ]);
+      // 基础健康评分（简化计算）
+      const baseScore = generateSimplifiedHealthScore(
+        categoryData,
+        budgetStatus
+      );
 
-          // 处理各个Promise的结果
-          if (results[0].status === "fulfilled") trendData = results[0].value;
-          if (results[1].status === "fulfilled") insights = results[1].value;
-          if (results[2].status === "fulfilled") healthScore = results[2].value;
-          if (results[3].status === "fulfilled")
-            topSpendingCategories = results[3].value;
-          if (results[4].status === "fulfilled")
-            budgetStatus = results[4].value || defaultBudgetStatus;
-        } catch (error) {
-          console.error("计算报表指标失败:", error);
-          // 继续使用默认值
-        }
+      // 计算详细指标，与首页卡片保持一致
+      const billSummary = summariseBills(
+        bills,
+        budgets,
+        periodType,
+        startDate,
+        endDate,
+        0
+      );
+      const detailedScore = computeHealthScore(billSummary);
 
-        // 计算平均支出
-        const averageSpending =
-          trendData.length > 0
-            ? trendData.reduce((sum, item) => sum + item.value, 0) /
-              trendData.length
-            : 0;
+      // Map detailed status (Good/Warning/Danger) -> simplified (Good/Fair/Poor)
+      const mappedStatus: "Good" | "Fair" | "Poor" =
+        detailedScore.status === "Danger"
+          ? "Poor"
+          : detailedScore.status === "Warning"
+            ? "Fair"
+            : "Good";
 
-        // 使用真实趋势数据更新健康评分
-        const healthMetrics = {
-          budgetUsagePct:
-            budgetStatus && budgetStatus.percentage != null
-              ? Math.round(budgetStatus.percentage)
-              : 0,
-          volatilityPct: calculateVolatilityPercentage(trendData),
-          // TODO: improve savingsRatePct once income / savings data pipeline ready
+      // 智能合并分数：超支时优先考虑预算控制，正常时综合考虑
+      let mergedScore: number;
+      let finalStatus: "Good" | "Fair" | "Poor";
+
+      if (budgetStatus && budgetStatus.percentage > 100) {
+        // 超支情况：优先考虑预算控制分数，但不完全忽略详细分数
+        mergedScore = Math.round(
+          baseScore.score * 0.8 + detailedScore.score * 0.2
+        );
+        finalStatus = "Poor"; // 超支情况强制为 Poor
+      } else if (budgetStatus && budgetStatus.percentage > 90) {
+        // 接近超支：预算控制权重更高
+        mergedScore = Math.round(
+          baseScore.score * 0.7 + detailedScore.score * 0.3
+        );
+        finalStatus = baseScore.score < 30 ? "Poor" : "Fair";
+      } else {
+        // 正常情况：平衡考虑两个分数
+        mergedScore = Math.round((baseScore.score + detailedScore.score) / 2);
+        finalStatus = mappedStatus;
+      }
+
+      const healthScore: HealthScore = {
+        ...baseScore,
+        score: mergedScore,
+        status: finalStatus,
+        metrics: {
+          budgetUsagePct: budgetStatus?.percentage ?? 0,
+          volatilityPct: detailedScore.subScores.volatility.pct,
+          recurringCoverDays: detailedScore.subScores.recurring.days,
           savingsRatePct: 0,
-          recurringCoverDays: 0,
-        } as const;
+        },
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore legacy extension
+        subScores: detailedScore.subScores,
+      } as any;
 
-        // 完整的报表数据
-        const completeReport: ReportData = {
-          categoryData,
-          trendData,
-          insights,
-          healthScore: {
-            ...healthScore,
-            metrics: healthMetrics,
-          },
-          periodSelectors,
-          averageSpending,
-          topSpendingCategories,
-          viewMode,
-          periodType,
-          budget: budgetStatus,
-        };
+      // 顶级支出类别 - 直接从categoryData计算
+      const topSpendingCategories = generateTopSpendingCategories(categoryData);
 
-        // 更新缓存
-        cacheReport(cacheKey, completeReport, dataVersion);
+      // 计算平均支出
+      const averageSpending =
+        trendData.length > 0
+          ? trendData.reduce((sum, item) => sum + item.value, 0) /
+            trendData.length
+          : 0;
 
-        console.log("报表数据计算完成");
-        return completeReport;
-      })();
+      // 完整的报表数据
+      const completeReport: ReportData = {
+        categoryData,
+        trendData,
+        insights: [], // 简化：移除复杂的洞察计算
+        healthScore,
+        periodSelectors,
+        averageSpending,
+        topSpendingCategories,
+        viewMode,
+        periodType,
+      };
 
-      // 竞态Promise，确保超时控制
-      const result = await Promise.race([fetchPromise, timeoutPromise]);
-      clearTimeout(timeoutId!);
+      // 更新缓存
+      cacheReport(cacheKey, completeReport, dataVersion);
 
-      return result as ReportData;
+      console.log("报表数据计算完成");
+      return completeReport;
     } catch (error) {
       console.error("Error generating report data:", error);
       // 返回基本报表数据以避免UI崩溃
@@ -976,14 +1026,10 @@ export async function fetchReportData(
         averageSpending: 0,
         viewMode,
         periodType,
-        budget: {
-          amount: null,
-          spent: 0,
-          remaining: 0,
-          percentage: 0,
-          status: "none" as const,
-        },
       };
+    } finally {
+      // 清理inFlight记录
+      delete inFlight[cacheKey];
     }
   })();
 
@@ -991,6 +1037,173 @@ export async function fetchReportData(
   inFlight[cacheKey] = promise;
 
   return promise;
+}
+
+// 新增：简化的趋势数据生成
+async function generateSimplifiedTrendData(
+  periodType: DatePeriodEnum,
+  viewMode: "personal" | "family",
+  startDate: Date,
+  endDate: Date,
+  bills: Bill[],
+  transactions: Transaction[]
+): Promise<TrendData[]> {
+  const trendData: TrendData[] = [];
+  // 获取当前语言环境
+  const currentLang = i18n.language || "en";
+  const locale: Locale =
+    currentLang === "zh" ? zhCN : currentLang === "es" ? esLocale : enUS;
+
+  // 简化：减少数据点数量，提高性能
+  switch (periodType) {
+    case DatePeriodEnum.WEEK: {
+      // 周视图：只计算7天
+      let currentDay = startDate;
+      while (currentDay <= endDate && trendData.length < 7) {
+        const startOfDayDate = startOfDay(currentDay);
+        const endOfDayDate = endOfDay(currentDay);
+
+        const dayExpense = calculateTotalExpenseForPeriod(
+          startOfDayDate,
+          endOfDayDate,
+          viewMode,
+          bills,
+          transactions
+        );
+
+        trendData.push({
+          label: format(currentDay, "EEE", { locale }),
+          value: dayExpense,
+          date: format(currentDay, "yyyy-MM-dd"),
+        });
+        currentDay = addDays(currentDay, 1);
+      }
+      break;
+    }
+
+    case DatePeriodEnum.MONTH: {
+      // 月视图：采样，每3天一个点
+      let currentDay = startDate;
+      while (currentDay <= endDate && trendData.length < 10) {
+        const startOfDayDate = startOfDay(currentDay);
+        const endOfDayDate = endOfDay(addDays(currentDay, 2)); // 3天为一组
+
+        const periodExpense = calculateTotalExpenseForPeriod(
+          startOfDayDate,
+          endOfDayDate,
+          viewMode,
+          bills,
+          transactions
+        );
+
+        trendData.push({
+          label: format(currentDay, "d", { locale }),
+          value: periodExpense,
+          date: format(currentDay, "yyyy-MM-dd"),
+        });
+        currentDay = addDays(currentDay, 3);
+      }
+      break;
+    }
+
+    case DatePeriodEnum.YEAR: {
+      // 年视图：按月计算
+      let currentMonth = startOfMonth(startDate);
+      while (currentMonth <= endDate && trendData.length < 12) {
+        const monthStart = startOfMonth(currentMonth);
+        const monthEnd = endOfMonth(currentMonth);
+
+        const monthExpense = calculateTotalExpenseForPeriod(
+          monthStart,
+          monthEnd,
+          viewMode,
+          bills,
+          transactions
+        );
+
+        trendData.push({
+          label: format(currentMonth, "MMM", { locale }),
+          value: monthExpense,
+          date: format(currentMonth, "yyyy-MM"),
+        });
+        currentMonth = addMonths(currentMonth, 1);
+      }
+      break;
+    }
+  }
+
+  return trendData;
+}
+
+// 新增：简化的健康评分生成
+function generateSimplifiedHealthScore(
+  categoryData: CategoryData[],
+  budgetStatus: BudgetReportData["budget"]
+): HealthScore {
+  const totalSpent = categoryData.reduce((sum, cat) => sum + cat.value, 0);
+
+  // 重新设计的评分计算 - 更严格的预算控制导向
+  let score = 50; // 降低基础分数
+  let status: "Good" | "Fair" | "Poor" = "Good";
+
+  // 预算使用情况影响评分
+  if (budgetStatus && budgetStatus.amount && budgetStatus.amount > 0) {
+    const usagePercent = budgetStatus.percentage;
+    if (usagePercent <= 50) {
+      // 优秀控制：使用50%以下
+      score += 40;
+      status = "Good";
+    } else if (usagePercent <= 70) {
+      // 良好控制：使用50-70%
+      score += 25;
+      status = "Good";
+    } else if (usagePercent <= 85) {
+      // 一般控制：使用70-85%
+      score += 10;
+      status = "Good";
+    } else if (usagePercent <= 95) {
+      // 警告区间：使用85-95%
+      score -= 10;
+      status = "Fair";
+    } else if (usagePercent <= 100) {
+      // 接近超支：使用95-100%
+      score -= 25;
+      status = "Fair";
+    } else if (usagePercent <= 110) {
+      // 轻微超支：100-110%
+      score -= 40;
+      status = "Poor";
+    } else if (usagePercent <= 150) {
+      // 严重超支：110-150%
+      score -= 50;
+      status = "Poor";
+    } else {
+      // 极度超支：>150%
+      score -= 60;
+      status = "Poor";
+    }
+  }
+
+  // 支出分散度影响评分
+  if (categoryData.length > 3) {
+    score += 10; // 支出类别多样化加分
+  }
+
+  score = Math.max(0, Math.min(100, score));
+
+  return {
+    score,
+    status,
+    categories: categoryData.slice(0, 3).map((cat, index) => ({
+      name: cat.label,
+      score: Math.min(100, Math.max(0, 100 - (cat.value / totalSpent) * 100)),
+      status: (cat.value > totalSpent * 0.4 ? "Poor" : "Good") as
+        | "Good"
+        | "Fair"
+        | "Poor",
+      color: cat.color,
+    })),
+  };
 }
 
 // 使用已经获取的原始账单和交易数据生成类别数据
@@ -1075,7 +1288,7 @@ async function calculateBudgetStatus(
   periodType: DatePeriodEnum,
   startDate: Date,
   endDate: Date
-): Promise<ReportData["budget"]> {
+): Promise<BudgetReportData["budget"]> {
   const periodMap: Record<DatePeriodEnum, BudgetPeriod> = {
     [DatePeriodEnum.WEEK]: "weekly",
     [DatePeriodEnum.MONTH]: "monthly",
@@ -1097,9 +1310,7 @@ async function calculateBudgetStatus(
   const spentTotal = summaryForSpent.coreTotals.totalExpense;
 
   const remaining = budgetAmount ? Math.max(0, budgetAmount - spentTotal) : 0;
-  const percentage = budgetAmount
-    ? Math.min((spentTotal / budgetAmount) * 100, 100)
-    : 0;
+  const percentage = budgetAmount ? (spentTotal / budgetAmount) * 100 : 0;
 
   let budgetStatus: "good" | "warning" | "danger" | "none" = "none";
   if (budgetAmount === null) {
@@ -1145,4 +1356,160 @@ function calculateVolatilityPercentage(trendData: TrendData[]): number {
   const volatilityPct = (stdDev / mean) * 100;
 
   return Math.round(volatilityPct);
+}
+
+// 获取预算报表数据
+export async function fetchBudgetReportData(
+  periodType: DatePeriodEnum,
+  viewMode: "personal" | "family",
+  selectedPeriodId?: string,
+  budgetVersion?: number,
+  forceRefresh = false
+): Promise<BudgetReportData> {
+  const cacheKey = buildBudgetReportCacheKey(
+    periodType,
+    viewMode,
+    selectedPeriodId
+  );
+
+  // 检查缓存
+  if (!forceRefresh) {
+    const cached = getBudgetReportFromCache(cacheKey, budgetVersion);
+    if (cached) return Promise.resolve(cached);
+  } else {
+    delete budgetReportCache[cacheKey];
+  }
+
+  try {
+    const periodSelectors = generatePeriodSelectors(periodType);
+    const selectedPeriod = periodSelectors.find(
+      (p) => p.id === selectedPeriodId
+    );
+
+    let startDate: Date;
+    let endDate: Date;
+
+    if (selectedPeriod) {
+      startDate = selectedPeriod.startDate;
+      endDate = selectedPeriod.endDate;
+    } else {
+      const latestPeriod = periodSelectors[0];
+      if (latestPeriod) {
+        startDate = latestPeriod.startDate;
+        endDate = latestPeriod.endDate;
+      } else {
+        const range = getDateRangeForPeriod(periodType);
+        startDate = range.start;
+        endDate = range.end;
+      }
+    }
+
+    // 获取最新预算和账单数据
+    const [bills, budgets] = await Promise.all([getBills(), getBudgets()]);
+
+    // 计算预算状态
+    const budgetStatus = await calculateBudgetStatus(
+      bills,
+      budgets,
+      periodType,
+      startDate,
+      endDate
+    );
+
+    // 直接从账单数据生成类别数据用于健康评分
+    const categoryData = await generateCategoryDataFromRawData(
+      bills,
+      [], // 暂时不考虑交易数据，简化计算
+      startDate,
+      endDate,
+      viewMode
+    );
+
+    // 生成简化健康评分
+    const baseScore = generateSimplifiedHealthScore(categoryData, budgetStatus);
+
+    // 计算详细健康评分
+    const billSummary = summariseBills(
+      bills,
+      budgets,
+      periodType,
+      startDate,
+      endDate,
+      0
+    );
+    const detailedScore = computeHealthScore(billSummary);
+
+    // 智能合并分数：超支时优先考虑预算控制，正常时综合考虑
+    let mergedScore: number;
+    let finalStatus: "Good" | "Fair" | "Poor";
+
+    if (budgetStatus && budgetStatus.percentage > 100) {
+      // 超支情况：优先考虑预算控制分数，但不完全忽略详细分数
+      mergedScore = Math.round(
+        baseScore.score * 0.8 + detailedScore.score * 0.2
+      );
+      finalStatus = "Poor"; // 超支情况强制为 Poor
+    } else if (budgetStatus && budgetStatus.percentage > 90) {
+      // 接近超支：预算控制权重更高
+      mergedScore = Math.round(
+        baseScore.score * 0.7 + detailedScore.score * 0.3
+      );
+      finalStatus = baseScore.score < 30 ? "Poor" : "Fair";
+    } else {
+      // 正常情况：平衡考虑两个分数
+      mergedScore = Math.round((baseScore.score + detailedScore.score) / 2);
+      const mappedStatus: "Good" | "Fair" | "Poor" =
+        detailedScore.status === "Danger"
+          ? "Poor"
+          : detailedScore.status === "Warning"
+            ? "Fair"
+            : "Good";
+      finalStatus = mappedStatus;
+    }
+
+    const healthScore: HealthScore = {
+      ...baseScore,
+      score: mergedScore,
+      status: finalStatus,
+      metrics: {
+        budgetUsagePct: budgetStatus?.percentage ?? 0,
+        volatilityPct: detailedScore.subScores.volatility.pct,
+        recurringCoverDays: detailedScore.subScores.recurring.days,
+        savingsRatePct: 0,
+      },
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore legacy extension
+      subScores: detailedScore.subScores,
+    } as any;
+
+    const budgetReport: BudgetReportData = {
+      healthScore,
+      budget: budgetStatus,
+      periodType,
+      viewMode,
+    };
+
+    // 缓存结果
+    cacheBudgetReport(cacheKey, budgetReport, budgetVersion);
+
+    return budgetReport;
+  } catch (error) {
+    console.error("Error generating budget report data:", error);
+    return {
+      healthScore: {
+        score: 0,
+        status: "Fair" as const,
+        categories: [],
+      },
+      budget: {
+        amount: null,
+        spent: 0,
+        remaining: 0,
+        percentage: 0,
+        status: "none" as const,
+      },
+      periodType,
+      viewMode,
+    };
+  }
 }

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { Modal, Platform, SafeAreaView, Alert } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { Platform, Modal } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { YStack, XStack, Button, Text, Input, ScrollView } from "tamagui";
 import {
@@ -13,13 +14,67 @@ import {
 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import * as ImagePicker from "expo-image-picker";
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
 import { useViewStore } from "@/stores/viewStore";
 import { saveBill, getBills, updateBill } from "@/utils/bills.utils";
-import { EXPENSE_CATEGORIES, getCategoryIcon } from "@/constants/categories";
+import {
+  EXPENSE_CATEGORIES,
+  getCategoryIcon,
+} from "@/constants/categories";
+
+// Memoised category icon to avoid re-renders
+const CategoryIcon = React.memo(({ categoryId }: { categoryId: string }) => {
+  const IconComponent = getCategoryIcon(categoryId);
+  return <IconComponent size={24} color="#333" />;
+});
+
+// Category item extracted for render-level memoization
+interface CategoryItemProps {
+  category: {
+    id: string;
+    name: string;
+    color: string;
+    lightColor: string;
+  };
+  label: string;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+}
+
+const CategoryItem: React.FC<CategoryItemProps> = React.memo(
+  ({ category, label, isSelected, onSelect }) => {
+    const handlePress = useCallback(() => onSelect(category.id), [onSelect, category.id]);
+
+    return (
+      <YStack
+        ai="center"
+        gap="$2"
+        p="$2"
+        w="25%"
+        onPress={handlePress}
+      >
+        <YStack
+          ai="center"
+          jc="center"
+          w={56}
+          h={56}
+          borderRadius="$10"
+          bg={isSelected ? category.lightColor : "$gray5"}
+          borderWidth={1}
+          borderColor={isSelected ? category.color : "transparent"}
+        >
+          <CategoryIcon categoryId={category.id} />
+        </YStack>
+        <Text fontSize="$2" ta="center">
+          {label}
+        </Text>
+      </YStack>
+    );
+  },
+  (prev, next) => prev.isSelected === next.isSelected // Re-render only if selection state changes
+);
 
 export default function AddBillScreen() {
   const { t } = useTranslation();
@@ -40,10 +95,12 @@ export default function AddBillScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Calculator state
   const [firstOperand, setFirstOperand] = useState<number | null>(null);
   const [operator, setOperator] = useState<string | null>(null);
   const [shouldResetDisplay, setShouldResetDisplay] = useState(false);
 
+  // Load bill data if editing
   useEffect(() => {
     if (!billId) return;
     setIsEditing(true);
@@ -64,11 +121,12 @@ export default function AddBillScreen() {
     loadBillData();
   }, [billId]);
 
-  const handleDateChange = (event: any, date?: Date) => {
+  const handleDateChange = (_event: any, date?: Date) => {
     if (Platform.OS === "android") setShowDatePicker(false);
     if (date) setSelectedDate(date);
   };
 
+  // Calculator helpers
   const calculate = (first: number, second: number, op: string): number => {
     switch (op) {
       case "+":
@@ -126,11 +184,7 @@ export default function AddBillScreen() {
 
   const handleOperatorPress = (op: string) => {
     if (firstOperand !== null && operator && !shouldResetDisplay) {
-      const currentResult = calculate(
-        firstOperand,
-        parseFloat(amount),
-        operator
-      );
+      const currentResult = calculate(firstOperand, parseFloat(amount), operator);
       setFirstOperand(currentResult);
       setAmount(String(currentResult));
     } else {
@@ -141,8 +195,7 @@ export default function AddBillScreen() {
   };
 
   const handleCalculate = () => {
-    if (firstOperand === null || operator === null || shouldResetDisplay)
-      return;
+    if (firstOperand === null || operator === null || shouldResetDisplay) return;
     const result = calculate(firstOperand, parseFloat(amount), operator);
     setAmount(String(result.toFixed(2)));
     setFirstOperand(null);
@@ -150,9 +203,8 @@ export default function AddBillScreen() {
     setShouldResetDisplay(true);
   };
 
-  const handleScanReceipt = async () => {
-    // This functionality is commented out as per user's last action
-  };
+  // Placeholder for future receipt scanning
+  const handleScanReceipt = () => { };
 
   const handleSave = async () => {
     const numericAmount = parseFloat(amount);
@@ -172,18 +224,21 @@ export default function AddBillScreen() {
         account: "Default",
         isFamilyBill: viewMode === "family",
         familyId: viewMode === "family" ? currentFamilySpace?.id : undefined,
-        familyName:
-          viewMode === "family" ? currentFamilySpace?.name : undefined,
-      };
+        familyName: viewMode === "family" ? currentFamilySpace?.name : undefined,
+      } as const;
 
       if (isEditing) await updateBill(billId, billData);
-      else
-        await saveBill(
-          billData,
-          user || { id: "local-user", name: "Local User" }
-        );
+      else await saveBill(billData, user || { id: "local-user", name: "Local User" });
 
-      await refreshData();
+      // Refresh data asynchronously to keep UI responsive
+      setTimeout(async () => {
+        try {
+          await refreshData();
+        } catch (err) {
+          console.warn("Background data refresh failed:", err);
+        }
+      }, 50);
+
       router.back();
     } catch (error) {
       console.error("Failed to save bill:", error);
@@ -193,11 +248,7 @@ export default function AddBillScreen() {
     }
   };
 
-  const CategoryIcon = ({ categoryId }: { categoryId: string }) => {
-    const IconComponent = getCategoryIcon(categoryId);
-    return <IconComponent size={24} color="#333" />;
-  };
-
+  // Helpers for UI
   const getDisplayString = () => {
     if (operator && firstOperand !== null) {
       if (shouldResetDisplay) return `${firstOperand} ${operator}`;
@@ -205,7 +256,6 @@ export default function AddBillScreen() {
     }
     return amount;
   };
-
   const displayString = getDisplayString();
   const showEquals = operator && !shouldResetDisplay;
 
@@ -215,187 +265,80 @@ export default function AddBillScreen() {
     return "$7";
   };
 
-  const renderKeypad = () => (
-    <XStack p="$2" gap="$2">
-      <YStack f={3} gap="$2">
-        <XStack gap="$2">
-          {["1", "2", "3"].map((key) => (
-            <Button
-              f={1}
-              key={key}
-              onPress={() => handleKeypadPress(key)}
-              size="$5"
-            >
-              <Text fontSize="$6">{key}</Text>
-            </Button>
+  // Render keypad - memoised for performance
+  const renderKeypad = useCallback(
+    () => (
+      <XStack p="$2" gap="$2">
+        <YStack f={3} gap="$2">
+          {["1", "2", "3"].map((k) => (
+            <XStack key={k} gap="$2">
+              {[k, (Number(k) + 1).toString(), (Number(k) + 2).toString()].map((key) => (
+                <Button key={key} f={1} onPress={() => handleKeypadPress(key)} size="$5">
+                  <Text fontSize="$6">{key}</Text>
+                </Button>
+              ))}
+            </XStack>
           ))}
-        </XStack>
-        <XStack gap="$2">
-          {["4", "5", "6"].map((key) => (
-            <Button
-              f={1}
-              key={key}
-              onPress={() => handleKeypadPress(key)}
-              size="$5"
-            >
-              <Text fontSize="$6">{key}</Text>
+          <XStack gap="$2">
+            <Button f={1} onPress={() => handleKeypadPress(".")} size="$5">
+              <Text fontSize="$6">.</Text>
             </Button>
-          ))}
-        </XStack>
-        <XStack gap="$2">
-          {["7", "8", "9"].map((key) => (
-            <Button
-              f={1}
-              key={key}
-              onPress={() => handleKeypadPress(key)}
-              size="$5"
-            >
-              <Text fontSize="$6">{key}</Text>
+            <Button f={1} onPress={() => handleKeypadPress("0")} size="$5">
+              <Text fontSize="$6">0</Text>
             </Button>
-          ))}
-        </XStack>
-        <XStack gap="$2">
-          <Button f={1} onPress={() => handleKeypadPress(".")} size="$5">
-            <Text fontSize="$6">.</Text>
+            <Button f={1} icon={<DeleteIcon size={24} color="#333" />} onPress={handleDeletePress} size="$5" />
+          </XStack>
+        </YStack>
+        <YStack f={1} gap="$2">
+          <Button f={1} icon={<CalendarIcon size={24} color="#333" />} onPress={() => setShowDatePicker(true)} size="$5" />
+          <Button f={1} icon={<PlusIcon size={24} color="#333" />} onPress={() => handleOperatorPress("+")} size="$5" />
+          <Button f={1} icon={<MinusIcon size={24} color="#333" />} onPress={() => handleOperatorPress("-")} size="$5" />
+          <Button f={1} theme="active" onPress={showEquals ? handleCalculate : handleSave} disabled={isSaving} size="$5" bg="$blue10">
+            {showEquals ? <EqualIcon size={24} color="white" /> : <Text color="white" fontWeight="bold">{t("Done")}</Text>}
           </Button>
-          <Button f={1} onPress={() => handleKeypadPress("0")} size="$5">
-            <Text fontSize="$6">0</Text>
-          </Button>
-          <Button
-            f={1}
-            icon={<DeleteIcon size={24} color="#333" />}
-            onPress={handleDeletePress}
-            size="$5"
-          />
-        </XStack>
-      </YStack>
-      <YStack f={1} gap="$2">
-        <Button
-          f={1}
-          icon={<CalendarIcon size={24} color="#333" />}
-          onPress={() => setShowDatePicker(true)}
-          size="$5"
-        />
-        <Button
-          f={1}
-          icon={<PlusIcon size={24} color="#333" />}
-          onPress={() => handleOperatorPress("+")}
-          size="$5"
-        />
-        <Button
-          f={1}
-          icon={<MinusIcon size={24} color="#333" />}
-          onPress={() => handleOperatorPress("-")}
-          size="$5"
-        />
-        <Button
-          f={1}
-          theme="active"
-          onPress={showEquals ? handleCalculate : handleSave}
-          disabled={isSaving}
-          size="$5"
-          bg="$blue10"
-        >
-          {showEquals ? (
-            <EqualIcon size={24} color="white" />
-          ) : (
-            <Text color="white" fontWeight="bold">
-              {t("Done")}
-            </Text>
-          )}
-        </Button>
-      </YStack>
-    </XStack>
+        </YStack>
+      </XStack>
+    ),
+    [amount, shouldResetDisplay, operator, firstOperand, isSaving]
   );
+
+  // Stable callback for category selection
+  const handleSelect = useCallback((id: string) => {
+    setSelectedCategory(id);
+  }, []);
 
   return (
     <YStack f={1} bg="$background">
       <Stack.Screen options={{ headerShown: false }} />
+
       <SafeAreaView style={{ flex: 1 }}>
         <YStack f={1}>
+          {/* Header */}
           <XStack p="$3">
-            <Button
-              chromeless
-              icon={<ChevronLeftIcon size={24} color="#333" />}
-              onPress={() => router.back()}
-            />
+            <Button chromeless icon={<ChevronLeftIcon size={24} color="#333" />} onPress={() => router.back()} />
           </XStack>
+
+          {/* Category selector */}
           <ScrollView>
             <YStack gap="$3" p="$3">
               <XStack flexWrap="wrap" jc="flex-start" ai="center">
                 {EXPENSE_CATEGORIES.map((category) => (
-                  <YStack
+                  <CategoryItem
                     key={category.id}
-                    ai="center"
-                    gap="$2"
-                    p="$2"
-                    w="25%"
-                    onPress={() => setSelectedCategory(category.id)}
-                  >
-                    <YStack
-                      ai="center"
-                      jc="center"
-                      w={56}
-                      h={56}
-                      borderRadius="$10"
-                      bg={
-                        selectedCategory === category.id
-                          ? category.lightColor
-                          : "$gray5"
-                      }
-                      borderWidth={1}
-                      borderColor={
-                        selectedCategory === category.id
-                          ? category.color
-                          : "transparent"
-                      }
-                    >
-                      <CategoryIcon categoryId={category.id} />
-                    </YStack>
-                    <Text fontSize="$2" ta="center">
-                      {t(category.name)}
-                    </Text>
-                  </YStack>
+                    category={category}
+                    label={t(category.name)}
+                    isSelected={selectedCategory === category.id}
+                    onSelect={handleSelect}
+                  />
                 ))}
               </XStack>
             </YStack>
           </ScrollView>
-          {Platform.OS === "ios" && (
-            <Modal transparent visible={showDatePicker} animationType="slide">
-              <YStack f={1} jc="flex-end">
-                <YStack bg="$background" btrr="$6" btlr="$6" p="$4" space>
-                  <XStack jc="flex-end">
-                    <Button onPress={() => setShowDatePicker(false)}>
-                      {t("Done")}
-                    </Button>
-                  </XStack>
-                  <DateTimePicker
-                    value={selectedDate}
-                    mode="date"
-                    display="spinner"
-                    onChange={handleDateChange}
-                    maximumDate={new Date()}
-                  />
-                </YStack>
-              </YStack>
-            </Modal>
-          )}
-          {Platform.OS === "android" && showDatePicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display="default"
-              onChange={handleDateChange}
-              maximumDate={new Date()}
-            />
-          )}
+
+          {/* Amount & notes + keypad */}
           <YStack p="$2" bg="white">
             <YStack p="$2" gap="$3">
-              <Text
-                fontSize={getFontSize(displayString)}
-                fontWeight="bold"
-                textAlign="right"
-              >
+              <Text fontSize={getFontSize(displayString)} fontWeight="bold" textAlign="right">
                 {displayString}
               </Text>
               <XStack gap="$2" ai="center">
@@ -407,15 +350,41 @@ export default function AddBillScreen() {
                   size="$4"
                   bg="$gray5"
                 />
-                <Button
-                  icon={<CameraIcon size={24} color="#333" />}
-                  onPress={handleScanReceipt}
-                />
+                <Button icon={<CameraIcon size={24} color="#333" />} onPress={handleScanReceipt} />
               </XStack>
             </YStack>
             {renderKeypad()}
           </YStack>
         </YStack>
+
+        {/* Date picker */}
+        {Platform.OS === "ios" && (
+          <Modal transparent visible={showDatePicker} animationType="slide">
+            <YStack f={1} jc="flex-end">
+              <YStack bg="$background" btrr="$6" btlr="$6" p="$4" space>
+                <XStack jc="flex-end">
+                  <Button onPress={() => setShowDatePicker(false)}>{t("Done")}</Button>
+                </XStack>
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                />
+              </YStack>
+            </YStack>
+          </Modal>
+        )}
+        {Platform.OS === "android" && showDatePicker && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+          />
+        )}
       </SafeAreaView>
     </YStack>
   );

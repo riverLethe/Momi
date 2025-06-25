@@ -24,6 +24,15 @@ interface DataContextType {
   refreshUpcomingBills: () => Promise<void>;
   refreshRecentTransactions: () => Promise<void>;
   dataVersion: number;
+  budgetVersion: number;
+  /**
+   * Manually bump the global data version so that consumers (e.g. report hooks,
+   * widget sync) refresh their data. This should be called whenever some piece
+   * of data changes that is not handled by {@link refreshData}, for example
+   * when budgets are updated.
+   */
+  bumpDataVersion: () => void;
+  bumpBudgetVersion: () => void;
 }
 
 // Create the data context
@@ -44,19 +53,20 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [upcomingBills, setUpcomingBills] = useState<Bill[]>([]);
   const [isLoading, setIsLoading] = useState<DataContextType['isLoading']>({
-    bills: true,
-    transactions: true,
-    upcomingBills: true,
-    recentTransactions: true,
-    initial: true,
+    bills: false,
+    transactions: false,
+    upcomingBills: false,
+    recentTransactions: false,
+    initial: false,
   });
   const [dataVersion, setDataVersion] = useState<number>(Date.now());
+  const [budgetVersion, setBudgetVersion] = useState<number>(Date.now());
   const lastRefresh = React.useRef<number>(0);
 
   // 加载账单数据
   const loadBills = useCallback(async () => {
     try {
-      setIsLoading(prev => ({ ...prev, bills: true }));
+      setIsLoading(prev => ({ ...prev, bills: true, initial: true }));
       const loadedBills = await getBills();
       setBills(loadedBills);
       return loadedBills;
@@ -68,48 +78,39 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // 加载即将到期账单
-  const loadUpcomingBills = useCallback(async () => {
-    try {
-      setIsLoading(prev => ({ ...prev, upcomingBills: true }));
-      const loadedUpcomingBills = await getUpcomingBills();
-      setUpcomingBills(loadedUpcomingBills);
-      return loadedUpcomingBills;
-    } catch (error) {
-      console.error('Failed to load upcoming bills:', error);
-      return [];
-    } finally {
-      setIsLoading(prev => ({ ...prev, upcomingBills: false }));
-    }
-  }, []);
-
   // 加载交易数据
   const loadTransactions = useCallback(async () => {
     try {
-      setIsLoading(prev => ({ ...prev, transactions: true }));
       const loadedTransactions = await getTransactions();
       setTransactions(loadedTransactions);
       return loadedTransactions;
     } catch (error) {
       console.error('Failed to load transactions:', error);
       return [];
-    } finally {
-      setIsLoading(prev => ({ ...prev, transactions: false, initial: false }));
     }
   }, []);
 
-  // 加载最近交易数据
+  // 加载即将到期账单 - 后台加载
+  const loadUpcomingBills = useCallback(async () => {
+    try {
+      const loadedUpcomingBills = await getUpcomingBills();
+      setUpcomingBills(loadedUpcomingBills);
+      return loadedUpcomingBills;
+    } catch (error) {
+      console.error('Failed to load upcoming bills:', error);
+      return [];
+    }
+  }, []);
+
+  // 加载最近交易数据 - 后台加载
   const loadRecentTransactions = useCallback(async () => {
     try {
-      setIsLoading(prev => ({ ...prev, recentTransactions: true }));
       const loadedRecentTransactions = await getRecentTransactions();
       setRecentTransactions(loadedRecentTransactions);
       return loadedRecentTransactions;
     } catch (error) {
       console.error('Failed to load recent transactions:', error);
       return [];
-    } finally {
-      setIsLoading(prev => ({ ...prev, recentTransactions: false }));
     }
   }, []);
 
@@ -140,8 +141,17 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       console.log(`设置新数据版本: ${newVersion}`);
       setDataVersion(newVersion);
 
-      // 后台刷新小部件
-      syncSpendingWidgets({ viewMode: "personal" }).catch(() => { });
+      // 账单或交易变化时，预算报表也需要更新（因为会影响预算状态和健康分数）
+      setBudgetVersion(newVersion);
+
+      // 后台刷新小部件 - 不阻塞UI，使用优化的同步
+      setTimeout(() => {
+        syncSpendingWidgets({
+          viewMode: "personal",
+          dataVersion: newVersion,
+          forceSync: false // 使用智能同步，避免过度刷新
+        }).catch(() => { });
+      }, 200); // 减少延迟时间
     } catch (error) {
       console.error("刷新数据失败:", error);
     }
@@ -161,27 +171,36 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   useEffect(() => {
     const initialLoad = async () => {
       try {
-        // 首先加载关键数据 (bills和transactions)
-        await Promise.all([loadBills(), loadTransactions()]);
+        // 优先加载关键数据 - bills为主，transactions可后台
+        await loadBills();
 
-        // 然后加载次要数据
-        Promise.all([loadUpcomingBills(), loadRecentTransactions()]).catch(err => {
-          console.warn('Failed to load secondary data:', err);
-        });
+        // 后台加载次要数据
+        setTimeout(() => {
+          loadTransactions();
+          loadUpcomingBills();
+          loadRecentTransactions();
+        }, 100);
       } catch (error) {
         console.error('初始数据加载失败:', error);
-        // 确保即使失败也重置加载状态
-        setIsLoading(prev => ({
-          ...prev,
-          bills: false,
-          transactions: false,
-          initial: false
-        }));
       }
     };
 
     initialLoad();
-  }, [isAuthenticated, loadBills, loadTransactions, loadUpcomingBills, loadRecentTransactions]);
+  }, [loadBills, loadTransactions, loadUpcomingBills, loadRecentTransactions]);
+
+  /**
+   * Increment the global {@link dataVersion} so that any hook relying on this
+   * value (e.g. {@link useReportData} or the widget-sync hooks) will perform a
+   * fresh fetch. We simply use the current timestamp to guarantee monotonic
+   * increase.
+   */
+  const bumpDataVersion = useCallback(() => {
+    setDataVersion(Date.now());
+  }, []);
+
+  const bumpBudgetVersion = useCallback(() => {
+    setBudgetVersion(Date.now());
+  }, []);
 
   // Context value
   const contextValue: DataContextType = {
@@ -194,6 +213,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     refreshUpcomingBills,
     refreshRecentTransactions,
     dataVersion,
+    budgetVersion,
+    bumpDataVersion,
+    bumpBudgetVersion,
   };
 
   return (

@@ -1,28 +1,29 @@
 import { useEffect } from "react";
-import { DatePeriodEnum, ReportData } from "@/types/reports.types";
+import { DatePeriodEnum, BudgetReportData } from "@/types/reports.types";
 import { syncBudgetWidgets } from "@/utils/budgetWidgetSync.utils";
 import { useColorScheme } from "react-native";
-import { useData } from "@/providers/DataProvider";
 
 /**
  * Synchronises the iOS Budget widgets (week/month/year) with latest data.
  */
-export function useBudgetWidgetSync(
-  reportData: ReportData | null,
+export const useBudgetWidgetSync = (
+  budgetData: BudgetReportData | null,
   periodType: DatePeriodEnum,
-  viewMode: "personal" | "family"
-) {
+  viewMode: "personal" | "family",
+  disabled: boolean = false
+) => {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
-  const { dataVersion } = useData();
 
   useEffect(() => {
+    if (!budgetData || disabled) return;
+
     syncBudgetWidgets({
       viewMode,
-      currentReportData: reportData,
+      currentBudgetData: budgetData,
       currentPeriodType: periodType,
       isDarkMode,
-      dataVersion,
-    }).catch((err) => console.warn("Failed to sync budget widgets:", err));
-  }, [reportData, periodType, viewMode, isDarkMode, dataVersion]);
-}
+      budgetVersion: Date.now(),
+    }).catch(() => {});
+  }, [budgetData, periodType, viewMode, isDarkMode, disabled]);
+};

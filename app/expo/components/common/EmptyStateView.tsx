@@ -2,8 +2,8 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
-import { 
-  Text, 
+import {
+  Text,
   YStack,
   Image,
   Paragraph,
@@ -36,7 +36,7 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
-  
+
   return (
     <YStack flex={1} paddingHorizontal="$4" paddingVertical="$6" space="$5" justifyContent="center" alignItems="center">
       {/* Logo and Title Section */}
@@ -49,23 +49,23 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
           resizeMode="contain"
           borderRadius={32}
         />
-        
+
         <YStack space="$2" alignItems="center">
           <H4 textAlign="center" marginTop="$4" color="$color">
             {title}
           </H4>
-          
+
           <Paragraph textAlign="center" color="$gray11" paddingHorizontal="$4">
             {description}
           </Paragraph>
         </YStack>
       </YStack>
-      
+
       {!hideAction && (
         <YStack space="$4" marginTop="$2" width="100%">
-          <Card 
-            padding="$4" 
-            bordered 
+          <Card
+            padding="$4"
+            bordered
             borderRadius="$4"
             pressStyle={{ scale: 0.98 }}
             backgroundColor="white"
@@ -92,7 +92,7 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
                   {actionText || t("Add New")}
                 </Text>
                 {actionSubtitle && (
-                  <Text fontSize="$2.5" color="$gray10" marginTop="$1">
+                  <Text fontSize={12} color="$gray10" marginTop="$1">
                     {actionSubtitle}
                   </Text>
                 )}

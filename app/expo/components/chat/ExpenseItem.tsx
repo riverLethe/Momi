@@ -1,122 +1,91 @@
-import React from "react";
-import { TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
-import { XStack, YStack, Text, View, Avatar, Card } from "tamagui";
-import { Expense } from "@/utils/api";
-import { formatCurrency } from "@/utils/format";
+import React, { useMemo, useCallback } from "react";
+import { Alert, TouchableOpacity } from "react-native";
+import { Avatar, Card, Text, XStack, YStack } from "tamagui";
+import { Calendar, MapPin } from "lucide-react-native";
 import { getCategoryById, getCategoryIcon } from "@/constants/categories";
+import { useTranslatedCategoryName } from "@/constants/categories";
+import { Bill } from "@/types/bills.types";
+import { formatCurrency } from "@/utils/format";
+import { useBillActions } from "@/hooks/useBillActions";
+import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/useLocale";
 
 interface ExpenseItemProps {
-  expense: Expense;
-  compact?: boolean;
+  expense: Bill;
 }
 
-export const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(
-  ({ expense, compact = false }) => {
-    const router = useRouter();
-    const { t } = useTranslation();
+export const ExpenseItem: React.FC<ExpenseItemProps> = ({ expense }) => {
+  const router = useRouter();
 
-    const handlePress = () => {
-      router.push({
-        pathname: "/bills/details",
-        params: { id: expense.id },
-      });
-    };
+  // 缓存日期格式化
+  const formattedDate = useMemo(() =>
+    new Date(expense.date).toLocaleDateString(),
+    [expense.date]
+  );
 
-    const formattedDate = new Date(expense.date).toLocaleDateString();
+  // 缓存金额格式化
+  const formattedAmount = useMemo(() =>
+    formatCurrency(expense.amount),
+    [expense.amount]
+  );
 
+  // 缓存分类信息
+  const categoryInfo = useMemo(() => {
     const category = getCategoryById(expense.category);
     const CategoryIcon = getCategoryIcon(expense.category);
+    return { category, CategoryIcon };
+  }, [expense.category]);
 
-    if (compact) {
-      return (
-        <TouchableOpacity activeOpacity={0.8} onPress={handlePress} style={{ marginVertical: 4 }}>
-          <Card
-            backgroundColor="$gray50"
-            borderColor="$gray200"
-            borderWidth={1}
-            borderRadius={10}
-            paddingVertical={6}
-            paddingHorizontal={10}
-            elevation={0.5}
-          >
-            <XStack alignItems="center" justifyContent="space-between">
-              <XStack alignItems="center" gap="$2">
-                <Avatar circular size="$2" backgroundColor={category.lightColor}>
-                  <CategoryIcon size={14} color={category.color} />
-                </Avatar>
-                <Text fontSize={14} color="$gray700">
-                  {t(category.name)}
-                </Text>
-              </XStack>
-              <Text fontSize={14} fontWeight="600" color="$gray800">
-                {formatCurrency(expense.amount)}
-              </Text>
-            </XStack>
-          </Card>
-        </TouchableOpacity>
-      );
-    }
+  const categoryName = useTranslatedCategoryName(expense.category);
 
-    return (
-      <TouchableOpacity
-        style={{
-          backgroundColor: "white",
-          borderRadius: 12,
-          marginVertical: 6,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 2,
-          elevation: 1,
-          overflow: "hidden"
-        }}
-        onPress={handlePress}
-        activeOpacity={0.7}
+  const handlePress = useCallback(() => {
+    router.push({
+      pathname: "/bills/details",
+      params: { id: expense.id },
+    });
+  }, [router, expense.id]);
+
+  const { category, CategoryIcon } = categoryInfo;
+
+  return (
+    <TouchableOpacity activeOpacity={0.8} onPress={handlePress} style={{ marginVertical: 4 }}>
+      <Card
+        elevate
+        size="$2"
+        backgroundColor="white"
+        borderWidth={1}
+        borderColor="$gray4"
+        borderRadius="$4"
+        padding="$3"
       >
-        <View
-          backgroundColor="$gray100"
-          paddingVertical="$1.5"
-          paddingHorizontal="$3"
-        >
-          <Text fontSize={12} color="$gray500">
-            {formattedDate}
-          </Text>
-        </View>
-
-        <XStack padding="$3">
-          <YStack flex={1}>
-            <Text
-              fontSize={16}
-              fontWeight="600"
-              color="$gray800"
-              marginBottom="$1"
-            >
-              {t(category.name)}
-            </Text>
-            <Text fontSize={14} color="$gray500">
-              {expense.note}
-            </Text>
-          </YStack>
+        <XStack alignItems="center" justifyContent="space-between">
+          <XStack alignItems="center" gap="$3" flex={1}>
+            <CategoryIcon size={24} color={category?.color || "#64748B"} />
+            <YStack flex={1} gap="$1">
+              <Text fontSize="$3" fontWeight="$6" numberOfLines={1}>
+                {categoryName}
+              </Text>
+              <Text fontSize="$2" color="$gray10" numberOfLines={1}>
+                {formattedDate}
+              </Text>
+            </YStack>
+          </XStack>
 
           <YStack alignItems="flex-end">
-            <Text
-              fontSize={16}
-              fontWeight="600"
-              color="$gray800"
-              marginBottom="$1"
-            >
-              {formatCurrency(expense.amount)}
+            <Text fontSize="$3" fontWeight="$6" color="$blue9">
+              {formattedAmount}
             </Text>
-            <Text fontSize={12} color="$gray500">
-              {expense.paymentMethod}
-            </Text>
+            {expense.merchant && (
+              <Text fontSize="$2" color="$gray10" numberOfLines={1}>
+                {expense.merchant}
+              </Text>
+            )}
           </YStack>
         </XStack>
-      </TouchableOpacity>
-    );
-  }
-);
+      </Card>
+    </TouchableOpacity>
+  );
+};
 
-ExpenseItem.displayName = "ExpenseItem";
+export default React.memo(ExpenseItem);

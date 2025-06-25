@@ -111,96 +111,108 @@ export const createHandleAIResponse = (params: UseAIResponseParams) => {
     if (response.type !== "structured") return;
 
     const { type, expense, expenses, query, budget, content } = response.data;
+
     if (type === "create_expense" && (expense || expenses)) {
       const expenseArray: any[] = Array.isArray(expenses)
         ? expenses
         : expense
           ? [expense]
           : [];
-      const newBills: Bill[] = [];
-      for (const exp of expenseArray) {
-        try {
-          const savedBill = await saveBill(
-            {
-              amount: exp.amount,
-              category: exp.category || "others",
-              date: exp.date ? new Date(exp.date) : new Date(),
-              merchant: exp.merchant || "",
-              notes: exp.note || "",
-              account: exp.paymentMethod || "Default",
-              isFamilyBill: false,
-            },
-            user || { id: "local-user", name: "Local User" }
-          );
-          newBills.push(savedBill);
-        } catch (err) {
-          console.error("Failed to save expense from AI:", err);
-        }
-      }
-      if (newBills.length) {
-        refreshData();
-        const expenseMessage = chatAPI.createMessage(
-          newBills.length > 1
-            ? i18n.t("{{count}} expenses created", { count: newBills.length })
-            : i18n.t("Expense created"),
-          false,
-          "text",
-          { type: "expense_list", expenses: newBills }
-        );
-        setMessages((prev) => [...prev, expenseMessage]);
-      }
-    } else if (type === "list_expenses" && query) {
-      // Query bills according to filters coming from AI
-      try {
-        const allBills = await getBills();
 
-        const billQuery: BillQuery = {
-          startDate: query.startDate,
-          endDate: query.endDate,
-          category: query.category,
-          categories: query.categories,
-          keyword: query.keyword,
-          keywords: query.keywords,
-          minAmount: query.minAmount,
-          maxAmount: query.maxAmount,
-          dateField: query.dateField,
-          dateRanges: query.dateRanges,
-        } as BillQuery;
-
-        const matched = filterBills(allBills, billQuery);
-
-        const MAX_DISPLAY = 8;
-        const topBills = matched.slice(0, MAX_DISPLAY);
-
-        const totalAmount = matched.reduce((sum, b) => sum + b.amount, 0);
-
-        const listMessage = chatAPI.createMessage(
-          matched.length === 0
-            ? i18n.t("No matching bills found")
-            : i18n.t("Found {{count}} bills, total spending: {{amount}}", {
-                count: matched.length,
-                amount: formatCurrency(totalAmount),
-              }),
-          false,
-          "text",
-          {
-            type: "expense_list",
-            expenses: topBills,
-            moreCount: matched.length - topBills.length,
-            query: billQuery,
+      // 优化：在后台处理费用创建，避免阻塞UI
+      setTimeout(async () => {
+        const newBills: Bill[] = [];
+        for (const exp of expenseArray) {
+          try {
+            const savedBill = await saveBill(
+              {
+                amount: exp.amount,
+                category: exp.category || "others",
+                date: exp.date ? new Date(exp.date) : new Date(),
+                merchant: exp.merchant || "",
+                notes: exp.note || "",
+                account: exp.paymentMethod || "Default",
+                isFamilyBill: false,
+              },
+              user || { id: "local-user", name: "Local User" }
+            );
+            newBills.push(savedBill);
+          } catch (err) {
+            console.error("Failed to save expense from AI:", err);
           }
-        );
-        setMessages((prev) => [...prev, listMessage]);
-      } catch (err) {
-        console.error("Failed to filter bills:", err);
-        const errorMessage = chatAPI.createMessage(
-          i18n.t("Sorry, an error occurred when filtering bills"),
-          false,
-          "text",
-          { type: "system_error" }
-        );
-        setMessages((prev) => [...prev, errorMessage]);
-      }
+        }
+        if (newBills.length) {
+          // 后台刷新数据
+          setTimeout(() => refreshData(), 100);
+          const expenseMessage = chatAPI.createMessage(
+            newBills.length > 1
+              ? i18n.t("{{count}} expenses created", { count: newBills.length })
+              : i18n.t("Expense created"),
+            false,
+            "text",
+            { type: "expense_list", expenses: newBills }
+          );
+          setMessages((prev) => [...prev, expenseMessage]);
+          setTimeout(scrollToBottom, 50);
+        }
+      }, 50);
+    } else if (type === "list_expenses" && query) {
+      // 优化：在后台处理账单查询，避免阻塞UI
+      setTimeout(async () => {
+        try {
+          const allBills = await getBills();
+
+          const billQuery: BillQuery = {
+            startDate: query.startDate,
+            endDate: query.endDate,
+            category: query.category,
+            categories: query.categories,
+            keyword: query.keyword,
+            keywords: query.keywords,
+            minAmount: query.minAmount,
+            maxAmount: query.maxAmount,
+            dateField: query.dateField,
+            dateRanges: query.dateRanges,
+          } as BillQuery;
+
+          const matched = filterBills(allBills, billQuery);
+
+          // 减少显示数量以提高性能
+          const MAX_DISPLAY = 6;
+          const topBills = matched.slice(0, MAX_DISPLAY);
+
+          const totalAmount = matched.reduce((sum, b) => sum + b.amount, 0);
+
+          const listMessage = chatAPI.createMessage(
+            matched.length === 0
+              ? i18n.t("No matching bills found")
+              : i18n.t("Found {{count}} bills, total spending: {{amount}}", {
+                  count: matched.length,
+                  amount: formatCurrency(totalAmount),
+                }),
+            false,
+            "text",
+            {
+              type: "expense_list",
+              expenses: topBills,
+              moreCount: matched.length - topBills.length,
+              query: billQuery,
+            }
+          );
+          setMessages((prev) => [...prev, listMessage]);
+          setTimeout(scrollToBottom, 50);
+        } catch (err) {
+          console.error("Failed to filter bills:", err);
+          const errorMessage = chatAPI.createMessage(
+            i18n.t("Sorry, an error occurred when filtering bills"),
+            false,
+            "text",
+            { type: "system_error" }
+          );
+          setMessages((prev) => [...prev, errorMessage]);
+          setTimeout(scrollToBottom, 50);
+        }
+      }, 50);
     } else if (type === "set_budget" && budget) {
       await updateBudgets({ [budget.period]: budget.amount }).catch((err) =>
         console.error(err)
