@@ -23,23 +23,18 @@ import DateFilter from "@/components/reports/DateFilter";
 // Utils & Types ------------------------------------------------------------
 import { DatePeriodEnum } from "@/types/reports.types";
 import { generatePeriodSelectors } from "@/utils/date.utils";
+import { useTranslation } from "react-i18next";
 
 
 
 export default function HomeScreenPager() {
+  const { t } = useTranslation();
   // ---------------------------------------------------------------------
   // Global data status / decide what to show
   // ---------------------------------------------------------------------
   const { bills, isLoading: dataLoading } = useData();
   const initialLoading = dataLoading.initial;
   const hasBills = bills.length > 0;
-
-  const FullScreenLoader = () => (
-    <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="#f8fafc">
-      <ActivityIndicator size="small" color="#3B82F6" />
-      <Text style={{ marginTop: 8, color: "#64748B" }}>Loading...</Text>
-    </YStack>
-  );
 
   const router = useRouter();
 
@@ -122,7 +117,10 @@ export default function HomeScreenPager() {
 
   // Decide UI -------------------------------------------------------------
   if (initialLoading) {
-    return <FullScreenLoader />;
+    return <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="#f8fafc">
+      <ActivityIndicator size="small" color="#3B82F6" />
+      <Text style={{ marginTop: 8, color: "#64748B" }}>{t("Loading...")}</Text>
+    </YStack>;
   }
 
   if (!hasBills) {
