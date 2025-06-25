@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { I18nextProvider } from 'react-i18next';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '@/utils/storage.utils';
 import i18n from '../i18n';
 import * as Localization from 'expo-localization';
 
@@ -29,7 +29,7 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     (async () => {
       try {
-        const saved = await AsyncStorage.getItem('user-language');
+        const saved = await storage.getItem<string>('user-language');
         if (saved) {
           setLanguageState(saved);
         }
@@ -43,7 +43,7 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (lang === 'system') {
         // Remove persisted preference and fall back to device locale
-        await AsyncStorage.removeItem('user-language');
+        await storage.removeItem('user-language');
         const normalized = Localization.locale.replace('_', '-');
         const deviceLocale = normalized.split('-')[0].toLowerCase();
         i18n.changeLanguage(['en', 'zh', 'es'].includes(deviceLocale) ? deviceLocale : 'en');
@@ -51,7 +51,7 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      await AsyncStorage.setItem('user-language', lang);
+      await storage.setItem('user-language', lang);
       i18n.changeLanguage(lang);
       setLanguageState(lang);
     } catch (error) {

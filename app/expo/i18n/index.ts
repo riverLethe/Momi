@@ -1,6 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { storage } from "@/utils/storage.utils";
 import * as Localization from "expo-localization";
 
 import en from "./locales/en";
@@ -13,7 +13,7 @@ const LANGUAGE_DETECTOR = {
   detect: async (callback: (lng: string) => void) => {
     try {
       // 1. Check if user has explicitly selected a language previously
-      const savedLanguage = await AsyncStorage.getItem("user-language");
+      const savedLanguage = await storage.getItem<string>("user-language");
       if (savedLanguage) {
         return callback(savedLanguage);
       }
@@ -26,7 +26,7 @@ const LANGUAGE_DETECTOR = {
       }
     } catch (error) {
       console.log(
-        "Error reading language from AsyncStorage or device locale:",
+        "Error reading language from storage or device locale:",
         error
       );
     }
@@ -37,9 +37,9 @@ const LANGUAGE_DETECTOR = {
   init: () => {},
   cacheUserLanguage: async (lng: string) => {
     try {
-      await AsyncStorage.setItem("user-language", lng);
+      await storage.setItem("user-language", lng);
     } catch (error) {
-      console.log("Error saving language to AsyncStorage:", error);
+      console.log("Error saving language to storage:", error);
     }
   },
 };

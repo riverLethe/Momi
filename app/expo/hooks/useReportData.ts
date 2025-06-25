@@ -199,26 +199,6 @@ export const useSplitReportData = (
     [periodType, viewMode, selectedPeriodId, dataVersion]
   );
 
-  // ----------------------------------------------
-  // 在初次轻量加载完成后，排队执行完整计算
-  // ----------------------------------------------
-  const hasScheduledHeavyRef = useRef(false);
-
-  useEffect(() => {
-    if (!coreReport || hasScheduledHeavyRef.current) return;
-    // healthScore.subScores 不存在说明仍为简化版本
-    // 这里用一个简单判断，避免重复调度
-    if ((coreReport as any).subScores === undefined) {
-      hasScheduledHeavyRef.current = true;
-      InteractionManager.runAfterInteractions(() => {
-        loadCoreReport(true).finally(() => {
-          // allow future schedules when periodType changes
-          hasScheduledHeavyRef.current = false;
-        });
-      });
-    }
-  }, [coreReport, loadCoreReport]);
-
   // 加载预算报表数据
   const loadBudgetReport = useCallback(
     async (forceRefresh = false) => {

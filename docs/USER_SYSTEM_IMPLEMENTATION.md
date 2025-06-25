@@ -183,7 +183,7 @@ interface AuthContextType {
 1. **网络状态监测** - 使用 `@react-native-community/netinfo` 监测网络连接
 2. **自动同步** - 网络恢复时自动触发同步
 3. **冲突处理** - 基于时间戳的简单冲突解决策略
-4. **本地存储** - 使用 AsyncStorage 存储同步状态
+4. **本地存储** - 使用 MMKV 存储同步状态
 
 ### 安全考虑
 

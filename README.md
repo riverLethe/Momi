@@ -15,8 +15,8 @@ MomiQ是一个基于Turbo Monorepo架构的移动记账应用，集成了AI对�
 
 ### 内存缓存层
 
-- 添加了高效的内存缓存(`memoryCache`)系统，位于AsyncStorage上层
-- 避免频繁的AsyncStorage读取操作，显著减少I/O开销
+- 添加了高效的内存缓存(`memoryCache`)系统，位于MMKV上层
+- 避免频繁的MMKV读取操作，显著减少I/O开销
 - 为缓存项设置TTL(生存时间)，确保数据合理更新
 
 ### 分段式数据加载

@@ -72,7 +72,7 @@ Notification switches retained, but _Bill Reminders_ & _Family Updates_ toggles 
 ## 7. Mobile Implementation Task List
 
 1. **NotificationProvider**
-   - Persist `notifications` & `settings` to AsyncStorage.
+   - Persist `notifications` & `settings` to MMKV.
    - `syncNotifications()` pulls from `/api/notifications` and merges.
    - `useEffect` listening to `bills`, `budgets`, `dataVersion` to fire `budget_alert` locally if thresholds crossed & not already notified for that month/level.
    - Daily `log_reminder` via `expo-task-manager` + `expo-background-fetch` or fallback App foreground check at 20:00.

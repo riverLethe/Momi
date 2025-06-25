@@ -172,7 +172,7 @@ pnpm dev:expo
 1. **手动账单录入表单**
 2. **账单详情页面**
 3. **家庭空间管理**
-4. **数据持久化 (AsyncStorage/SQLite)**
+4. **数据持久化 (MMKV/SQLite)**
 
 ### 优先级2 - 功能增强
 
@@ -572,7 +572,7 @@ export async function syncBudgetWidgets(options) {
 
 - **L1缓存**: 内存中的全局状态 (<50ms)
 - **L2缓存**: billEditCache专用缓存 (<100ms)
-- **L3缓存**: AsyncStorage持久化 (<200ms)
+- **L3缓存**: MMKV持久化 (<200ms)
 
 ##### 2. 智能防抖系统
 

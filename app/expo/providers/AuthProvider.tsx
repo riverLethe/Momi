@@ -14,7 +14,6 @@ import {
 } from '@/utils/userPreferences.utils';
 import { apiClient } from '@/utils/api';
 import { smartSync } from '@/utils/sync.utils';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure Google Sign-In
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -75,20 +74,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>(initialAuthState);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
-  // Apple Sign In configuration
+  // Memoise the auth request configuration so that the object reference stays
+  // stable across renders, avoiding the "Maximum update depth exceeded" loop
+  // inside expo-auth-session hooks (which internally compare configs and call
+  // setState when they change).
+
+  const appleRequestConfig = React.useMemo(() => ({
+    clientId: process.env.EXPO_PUBLIC_APPLE_CLIENT_ID || 'com.momiq.app',
+    scopes: ['name', 'email'] as string[],
+    redirectUri,
+    responseType: AuthSession.ResponseType.Code,
+    // Generate once per component lifecycle
+    state: Crypto.randomUUID(),
+  }), [redirectUri]);
+
+  const appleServiceConfig = React.useMemo(() => ({
+    authorizationEndpoint: 'https://appleid.apple.com/auth/authorize',
+    tokenEndpoint: 'https://appleid.apple.com/auth/token',
+    revocationEndpoint: 'https://appleid.apple.com/auth/revoke',
+  }), []);
+
   const [appleRequest, appleResponse, applePromptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: process.env.EXPO_PUBLIC_APPLE_CLIENT_ID || 'com.momiq.app',
-      scopes: ['name', 'email'],
-      redirectUri,
-      responseType: AuthSession.ResponseType.Code,
-      state: Crypto.randomUUID(),
-    },
-    {
-      authorizationEndpoint: 'https://appleid.apple.com/auth/authorize',
-      tokenEndpoint: 'https://appleid.apple.com/auth/token',
-      revocationEndpoint: 'https://appleid.apple.com/auth/revoke',
-    }
+    appleRequestConfig,
+    appleServiceConfig
   );
 
   // Check if user is authenticated on mount

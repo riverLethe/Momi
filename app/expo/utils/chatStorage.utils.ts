@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { storage } from "@/utils/storage.utils";
 import { Message } from "@/utils/api";
 import * as FileSystem from "expo-file-system";
 
@@ -50,7 +50,7 @@ export const saveChatMessages = async (messages: Message[]): Promise<void> => {
       return cloned;
     });
 
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(serialisable));
+    await storage.setItem(STORAGE_KEY, serialisable);
   } catch (error) {
     console.error("Failed to save chat messages:", error);
   }
@@ -62,10 +62,10 @@ export const saveChatMessages = async (messages: Message[]): Promise<void> => {
  */
 export const loadChatMessages = async (): Promise<Message[]> => {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    const rawData = await storage.getItem<any[]>(STORAGE_KEY);
+    if (!rawData) return [];
 
-    const parsed: Message[] = JSON.parse(raw).map((msg: any) => ({
+    const parsed: Message[] = rawData.map((msg: any) => ({
       ...msg,
       timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
     }));
@@ -121,7 +121,7 @@ export const loadChatMessages = async (): Promise<Message[]> => {
  */
 export const clearChatMessages = async (): Promise<void> => {
   try {
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    await storage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.error("Failed to clear chat messages:", error);
   }

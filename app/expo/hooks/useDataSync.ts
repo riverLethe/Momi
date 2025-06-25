@@ -4,7 +4,7 @@ import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/utils/api";
 import { getAuthToken } from "@/utils/userPreferences.utils";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { storage } from "@/utils/storage.utils";
 
 interface SyncState {
   isOnline: boolean;
@@ -14,8 +14,8 @@ interface SyncState {
   error: string | null;
 }
 
-const LAST_SYNC_KEY = "@momiq_last_sync";
-const PENDING_CHANGES_KEY = "@momiq_pending_changes";
+const LAST_SYNC_KEY = "momiq_last_sync";
+const PENDING_CHANGES_KEY = "momiq_pending_changes";
 
 export const useDataSync = () => {
   const { isAuthenticated, user, lastSyncTime: authLastSyncTime } = useAuth();
@@ -47,8 +47,8 @@ export const useDataSync = () => {
   const loadLocalSyncState = async () => {
     try {
       const [lastSyncStr, pendingChangesStr] = await Promise.all([
-        AsyncStorage.getItem(LAST_SYNC_KEY),
-        AsyncStorage.getItem(PENDING_CHANGES_KEY),
+        storage.getItem<string>(LAST_SYNC_KEY),
+        storage.getItem<string>(PENDING_CHANGES_KEY),
       ]);
 
       setSyncState((prev) => ({
@@ -63,7 +63,7 @@ export const useDataSync = () => {
 
   const savePendingChanges = async (count: number) => {
     try {
-      await AsyncStorage.setItem(PENDING_CHANGES_KEY, count.toString());
+      await storage.setItem(PENDING_CHANGES_KEY, count.toString());
       setSyncState((prev) => ({
         ...prev,
         pendingChanges: count,
@@ -107,7 +107,7 @@ export const useDataSync = () => {
 
         // Update sync state
         const newSyncTime = new Date();
-        await AsyncStorage.setItem(LAST_SYNC_KEY, newSyncTime.toISOString());
+        await storage.setItem(LAST_SYNC_KEY, newSyncTime.toISOString());
         await savePendingChanges(0);
 
         setSyncState((prev) => ({

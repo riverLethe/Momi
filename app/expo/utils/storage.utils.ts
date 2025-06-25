@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MMKV } from "react-native-mmkv";
 import * as SecureStore from "expo-secure-store";
 
 // Storage keys
@@ -31,113 +31,101 @@ const memoryCache: Record<string, { data: any; timestamp: number }> = {};
 // 缓存过期时间 (毫秒)
 const CACHE_TTL = 30000; // 30秒
 
-// Regular storage for non-sensitive data
+// ---------------------------------------------------------------------------
+// MMKV INSTANCE (Singleton)
+// ---------------------------------------------------------------------------
+// Creating multiple MMKV instances with the same `id` will trigger extra log
+// noise ("Creating MMKV instance \"momiq_storage\"...").  Because modules are
+// single-cached by the bundler, instantiating here guarantees a single shared
+// instance across the entire JS runtime.
+
+export const mmkv = new MMKV({ id: "momiq_storage" });
+
+/** Helper: Promise-wrap synchronous MMKV calls so the external API stays async. */
+const wrapAsync = <T>(fn: () => T): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    try {
+      resolve(fn());
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Regular storage for non-sensitive data (backed by MMKV)
+// ---------------------------------------------------------------------------
+
 export const storage = {
   /**
    * Store data in local storage
    */
-  setItem: async <T>(key: string, value: T): Promise<void> => {
-    try {
+  setItem: async <T>(key: string, value: T): Promise<void> =>
+    wrapAsync(() => {
       const jsonValue = JSON.stringify(value);
-      await AsyncStorage.setItem(key, jsonValue);
+      mmkv.set(key, jsonValue);
 
-      // 同时更新内存缓存
+      // 更新内存缓存
       memoryCache[key] = {
         data: value,
         timestamp: Date.now(),
       };
-    } catch (error) {
-      console.error(`Error storing ${key}:`, error);
-      throw error;
-    }
-  },
+    }),
 
   /**
    * Get data from local storage
    */
-  getItem: async <T>(key: string): Promise<T | null> => {
-    try {
-      // 1. 检查内存缓存是否存在且未过期
-      const cachedItem = memoryCache[key];
-      if (cachedItem && Date.now() - cachedItem.timestamp < CACHE_TTL) {
-        return cachedItem.data;
+  getItem: async <T>(key: string): Promise<T | null> =>
+    wrapAsync(() => {
+      // 1. Memory-cache first
+      const cached = memoryCache[key];
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.data as T;
       }
 
-      // 2. 如果没有缓存或已过期，尝试从AsyncStorage读取
-      const jsonValue = await AsyncStorage.getItem(key);
+      // 2. MMKV lookup
+      const jsonValue = mmkv.getString(key);
       if (jsonValue != null) {
-        const parsedData = JSON.parse(jsonValue);
-
-        // 更新内存缓存
-        memoryCache[key] = {
-          data: parsedData,
-          timestamp: Date.now(),
-        };
-
-        return parsedData;
+        const parsed = JSON.parse(jsonValue) as T;
+        memoryCache[key] = { data: parsed, timestamp: Date.now() };
+        return parsed;
       }
 
-      // 3. Fallback to legacy key if data under new key is missing
+      // 3. Legacy key fallback (also in MMKV ‑ migration from old key)
       const legacyKey = deriveLegacyKey(key);
       if (legacyKey) {
-        const legacyValue = await AsyncStorage.getItem(legacyKey);
+        const legacyValue = mmkv.getString(legacyKey);
         if (legacyValue != null) {
-          // Migrate data to the new key asynchronously (fire-and-forget)
-          AsyncStorage.setItem(key, legacyValue).catch(() => {});
-          AsyncStorage.removeItem(legacyKey).catch(() => {});
+          // migrate
+          mmkv.set(key, legacyValue);
+          mmkv.delete(legacyKey);
 
-          const parsedLegacyData = JSON.parse(legacyValue);
-
-          // 更新内存缓存
-          memoryCache[key] = {
-            data: parsedLegacyData,
-            timestamp: Date.now(),
-          };
-
-          return parsedLegacyData;
+          const parsedLegacy = JSON.parse(legacyValue) as T;
+          memoryCache[key] = { data: parsedLegacy, timestamp: Date.now() };
+          return parsedLegacy;
         }
       }
 
       return null;
-    } catch (error) {
-      console.error(`Error retrieving ${key}:`, error);
-      return null;
-    }
-  },
+    }),
 
   /**
    * Remove data from local storage
    */
-  removeItem: async (key: string): Promise<void> => {
-    try {
-      await AsyncStorage.removeItem(key);
-
-      // 同时从内存缓存中删除
-      if (key in memoryCache) {
-        delete memoryCache[key];
-      }
-    } catch (error) {
-      console.error(`Error removing ${key}:`, error);
-      throw error;
-    }
-  },
+  removeItem: async (key: string): Promise<void> =>
+    wrapAsync(() => {
+      mmkv.delete(key);
+      if (key in memoryCache) delete memoryCache[key];
+    }),
 
   /**
    * Clear all data from local storage
    */
-  clear: async (): Promise<void> => {
-    try {
-      await AsyncStorage.clear();
-
-      // 清空内存缓存
-      Object.keys(memoryCache).forEach((key) => {
-        delete memoryCache[key];
-      });
-    } catch (error) {
-      console.error("Error clearing storage:", error);
-      throw error;
-    }
-  },
+  clear: async (): Promise<void> =>
+    wrapAsync(() => {
+      mmkv.clearAll();
+      Object.keys(memoryCache).forEach((k) => delete memoryCache[k]);
+    }),
 
   /**
    * Invalidate memory cache for a specific key
