@@ -1,5 +1,5 @@
-import React, { useRef, useState, Suspense } from "react";
-import { useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, View, ActivityIndicator } from "react-native";
+import React, { useRef, useState } from "react";
+import { useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, View, ActivityIndicator, Text } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -8,7 +8,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Text } from "tamagui";
+import { YStack } from "tamagui";
+
+// Data & Welcome -----------------------------------------------------------
+import { useData } from "@/providers/DataProvider";
+import WelcomeScreen from "@/components/home/WelcomeScreen";
 
 // 懒加载PeriodPage组件，避免阻塞初始渲染
 import PeriodPage from "@/components/home/PeriodPage"
@@ -20,15 +24,23 @@ import DateFilter from "@/components/reports/DateFilter";
 import { DatePeriodEnum } from "@/types/reports.types";
 import { generatePeriodSelectors } from "@/utils/date.utils";
 
-// 简单的加载组件，避免复杂渲染
-const LoadingFallback = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
-    <ActivityIndicator size="small" color="#3B82F6" />
-    <Text marginTop="$2" color="$gray600">Loading...</Text>
-  </View>
-);
+
 
 export default function HomeScreenPager() {
+  // ---------------------------------------------------------------------
+  // Global data status / decide what to show
+  // ---------------------------------------------------------------------
+  const { bills, isLoading: dataLoading } = useData();
+  const initialLoading = dataLoading.initial;
+  const hasBills = bills.length > 0;
+
+  const FullScreenLoader = () => (
+    <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="#f8fafc">
+      <ActivityIndicator size="small" color="#3B82F6" />
+      <Text style={{ marginTop: 8, color: "#64748B" }}>Loading...</Text>
+    </YStack>
+  );
+
   const router = useRouter();
 
   const { width } = useWindowDimensions();
@@ -108,6 +120,15 @@ export default function HomeScreenPager() {
     }
   });
 
+  // Decide UI -------------------------------------------------------------
+  if (initialLoading) {
+    return <FullScreenLoader />;
+  }
+
+  if (!hasBills) {
+    return <WelcomeScreen onStartChatPress={() => router.push("/chat")} />;
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
       {/* Fixed Header */}
@@ -132,18 +153,16 @@ export default function HomeScreenPager() {
         scrollEventThrottle={16}
         style={{ flex: 1 }}
       >
-        {periodOrder.map((p) => (
+        {periodOrder.map((p, idx) => (
           <View key={p} style={{ width }}>
-            <Suspense fallback={<LoadingFallback />}>
-              <PeriodPage
-                periodType={p}
-                onPeriodTypeChange={handleExternalPeriodChange}
-                selectedPeriodId={selectedIds[p]}
-                onSelectedPeriodChange={(id: string) =>
-                  setSelectedIds((prev) => ({ ...prev, [p]: id }))
-                }
-              />
-            </Suspense>
+            <PeriodPage
+              periodType={p}
+              onPeriodTypeChange={handleExternalPeriodChange}
+              selectedPeriodId={selectedIds[p]}
+              onSelectedPeriodChange={(id: string) =>
+                setSelectedIds((prev) => ({ ...prev, [p]: id }))
+              }
+            />
           </View>
         ))}
       </Animated.ScrollView>

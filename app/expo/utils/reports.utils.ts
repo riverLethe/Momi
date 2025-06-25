@@ -42,6 +42,11 @@ import i18n from "@/i18n";
 import { enUS, zhCN, es as esLocale } from "date-fns/locale";
 import { Locale } from "date-fns";
 
+// --------------------------------------------------
+// 🔄 共享中间产物缓存：避免重复 summariseBills
+// --------------------------------------------------
+const billSummaryCache: Record<string, any> = {};
+
 // ------------ Global singleton typings (avoid TS errors) ---------------
 declare global {
   // Using `var` to allow re-assignment across modules
@@ -807,7 +812,9 @@ export async function fetchReportData(
   viewMode: "personal" | "family",
   selectedPeriodId?: string,
   dataVersion?: number,
-  forceRefresh = false
+  forceRefresh = false,
+  /** When true, skip CPU-intensive computations (health score, insights, etc.). */
+  lightweight = false
 ): Promise<ReportData> {
   // ---- 1. 并发请求去重 --------------------------------------------------
   const cacheKey = buildReportCacheKey(periodType, viewMode, selectedPeriodId);
@@ -926,64 +933,75 @@ export async function fetchReportData(
         budgetStatus
       );
 
-      // 计算详细指标，与首页卡片保持一致
-      const billSummary = summariseBills(
-        bills,
-        budgets,
-        periodType,
-        startDate,
-        endDate,
-        0
-      );
-      const detailedScore = computeHealthScore(billSummary);
+      let healthScore: HealthScore;
+      let topSpendingCategories = [] as TopSpendingCategory[];
 
-      // Map detailed status (Good/Warning/Danger) -> simplified (Good/Fair/Poor)
-      const mappedStatus: "Good" | "Fair" | "Poor" =
-        detailedScore.status === "Danger"
-          ? "Poor"
-          : detailedScore.status === "Warning"
-            ? "Fair"
-            : "Good";
-
-      // 智能合并分数：超支时优先考虑预算控制，正常时综合考虑
-      let mergedScore: number;
-      let finalStatus: "Good" | "Fair" | "Poor";
-
-      if (budgetStatus && budgetStatus.percentage > 100) {
-        // 超支情况：优先考虑预算控制分数，但不完全忽略详细分数
-        mergedScore = Math.round(
-          baseScore.score * 0.8 + detailedScore.score * 0.2
-        );
-        finalStatus = "Poor"; // 超支情况强制为 Poor
-      } else if (budgetStatus && budgetStatus.percentage > 90) {
-        // 接近超支：预算控制权重更高
-        mergedScore = Math.round(
-          baseScore.score * 0.7 + detailedScore.score * 0.3
-        );
-        finalStatus = baseScore.score < 30 ? "Poor" : "Fair";
+      if (lightweight) {
+        // 轻量模式：直接返回基础健康分数，跳过详细计算。
+        healthScore = baseScore;
       } else {
-        // 正常情况：平衡考虑两个分数
-        mergedScore = Math.round((baseScore.score + detailedScore.score) / 2);
-        finalStatus = mappedStatus;
+        // 计算详细指标，与首页卡片保持一致
+        let billSummary =
+          billSummaryCache[
+            buildReportCacheKey(periodType, viewMode, selectedPeriodId)
+          ];
+        if (!billSummary) {
+          billSummary = summariseBills(
+            bills,
+            budgets,
+            periodType,
+            startDate,
+            endDate,
+            0
+          );
+        }
+        const detailedScore = computeHealthScore(billSummary);
+
+        // Map detailed status (Good/Warning/Danger) -> simplified (Good/Fair/Poor)
+        const mappedStatus: "Good" | "Fair" | "Poor" =
+          detailedScore.status === "Danger"
+            ? "Poor"
+            : detailedScore.status === "Warning"
+              ? "Fair"
+              : "Good";
+
+        // 智能合并分数：超支时优先考虑预算控制，正常时综合考虑
+        let mergedScore: number;
+        let finalStatus: "Good" | "Fair" | "Poor";
+
+        if (budgetStatus && budgetStatus.percentage > 100) {
+          mergedScore = Math.round(
+            baseScore.score * 0.8 + detailedScore.score * 0.2
+          );
+          finalStatus = "Poor";
+        } else if (budgetStatus && budgetStatus.percentage > 90) {
+          mergedScore = Math.round(
+            baseScore.score * 0.7 + detailedScore.score * 0.3
+          );
+          finalStatus = baseScore.score < 30 ? "Poor" : "Fair";
+        } else {
+          mergedScore = Math.round((baseScore.score + detailedScore.score) / 2);
+          finalStatus = mappedStatus;
+        }
+
+        healthScore = {
+          ...baseScore,
+          score: mergedScore,
+          status: finalStatus,
+          metrics: {
+            budgetUsagePct: budgetStatus?.percentage ?? 0,
+            volatilityPct: detailedScore.subScores.volatility.pct,
+            recurringCoverDays: detailedScore.subScores.recurring.days,
+            savingsRatePct: 0,
+          },
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore legacy extension
+          subScores: detailedScore.subScores,
+        } as any;
+
+        // 顶级支出类别 - 直接从categoryData计算
+        topSpendingCategories = generateTopSpendingCategories(categoryData);
       }
-
-      const healthScore: HealthScore = {
-        ...baseScore,
-        score: mergedScore,
-        status: finalStatus,
-        metrics: {
-          budgetUsagePct: budgetStatus?.percentage ?? 0,
-          volatilityPct: detailedScore.subScores.volatility.pct,
-          recurringCoverDays: detailedScore.subScores.recurring.days,
-          savingsRatePct: 0,
-        },
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore legacy extension
-        subScores: detailedScore.subScores,
-      } as any;
-
-      // 顶级支出类别 - 直接从categoryData计算
-      const topSpendingCategories = generateTopSpendingCategories(categoryData);
 
       // 计算平均支出
       const averageSpending =
@@ -1428,15 +1446,21 @@ export async function fetchBudgetReportData(
     // 生成简化健康评分
     const baseScore = generateSimplifiedHealthScore(categoryData, budgetStatus);
 
-    // 计算详细健康评分
-    const billSummary = summariseBills(
-      bills,
-      budgets,
-      periodType,
-      startDate,
-      endDate,
-      0
-    );
+    // 计算详细健康评分（尝试重用 core 报表结果以减少重复计算）
+    let billSummary =
+      billSummaryCache[
+        buildReportCacheKey(periodType, viewMode, selectedPeriodId)
+      ];
+    if (!billSummary) {
+      billSummary = summariseBills(
+        bills,
+        budgets,
+        periodType,
+        startDate,
+        endDate,
+        0
+      );
+    }
     const detailedScore = computeHealthScore(billSummary);
 
     // 智能合并分数：超支时优先考虑预算控制，正常时综合考虑
@@ -1481,6 +1505,9 @@ export async function fetchBudgetReportData(
       // @ts-ignore legacy extension
       subScores: detailedScore.subScores,
     } as any;
+
+    // 缓存 billSummary 供预算报表复用
+    billSummaryCache[cacheKey] = billSummary;
 
     const budgetReport: BudgetReportData = {
       healthScore,

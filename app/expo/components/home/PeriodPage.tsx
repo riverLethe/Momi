@@ -219,12 +219,6 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
     }, [selectedPeriodId, externalSelectedId, onSelectedPeriodChange]);
 
     /* ---------------------------- UI 渲染逻辑 ---------------------------- */
-    // 优化loading逻辑：只在真正需要时显示
-    const shouldShowLoading = useMemo(() =>
-        (loadingCore || loadingBudget) && (!coreReport || !budgetReport) && hasBills,
-        [loadingCore, loadingBudget, coreReport, budgetReport, hasBills]
-    );
-
     // 缓存预算数据
     const budgetSummaryProps = useMemo(() => ({
         budgetStatus,
@@ -267,14 +261,6 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
     }), [coreReport]);
 
     const mainContent = useMemo(() => {
-        if (!hasBills) {
-            return (
-                <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-                    <WelcomeScreen onStartChatPress={handleStartChat} />
-                </View>
-            );
-        }
-
         return (
             <View style={{ flex: 1, backgroundColor: "#eee" }}>
                 <YStack flex={1}>
@@ -291,36 +277,29 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
                             />
                         }
                     >
-                        {shouldShowLoading ? (
-                            <YStack alignItems="center" justifyContent="center" paddingVertical="$4">
-                                <ActivityIndicator size="small" color="#3B82F6" />
-                                <Text marginTop="$2">{t("Loading...")}</Text>
-                            </YStack>
-                        ) : (
-                            <YStack gap="$3">
-                                <MemoizedBudgetSummaryCard {...budgetSummaryProps} />
+                        <YStack gap="$3">
+                            <MemoizedBudgetSummaryCard {...budgetSummaryProps} />
 
-                                {coreReport && (
-                                    <>
-                                        <MemoizedEnhancedDonutChart
-                                            data={chartData.categoryData}
-                                            onCategoryPress={handleCategoryPress}
-                                        />
-                                        <MemoizedExpenseTrendChart
-                                            data={chartData.trendData}
-                                            averageSpending={chartData.averageSpending}
-                                        />
-                                    </>
-                                )}
+                            {coreReport && (
+                                <>
+                                    <MemoizedEnhancedDonutChart
+                                        data={chartData.categoryData}
+                                        onCategoryPress={handleCategoryPress}
+                                    />
+                                    <MemoizedExpenseTrendChart
+                                        data={chartData.trendData}
+                                        averageSpending={chartData.averageSpending}
+                                    />
+                                </>
+                            )}
 
-                                <MemoizedRecentBillsList
-                                    bills={bills}
-                                    periodStart={currentSelector?.startDate}
-                                    periodEnd={currentSelector?.endDate}
-                                    maxItems={5}
-                                />
-                            </YStack>
-                        )}
+                            <MemoizedRecentBillsList
+                                bills={bills}
+                                periodStart={currentSelector?.startDate}
+                                periodEnd={currentSelector?.endDate}
+                                maxItems={5}
+                            />
+                        </YStack>
                     </ScrollView>
                 </YStack>
             </View>
@@ -330,7 +309,6 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
         handleStartChat,
         isRefreshing,
         handleRefresh,
-        shouldShowLoading,
         t,
         budgetSummaryProps,
         coreReport,
