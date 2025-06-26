@@ -4,6 +4,7 @@ import { Button, Text, XStack, YStack, Avatar } from 'tamagui';
 import { UserCircle } from 'lucide-react-native';
 import { User } from '@/types/user.types';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ProfileHeaderProps {
   user: User | null;
@@ -17,6 +18,8 @@ interface ProfileHeaderProps {
 export const ProfileHeader: React.FC<ProfileHeaderProps> = React.memo(
   ({ user, isAuthenticated, onLoginPress }) => {
     const { t } = useTranslation();
+    const insets = useSafeAreaInsets();
+
     return (
       <LinearGradient
         colors={["$blue9", "$blue8"]}
@@ -25,6 +28,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = React.memo(
         padding="$5"
         borderRadius="$0"
         marginBottom="$6"
+        paddingTop={insets.top}
       >
         <XStack alignItems="center" space="$4">
           <Avatar circular size="$10" overflow="hidden">

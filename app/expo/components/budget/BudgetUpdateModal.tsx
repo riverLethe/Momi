@@ -202,6 +202,7 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
               [selectedPeriod]: { ...prev[selectedPeriod], ignoredCategories: categories },
             }));
           }}
+          onlyContent
         />
       </Sheet.Frame>
     </Sheet>
@@ -248,13 +249,13 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
     <Sheet
       open={isOpen}
       onOpenChange={onOpenChange}
-      snapPoints={[50]}
+      snapPoints={[45]}
       disableDrag
       dismissOnSnapToBottom={false}
       dismissOnOverlayPress={false}
     >
       <Sheet.Overlay />
-      <Sheet.Frame padding="$4" paddingBottom="$6">
+      <Sheet.Frame padding="$4" paddingBottom="$0">
         <Sheet.ScrollView showsVerticalScrollIndicator={false}>
           <YStack gap="$3" marginTop="$2">
             {/* Header */}

@@ -10,9 +10,11 @@ interface ProfileSectionProps {
 
 /**
  * Renders a card-like section inside the profile page.
- * It displays a title and the provided children, and applies consistent padding & separators.
+ * It displays a title and the provided children, inserting separators automatically for better visual grouping.
  */
 export const ProfileSection: React.FC<ProfileSectionProps> = ({ title, children }) => {
+  const items = React.Children.toArray(children);
+
   return (
     <Card marginBottom="$5" elevate borderWidth={1} borderColor="$gray6">
       <Text
@@ -26,7 +28,12 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ title, children 
         {title.toUpperCase()}
       </Text>
       <Separator />
-      {children}
+      {items.map((child, index) => (
+        <React.Fragment key={index}>
+          {child}
+          {index !== items.length - 1 && <Separator />}
+        </React.Fragment>
+      ))}
     </Card>
   );
 }; 

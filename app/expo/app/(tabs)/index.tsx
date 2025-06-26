@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, View, ActivityIndicator, Text } from "react-native";
+import React, { useRef, useState, useCallback } from "react";
+import { useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, ActivityIndicator, Text } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -7,8 +7,8 @@ import Animated, {
   runOnJS
 } from "react-native-reanimated";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { YStack } from "tamagui";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { View, YStack } from "tamagui";
 
 // Data & Welcome -----------------------------------------------------------
 import { useData } from "@/providers/DataProvider";
@@ -25,7 +25,11 @@ import { DatePeriodEnum } from "@/types/reports.types";
 import { generatePeriodSelectors } from "@/utils/date.utils";
 import { useTranslation } from "react-i18next";
 
-
+// Budget modal and budgets -------------------------------------------------
+import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
+import { useBudgets } from "@/hooks/useBudgets";
+import { syncBudgetWidgets } from "@/utils/budgetWidgetSync.utils";
+import type { Budgets, BudgetPeriod } from "@/utils/budget.utils";
 
 export default function HomeScreenPager() {
   const { t } = useTranslation();
@@ -35,6 +39,7 @@ export default function HomeScreenPager() {
   const { bills, isLoading: dataLoading } = useData();
   const initialLoading = dataLoading.initial;
   const hasBills = bills.length > 0;
+  const insets = useSafeAreaInsets();
 
   const router = useRouter();
 
@@ -115,6 +120,31 @@ export default function HomeScreenPager() {
     }
   });
 
+  // Budgets ----------------------------------------------------------------
+  const { budgets, saveBudgetForPeriod } = useBudgets();
+
+  const [isBudgetModalOpen, setBudgetModalOpen] = useState(false);
+
+  const openBudgetModal = useCallback(() => setBudgetModalOpen(true), []);
+
+  const handleSaveBudgets = useCallback(async (nextBudgets: Budgets) => {
+    try {
+      const periods: BudgetPeriod[] = ["weekly", "monthly", "yearly"];
+      for (const p of periods) {
+        const detail = nextBudgets[p as keyof Budgets];
+        if (detail) {
+          // eslint-disable-next-line no-await-in-loop
+          await saveBudgetForPeriod(p, detail);
+        }
+      }
+
+      // Sync widgets after budgets updated
+      await syncBudgetWidgets({ viewMode: "personal", budgetVersion: Date.now() }).catch(() => { });
+    } catch (error) {
+      console.error("Failed to save budgets:", error);
+    }
+  }, [saveBudgetForPeriod]);
+
   // Decide UI -------------------------------------------------------------
   if (initialLoading) {
     return <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="#f8fafc">
@@ -128,42 +158,55 @@ export default function HomeScreenPager() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
-      {/* Fixed Header */}
-      <View style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
-        <DateFilter
-          selectedPeriod={periodOrder[visibleIdx]}
-          onPeriodChange={handleExternalPeriodChange}
-          periodSelectors={generatePeriodSelectors(periodOrder[visibleIdx])}
-          selectedPeriodId={selectedIds[periodOrder[visibleIdx]]}
-          onPeriodSelectorChange={handlePeriodSelectorChange}
-          onBillsPress={() => router.push("/bills")}
-        />
+    <>
+      <View flex={1} backgroundColor="#eee" paddingTop={insets.top}>
+        {/* Fixed Header */}
+        <View paddingHorizontal={8} paddingVertical={4} >
+          <DateFilter
+            selectedPeriod={periodOrder[visibleIdx]}
+            onPeriodChange={handleExternalPeriodChange}
+            periodSelectors={generatePeriodSelectors(periodOrder[visibleIdx])}
+            selectedPeriodId={selectedIds[periodOrder[visibleIdx]]}
+            onPeriodSelectorChange={handlePeriodSelectorChange}
+            onBillsPress={() => router.push("/bills")}
+          />
+        </View>
+
+        <Animated.ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleMomentumScrollEnd}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          style={{ flex: 1 }}
+        >
+          {periodOrder.map((p, idx) => (
+            <View key={p} style={{ width }}>
+              <PeriodPage
+                periodType={p}
+                onPeriodTypeChange={handleExternalPeriodChange}
+                selectedPeriodId={selectedIds[p]}
+                onSelectedPeriodChange={(id: string) =>
+                  setSelectedIds((prev) => ({ ...prev, [p]: id }))
+                }
+                openBudgetModal={openBudgetModal}
+              />
+            </View>
+          ))}
+        </Animated.ScrollView>
+
       </View>
 
-      <Animated.ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleMomentumScrollEnd}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        style={{ flex: 1 }}
-      >
-        {periodOrder.map((p, idx) => (
-          <View key={p} style={{ width }}>
-            <PeriodPage
-              periodType={p}
-              onPeriodTypeChange={handleExternalPeriodChange}
-              selectedPeriodId={selectedIds[p]}
-              onSelectedPeriodChange={(id: string) =>
-                setSelectedIds((prev) => ({ ...prev, [p]: id }))
-              }
-            />
-          </View>
-        ))}
-      </Animated.ScrollView>
-    </SafeAreaView>
+      {/* Global budget update modal */}
+      <BudgetUpdateModal
+        isOpen={isBudgetModalOpen}
+        onOpenChange={setBudgetModalOpen}
+        budgets={budgets}
+        onSave={handleSaveBudgets}
+        defaultPeriod={periodOrder[visibleIdx]}
+      />
+    </>
   );
 }

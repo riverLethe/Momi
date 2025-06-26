@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
     ScrollView,
-    ActivityIndicator,
     RefreshControl,
     View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useTranslation } from "react-i18next";
-import { YStack, Text } from "tamagui";
+import { YStack } from "tamagui";
 import { format } from "date-fns";
 
 // Stores & Providers -------------------------------------------------------
-import { useViewStore } from "@/stores/viewStore";
 import { useData } from "@/providers/DataProvider";
 import { useBudgets } from "@/hooks/useBudgets";
 
@@ -21,21 +18,14 @@ import { useBudgetStatus } from "@/hooks/useBudgetStatus";
 import { useSplitReportData } from "@/hooks/useReportData";
 import { useSpendingWidgetSync } from "@/hooks/useSpendingWidgetSync";
 import { useBudgetWidgetSync } from "@/hooks/useBudgetWidgetSync";
-import { syncBudgetWidgets } from "@/utils/budgetWidgetSync.utils";
 
 // UI Components ------------------------------------------------------------
 import BudgetSummaryCard from "@/components/home/BudgetSummaryCard";
 import EnhancedDonutChart from "@/components/reports/EnhancedDonutChart";
 import ExpenseTrendChart from "@/components/reports/ExpenseTrendChart";
 import RecentBillsList from "@/components/home/RecentBillsList";
-import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
-import WelcomeScreen from "@/components/home/WelcomeScreen";
 
 // Utils & Types ------------------------------------------------------------
-import {
-    BudgetPeriod,
-    Budgets,
-} from "@/utils/budget.utils";
 import { DatePeriodEnum } from "@/types/reports.types";
 
 // Subcomponents memo optimization
@@ -49,6 +39,8 @@ interface PeriodPageProps {
     onPeriodTypeChange: (p: DatePeriodEnum) => void;
     selectedPeriodId: string;
     onSelectedPeriodChange: (id: string) => void;
+    /** Trigger opening of the global budget modal */
+    openBudgetModal: () => void;
 }
 
 /**
@@ -60,13 +52,13 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
     onPeriodTypeChange,
     selectedPeriodId: externalSelectedId,
     onSelectedPeriodChange,
+    openBudgetModal,
 }) => {
     const router = useRouter();
-    const { t } = useTranslation();
 
     // Data -------------------------------------------------------------------
     const { bills, transactions, refreshData } = useData();
-    const { budgets, saveBudgetForPeriod } = useBudgets();
+    const { budgets } = useBudgets();
 
     // Reports ----------------------------------------------------------------
     const {
@@ -114,10 +106,7 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
         [bills.length, transactions.length]
     );
 
-    const [isBudgetModalOpen, setBudgetModalOpen] = useState(false);
-    const [savingBudget, setSavingBudget] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [isManuallyUpdatingWidget, setIsManuallyUpdatingWidget] = useState(false);
 
     /* ------------------------------- Actions ------------------------------- */
     const handleRefresh = useCallback(async () => {
@@ -131,50 +120,9 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
         }
     }, [refreshData, refreshBothReports]);
 
-    const handleSaveBudgets = useCallback(async (nextBudgets: Budgets) => {
-        setSavingBudget(true);
-        setIsManuallyUpdatingWidget(true);
-        try {
-            const periods: BudgetPeriod[] = ["weekly", "monthly", "yearly"];
-
-            // 顺序保存预算，避免并发写导致覆盖问题
-            for (const p of periods) {
-                const detail = nextBudgets[p as keyof Budgets];
-                if (detail) {
-                    // eslint-disable-next-line no-await-in-loop
-                    await saveBudgetForPeriod(p, detail);
-                }
-            }
-
-            // 预算更新后重新计算报表数据，确保 healthScore 及时刷新
-            await refreshBudgetReport();
-
-            // 等待一个微任务，确保 reportData 状态已更新
-            await new Promise(resolve => setTimeout(resolve, 0));
-
-            // Sync iOS widgets once after budgets are updated with the latest report
-            syncBudgetWidgets({
-                viewMode: "personal",
-                currentBudgetData: budgetReport,
-                currentPeriodType: periodType,
-                budgetVersion: Date.now()
-            }).catch(() => { });
-        } catch (error) {
-            console.error("Failed to save budgets:", error);
-        } finally {
-            setSavingBudget(false);
-            // 延迟恢复自动同步，确保手动同步完成
-            setTimeout(() => setIsManuallyUpdatingWidget(false), 1000);
-        }
-    }, [saveBudgetForPeriod, refreshBudgetReport, budgetReport, periodType]);
-
-    const handleStartChat = useCallback(() => router.push("/chat"), [router]);
-
     const handleBudgetFinancialInsights = useCallback(() => {
         router.push(`/chat?insightsPeriod=${periodType}&ts=${Date.now()}`);
     }, [router, periodType]);
-
-    const openBudgetModal = useCallback(() => setBudgetModalOpen(true), []);
 
     /* --------------------------- Category navigation --------------------------- */
     const handleCategoryPress = useCallback((categoryId: string) => {
@@ -202,7 +150,7 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
     }, [coreReport, budgetReport]);
 
     useSpendingWidgetSync(combinedReportData, periodType, "personal");
-    useBudgetWidgetSync(budgetReport, periodType, "personal", isManuallyUpdatingWidget);
+    useBudgetWidgetSync(budgetReport, periodType, "personal");
 
     // Sync external selectedId -> internal
     useEffect(() => {
@@ -306,10 +254,8 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
         );
     }, [
         hasBills,
-        handleStartChat,
         isRefreshing,
         handleRefresh,
-        t,
         budgetSummaryProps,
         coreReport,
         chartData,
@@ -322,14 +268,6 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
     return (
         <>
             {mainContent}
-
-            <BudgetUpdateModal
-                isOpen={isBudgetModalOpen}
-                onOpenChange={setBudgetModalOpen}
-                budgets={budgets}
-                onSave={handleSaveBudgets}
-                defaultPeriod={periodType}
-            />
         </>
     );
 };

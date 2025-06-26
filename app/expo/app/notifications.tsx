@@ -1,5 +1,5 @@
 import React from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Bell, DollarSign, Calendar, Users, List, Clock } from "lucide-react-native";
 import {
@@ -11,7 +11,8 @@ import {
   Switch,
   Circle,
   Separator,
-  ScrollView
+  ScrollView,
+  View,
 } from "tamagui";
 
 import { useNotifications } from "@/providers/NotificationProvider";
@@ -19,25 +20,27 @@ import { useTranslation } from "react-i18next";
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { settings, updateSettings, unreadCount } = useNotifications();
+  const { settings, updateSettings } = useNotifications();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const toggleNotification = (key: keyof typeof settings) => {
     updateSettings({ [key]: !settings[key] });
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
+    <View flex={1}>
       <YStack flex={1}>
         {/* Custom Header matching bill details style */}
         <XStack
-          height="$5"
           paddingHorizontal="$4"
           alignItems="center"
           justifyContent="space-between"
           backgroundColor="white"
           borderBottomWidth={1}
           borderBottomColor="$gray4"
+          paddingTop={insets.top}
+          paddingBottom="$3"
         >
           <Button
             size="$3"
@@ -54,7 +57,7 @@ export default function NotificationsScreen() {
           <XStack width={32} />
         </XStack>
 
-        <ScrollView flex={1} contentContainerStyle={{ padding: 16 }}>
+        <ScrollView flex={1} contentContainerStyle={{ height: "100%", padding: 16, backgroundColor: "#eee" }}>
           <YStack gap="$4">
             <Card padding="$4" elevate>
               <Text fontSize="$4" fontWeight="$7" marginBottom="$4">
@@ -82,20 +85,6 @@ export default function NotificationsScreen() {
               </Text>
 
               <YStack gap="$4">
-                {/* <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
-                  <XStack alignItems="center" gap="$3">
-                    <Circle size="$2.5" backgroundColor="$blue4">
-                      <Calendar size={16} color="#3B82F6" />
-                    </Circle>
-                    <Text>{t("Bill Reminders")}</Text>
-                  </XStack>
-                  <Switch
-                    size="$2"
-                    checked={settings.billReminders}
-                    disabled={!settings.pushEnabled}
-                    onCheckedChange={() => toggleNotification('billReminders')}
-                  ><Switch.Thumb animation="bouncy" /></Switch>
-                </XStack> */}
 
                 {/* Log Reminders */}
                 <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
@@ -145,33 +134,6 @@ export default function NotificationsScreen() {
                   ><Switch.Thumb animation="bouncy" /></Switch>
                 </XStack>
 
-                {/* Bill Due Reminders (hidden feature) */}
-                {/* <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
-                  <XStack alignItems="center" gap="$3">
-                    <Circle size="$2.5" backgroundColor="$blue4">
-                      <Calendar size={16} color="#3B82F6" />
-                    </Circle>
-                    <XStack gap="$2" alignItems="center">
-                      <Text>{t("Bill Due Reminders")}</Text>
-                      <Text fontSize="$2" color="$gray6">{t("Coming Soon")}</Text>
-                    </XStack>
-                  </XStack>
-                  <Switch size="$2" disabled={true} checked={false}><Switch.Thumb /></Switch>
-                </XStack> */}
-
-                {/* Family Updates (hidden) */}
-                {/* <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
-                  <XStack alignItems="center" gap="$3">
-                    <Circle size="$2.5" backgroundColor="$purple4">
-                      <Users size={16} color="#8B5CF6" />
-                    </Circle>
-                    <XStack gap="$2" alignItems="center">
-                      <Text>{t("Family Updates")}</Text>
-                      <Text fontSize="$2" color="$gray6">{t("Coming Soon")}</Text>
-                    </XStack>
-                  </XStack>
-                  <Switch size="$2" disabled={true} checked={false}><Switch.Thumb /></Switch>
-                </XStack> */}
               </YStack>
             </Card>
 
@@ -186,6 +148,6 @@ export default function NotificationsScreen() {
           </YStack>
         </ScrollView>
       </YStack>
-    </SafeAreaView>
+    </View>
   );
 } 

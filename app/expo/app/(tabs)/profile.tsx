@@ -1,6 +1,5 @@
 import React from "react";
 import { ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -10,7 +9,6 @@ import {
   Settings,
   Bell,
   LogOut,
-  ChevronRight,
   RefreshCw,
   Wifi,
   WifiOff,
@@ -21,18 +19,18 @@ import {
   Button,
   XStack,
   YStack,
-  Card,
   Circle,
   Separator,
   Spinner,
+  View,
 } from "tamagui";
-import { LinearGradient } from "tamagui/linear-gradient";
 import { installQuickScreenshotBillShortcut } from '@/utils/shortcutInstaller';
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useDataSync } from "@/hooks/useDataSync";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileSection } from "@/components/profile/ProfileSection";
+import { ProfileRow } from "@/components/profile/ProfileRow";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -69,7 +67,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#eee" }}>
+    <View flex={1} backgroundColor="#eee">
       <YStack flex={1}>
         {/* Header */}
         <ProfileHeader
@@ -146,115 +144,61 @@ export default function ProfileScreen() {
 
           {/* Family Space Section */}
           <ProfileSection title={t("Family")}>
-            <Button
-              chromeless
-              justifyContent="flex-start"
-              hoverStyle={{ backgroundColor: "$gray2" }}
-              pressStyle={{ backgroundColor: "$gray3" }}
+            <ProfileRow
+              icon={
+                <Circle size="$3" backgroundColor="$blue4">
+                  <Home size={22} color="#3B82F6" />
+                </Circle>
+              }
+              label={t("Family Spaces")}
               onPress={handleFamilySpacePress}
-              borderWidth={0}
-              height="$5"
-            >
-              <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" gap="$3">
-                  <Circle size="$3" backgroundColor="$blue4">
-                    <Home size={22} color="#3B82F6" />
-                  </Circle>
-                  <Text fontWeight="$6" fontSize="$3">{t("Family Spaces")}</Text>
-                </XStack>
-                <ChevronRight size={20} color="#9CA3AF" />
-              </XStack>
-            </Button>
+            />
           </ProfileSection>
 
           {/* Personal Finance Section */}
           <ProfileSection title={t("Finance")}>
-            <Button
-              chromeless
-              justifyContent="flex-start"
-              hoverStyle={{ backgroundColor: "$gray2" }}
-              pressStyle={{ backgroundColor: "$gray3" }}
+            <ProfileRow
+              icon={
+                <Circle size="$3" backgroundColor="$green4">
+                  <CreditCard size={22} color="#10B981" />
+                </Circle>
+              }
+              label={t("My Budgets")}
               onPress={() => router.push("/budget")}
-              height="$5"
-              borderWidth={0}
-            >
-              <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" gap="$3">
-                  <Circle size="$3" backgroundColor="$green4">
-                    <CreditCard size={22} color="#10B981" />
-                  </Circle>
-                  <Text fontWeight="$6" fontSize="$3">{t("My Budgets")}</Text>
-                </XStack>
-                <ChevronRight size={20} color="#9CA3AF" />
-              </XStack>
-            </Button>
+            />
 
-            <Separator opacity={0.5} />
-
-            <Button
-              chromeless
-              justifyContent="flex-start"
-              hoverStyle={{ backgroundColor: "$gray2" }}
-              pressStyle={{ backgroundColor: "$gray3" }}
+            <ProfileRow
+              icon={
+                <Circle size="$3" backgroundColor="$purple4">
+                  <FileText size={22} color="#8B5CF6" />
+                </Circle>
+              }
+              label={t("Export Data")}
               onPress={() => router.push("/export")}
-              height="$5"
-              borderWidth={0}
-            >
-              <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" gap="$3">
-                  <Circle size="$3" backgroundColor="$purple4">
-                    <FileText size={22} color="#8B5CF6" />
-                  </Circle>
-                  <Text fontWeight="$6" fontSize="$3">{t("Export Data")}</Text>
-                </XStack>
-                <ChevronRight size={20} color="#9CA3AF" />
-              </XStack>
-            </Button>
+            />
           </ProfileSection>
 
           {/* Settings Section */}
           <ProfileSection title={t("Settings")}>
-            <Button
-              chromeless
-              justifyContent="flex-start"
-              hoverStyle={{ backgroundColor: "$gray2" }}
-              pressStyle={{ backgroundColor: "$gray3" }}
+            <ProfileRow
+              icon={
+                <Circle size="$3" backgroundColor="$gray4">
+                  <Settings size={22} color="#6B7280" />
+                </Circle>
+              }
+              label={t("App Settings")}
               onPress={() => router.push("/settings")}
-              height="$5"
-              borderWidth={0}
-            >
-              <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" gap="$3">
-                  <Circle size="$3" backgroundColor="$gray4">
-                    <Settings size={22} color="#6B7280" />
-                  </Circle>
-                  <Text fontWeight="$6" fontSize="$3">{t("App Settings")}</Text>
-                </XStack>
-                <ChevronRight size={20} color="#9CA3AF" />
-              </XStack>
-            </Button>
+            />
 
-            <Separator opacity={0.5} />
-
-            <Button
-              chromeless
-              justifyContent="flex-start"
-              hoverStyle={{ backgroundColor: "$gray2" }}
-              pressStyle={{ backgroundColor: "$gray3" }}
+            <ProfileRow
+              icon={
+                <Circle size="$3" backgroundColor="$yellow4">
+                  <Bell size={22} color="#F59E0B" />
+                </Circle>
+              }
+              label={t("Notifications")}
               onPress={() => router.push("/notifications")}
-              height="$5"
-              borderWidth={0}
-            >
-              <XStack alignItems="center" justifyContent="space-between" width="100%">
-                <XStack alignItems="center" gap="$3">
-                  <Circle size="$3" backgroundColor="$yellow4">
-                    <Bell size={22} color="#F59E0B" />
-                  </Circle>
-                  <Text fontWeight="$6" fontSize="$3">{t("Notifications")}</Text>
-                </XStack>
-                <ChevronRight size={20} color="#9CA3AF" />
-              </XStack>
-            </Button>
+            />
           </ProfileSection>
 
           {/* Logout Button (only if logged in) */}
@@ -285,6 +229,6 @@ export default function ProfileScreen() {
           </Button>
         </ScrollView>
       </YStack>
-    </SafeAreaView>
+    </View>
   );
 }
