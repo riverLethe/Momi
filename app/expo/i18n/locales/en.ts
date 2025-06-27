@@ -12,6 +12,14 @@ export default {
     Education: "Education",
     Coffee: "Coffee",
     Other: "Other",
+    Groceries: "Groceries",
+    Health: "Health",
+    Insurance: "Insurance",
+    PersonalCare: "Personal Care",
+    Pets: "Pets",
+    Subscriptions: "Subscriptions",
+    Taxes: "Taxes",
+    Charity: "Charity",
 
     // Bills screen
     Bills: "Bills",
@@ -259,7 +267,6 @@ export default {
     "After adding expenses, you can set up your budget to track your spending":
       "After adding expenses, you can set up your budget to track your spending",
     "Get Started": "Get Started",
-    Health: "Health",
     Travel: "Travel",
 
     // Chat / MessageBubble additions
@@ -383,12 +390,7 @@ export default {
     中文: "中文",
     Español: "Español",
     System: "System",
-    Groceries: "Groceries",
-    Insurance: "Insurance",
     "Personal Care": "Personal Care",
-    Pets: "Pets",
-    Subscriptions: "Subscriptions",
-    Taxes: "Taxes",
     "Send a message or hold to talk...": "Send a message or hold to talk...",
     "Enter text or send directly...": "Enter text or send directly...",
     "Send a message...": "Send a message...",
@@ -502,5 +504,8 @@ export default {
     yearly: "yearly",
     "Release to cancel": "Release to cancel",
     "{{count}} Categories": "{{count}} Categories",
+    "Don't forget to log today's expenses":
+      "Don't forget to log today's expenses",
+    "Tap to add your bills now.": "Tap to add your bills now.",
   },
 };

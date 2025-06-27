@@ -238,6 +238,7 @@ export default function ChatScreen() {
           setIsTextMode(false);
         }
       }}
+      disabled={!isTextMode}
       accessible={false}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>

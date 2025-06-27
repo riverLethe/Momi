@@ -155,28 +155,6 @@ export default function ProfileScreen() {
             />
           </ProfileSection>
 
-          {/* Personal Finance Section */}
-          <ProfileSection title={t("Finance")}>
-            <ProfileRow
-              icon={
-                <Circle size="$3" backgroundColor="$green4">
-                  <CreditCard size={22} color="#10B981" />
-                </Circle>
-              }
-              label={t("My Budgets")}
-              onPress={() => router.push("/budget")}
-            />
-
-            <ProfileRow
-              icon={
-                <Circle size="$3" backgroundColor="$purple4">
-                  <FileText size={22} color="#8B5CF6" />
-                </Circle>
-              }
-              label={t("Export Data")}
-              onPress={() => router.push("/export")}
-            />
-          </ProfileSection>
 
           {/* Settings Section */}
           <ProfileSection title={t("Settings")}>
@@ -190,6 +168,7 @@ export default function ProfileScreen() {
               onPress={() => router.push("/settings")}
             />
 
+
             <ProfileRow
               icon={
                 <Circle size="$3" backgroundColor="$yellow4">
@@ -198,6 +177,16 @@ export default function ProfileScreen() {
               }
               label={t("Notifications")}
               onPress={() => router.push("/notifications")}
+            />
+
+            <ProfileRow
+              icon={
+                <Circle size="$3" backgroundColor="$purple4">
+                  <FileText size={22} color="#8B5CF6" />
+                </Circle>
+              }
+              label={t("Export Data")}
+              onPress={() => router.push("/export")}
             />
           </ProfileSection>
 

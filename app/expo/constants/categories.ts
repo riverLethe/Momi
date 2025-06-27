@@ -1,5 +1,27 @@
-import { PizzaIcon, Train, ShoppingBag, Film, Zap, Home, Smartphone, Gift, BookOpen, Coffee, Utensils, DollarSign, ShoppingCart, Shield, Plane, Scissors, Dog, HeartPulse, ReceiptText, CreditCard } from "lucide-react-native";
-import { useTranslation } from 'react-i18next';
+import {
+  PizzaIcon,
+  Train,
+  ShoppingBag,
+  Film,
+  Zap,
+  Home,
+  Smartphone,
+  Gift,
+  BookOpen,
+  Coffee,
+  Utensils,
+  DollarSign,
+  ShoppingCart,
+  Shield,
+  Plane,
+  Scissors,
+  Dog,
+  HeartPulse,
+  Heart,
+  ReceiptText,
+  CreditCard,
+} from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 export interface ExpenseCategory {
   id: string;
@@ -15,139 +37,146 @@ export const EXPENSE_CATEGORIES = [
     name: "Food",
     color: "#10B981",
     lightColor: "#ECFDF5",
-    icon: "Utensils"
+    icon: "Utensils",
   },
   {
     id: "transport",
     name: "Transport",
     color: "#3B82F6",
     lightColor: "#EFF6FF",
-    icon: "Train"
+    icon: "Train",
   },
   {
     id: "shopping",
     name: "Shopping",
     color: "#EC4899",
     lightColor: "#FCE7F3",
-    icon: "ShoppingBag"
+    icon: "ShoppingBag",
   },
   {
     id: "entertainment",
     name: "Entertainment",
     color: "#F59E0B",
     lightColor: "#FEF3C7",
-    icon: "Film"
+    icon: "Film",
   },
   {
     id: "utilities",
     name: "Utilities",
     color: "#8B5CF6",
     lightColor: "#F3E8FF",
-    icon: "Zap"
+    icon: "Zap",
   },
   {
     id: "housing",
     name: "Housing",
     color: "#06B6D4",
     lightColor: "#ECFEFF",
-    icon: "Home"
+    icon: "Home",
   },
   {
     id: "communication",
     name: "Communication",
     color: "#6366F1",
     lightColor: "#EEF2FF",
-    icon: "Smartphone"
+    icon: "Smartphone",
   },
   {
     id: "gifts",
     name: "Gifts",
     color: "#F43F5E",
     lightColor: "#FEE2E2",
-    icon: "Gift"
+    icon: "Gift",
   },
   {
     id: "education",
     name: "Education",
     color: "#4F46E5",
     lightColor: "#E0E7FF",
-    icon: "BookOpen"
+    icon: "BookOpen",
   },
   {
     id: "cafe",
     name: "Coffee",
     color: "#D97706",
     lightColor: "#FEF3C7",
-    icon: "Coffee"
+    icon: "Coffee",
   },
   {
     id: "other",
     name: "Other",
     color: "#6B7280",
     lightColor: "#F3F4F6",
-    icon: "DollarSign"
+    icon: "DollarSign",
   },
   {
     id: "groceries",
     name: "Groceries",
     color: "#22C55E",
     lightColor: "#ECFDF5",
-    icon: "ShoppingCart"
+    icon: "ShoppingCart",
   },
   {
     id: "health",
     name: "Health",
     color: "#EF4444",
     lightColor: "#FEE2E2",
-    icon: "HeartPulse"
+    icon: "HeartPulse",
   },
   {
     id: "insurance",
     name: "Insurance",
     color: "#0EA5E9",
     lightColor: "#E0F2FE",
-    icon: "Shield"
+    icon: "Shield",
   },
   {
     id: "travel",
     name: "Travel",
     color: "#F97316",
     lightColor: "#FFEDD5",
-    icon: "Plane"
+    icon: "Plane",
   },
   {
     id: "personal_care",
     name: "Personal Care",
     color: "#DB2777",
     lightColor: "#FCE7F3",
-    icon: "Scissors"
+    icon: "Scissors",
   },
   {
     id: "pets",
     name: "Pets",
     color: "#F59E0B",
     lightColor: "#FEF3C7",
-    icon: "Dog"
+    icon: "Dog",
   },
   {
     id: "subscriptions",
     name: "Subscriptions",
     color: "#8B5CF6",
     lightColor: "#F3E8FF",
-    icon: "CreditCard"
+    icon: "CreditCard",
   },
   {
     id: "taxes",
     name: "Taxes",
     color: "#6B7280",
     lightColor: "#F3F4F6",
-    icon: "ReceiptText"
-  }
+    icon: "ReceiptText",
+  },
+  {
+    id: "charity",
+    name: "Charity",
+    color: "#E11D48",
+    lightColor: "#FEE2E2",
+    icon: "Heart",
+  },
 ];
 
 // Get category by ID
 export const getCategoryById = (id: string): ExpenseCategory => {
-  const category = EXPENSE_CATEGORIES.find(cat => cat.id === id);
+  const category = EXPENSE_CATEGORIES.find((cat) => cat.id === id);
   return category || EXPENSE_CATEGORIES[EXPENSE_CATEGORIES.length - 1]; // Return "other" category as default
 };
 
@@ -161,7 +190,7 @@ export const useTranslatedCategoryName = (categoryId: string) => {
 // Get category icon component
 export const getCategoryIcon = (categoryId: string) => {
   const category = getCategoryById(categoryId);
-  
+
   switch (category.icon) {
     case "Utensils":
     case "PizzaIcon":
@@ -200,6 +229,8 @@ export const getCategoryIcon = (categoryId: string) => {
       return ReceiptText;
     case "CreditCard":
       return CreditCard;
+    case "Heart":
+      return Heart;
     case "DollarSign":
     default:
       return DollarSign;

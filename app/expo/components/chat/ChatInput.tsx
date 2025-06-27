@@ -254,7 +254,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 }}
                 onPress={onToggleInputMode}
                 onLongPress={handleLongPressStart}
-                delayLongPress={60} // 从80ms减少到60ms
+                delayLongPress={100}
               >
                 <Text fontSize={14} color="$gray9">
                   {t("Send a message or hold to talk...")}

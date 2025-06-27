@@ -46,6 +46,14 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
     }
   }, [selectedCategories.join(","), multiSelect]);
 
+  // When the sheet is rendered as content-only (managed by parent), propagate
+  // multi-select changes to the parent immediately so the parent can keep its
+  // state in sync. This avoids relying on sheet close events which are not
+  // available in `onlyContent` mode.
+  useEffect(() => {
+    if (!onlyContent || !onCategoriesChange || !multiSelect) return
+    onCategoriesChange(localSelected);
+  }, [localSelected, onlyContent, multiSelect]);
 
   const renderContent = () => (
     <YStack flex={1}>

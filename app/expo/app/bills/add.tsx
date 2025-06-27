@@ -270,15 +270,27 @@ export default function AddBillScreen() {
     () => (
       <XStack p="$2" gap="$2">
         <YStack f={3} gap="$2">
-          {["1", "2", "3"].map((k) => (
-            <XStack key={k} gap="$2">
-              {[k, (Number(k) + 1).toString(), (Number(k) + 2).toString()].map((key) => (
-                <Button key={key} f={1} onPress={() => handleKeypadPress(key)} size="$5">
-                  <Text fontSize="$6">{key}</Text>
-                </Button>
-              ))}
-            </XStack>
-          ))}
+          <XStack gap="$2">
+            {["1", "2", "3"].map((k) => (
+              <Button key={k} f={1} onPress={() => handleKeypadPress(k)} size="$5">
+                <Text fontSize="$6">{k}</Text>
+              </Button>
+            ))}
+          </XStack>
+          <XStack gap="$2">
+            {["4", "5", "6"].map((k) => (
+              <Button key={k} f={1} onPress={() => handleKeypadPress(k)} size="$5">
+                <Text fontSize="$6">{k}</Text>
+              </Button>
+            ))}
+          </XStack>
+          <XStack gap="$2">
+            {["7", "8", "9"].map((k) => (
+              <Button key={k} f={1} onPress={() => handleKeypadPress(k)} size="$5">
+                <Text fontSize="$6">{k}</Text>
+              </Button>
+            ))}
+          </XStack>
           <XStack gap="$2">
             <Button f={1} onPress={() => handleKeypadPress(".")} size="$5">
               <Text fontSize="$6">.</Text>

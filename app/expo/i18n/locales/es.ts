@@ -16,7 +16,14 @@ export default {
     中文: "Chino",
     Español: "Español",
     System: "Sistema",
-
+    Groceries: "Compras",
+    Health: "Salud",
+    Insurance: "Seguros",
+    PersonalCare: "Cuidado Personal",
+    Pets: "Mascotas",
+    Subscriptions: "Suscripciones",
+    Taxes: "Impuestos",
+    Charity: "Caridad",
     // Bills screen
     Bills: "Facturas",
     "Total Expense": "Gasto Total",
@@ -86,14 +93,8 @@ export default {
     "Loading more messages...": "Cargando más mensajes...",
     "Pull down to load more messages":
       "Desliza hacia abajo para cargar más mensajes",
-    Groceries: "Compras",
-    Insurance: "Seguros",
     "Personal Care": "Cuidado Personal",
-    Pets: "Mascotas",
-    Subscriptions: "Suscripciones",
-    Taxes: "Impuestos",
     Travel: "Viajes",
-    Health: "Salud",
     "Send a message or hold to talk...":
       "Envía un mensaje o mantén presionado para hablar...",
     "Enter text or send directly...": "Escribe texto o envía directamente...",
@@ -203,5 +204,8 @@ export default {
     Or: "O",
     "Release to cancel": "Suelta para cancelar",
     "{{count}} Categories": "{{count}} Categorías",
+    "Don't forget to log today's expenses":
+      "No olvides registrar tus gastos de hoy",
+    "Tap to add your bills now.": "Toca para agregar tus facturas ahora.",
   },
 };

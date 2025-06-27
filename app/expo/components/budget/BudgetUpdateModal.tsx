@@ -16,6 +16,7 @@ import { Budgets, BudgetPeriod, BudgetDetail, _BudgetPeriodMap } from "@/utils/b
 import { formatCurrency } from "@/utils/format";
 import CategorySelectSheet from "../ui/CategorySelectSheet";
 import { DatePeriodEnum } from "@/types/reports.types";
+import { KeyboardAvoidingView, Platform } from "react-native";
 
 // Category filter mode
 type FilterMode = "all" | "include" | "exclude";
@@ -208,35 +209,6 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
     </Sheet>
   );
 
-  // Helper to render one period input row
-  const PeriodRow = (
-    period: BudgetPeriod,
-    value: string,
-    setValue: (v: string) => void
-  ) => (
-    <YStack gap="$1">
-      <Label htmlFor={`${period}-amount`} fontSize="$3" color="$gray11">
-        {t("Amount")}
-      </Label>
-      <Input
-        id={`${period}-amount`}
-        size="$3"
-        placeholder={formatCurrency(0).replace(/0+([.,]0+)?/, "0")}
-        keyboardType="numeric"
-        value={value}
-        onChangeText={setValue}
-        borderWidth={1}
-        borderColor={errors[period] ? "$red9" : "$gray5"}
-        backgroundColor={"$gray1"}
-      />
-      {errors[period] && (
-        <Text fontSize="$2" color="$red9">
-          {errors[period]}
-        </Text>
-      )}
-    </YStack>
-  );
-
   // Functions to update current period amount or categories
   const updateAmount = (val: string) => {
     setForm((prev) => ({
@@ -249,10 +221,11 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
     <Sheet
       open={isOpen}
       onOpenChange={onOpenChange}
-      snapPoints={[45]}
+      snapPoints={[40]}
       disableDrag
       dismissOnSnapToBottom={false}
       dismissOnOverlayPress={false}
+      moveOnKeyboardChange
     >
       <Sheet.Overlay />
       <Sheet.Frame padding="$4" paddingBottom="$0">
@@ -297,7 +270,27 @@ const BudgetUpdateModal: React.FC<BudgetUpdateModalProps> = ({
             </XStack>
 
             {/* Amount input for selected period */}
-            {PeriodRow(selectedPeriod, form[selectedPeriod].amount, updateAmount)}
+            <YStack gap="$1">
+              <Label htmlFor={`${selectedPeriod}-amount`} fontSize="$3" color="$gray11">
+                {t("Amount")}
+              </Label>
+              <Input
+                id={`${selectedPeriod}-amount`}
+                size="$3"
+                placeholder={formatCurrency(0).replace(/0+([.,]0+)?/, "0")}
+                keyboardType="numeric"
+                value={form[selectedPeriod].amount}
+                onChangeText={updateAmount}
+                borderWidth={1}
+                borderColor={errors[selectedPeriod] ? "$red9" : "$gray5"}
+                backgroundColor={"$gray1"}
+              />
+              {errors[selectedPeriod] && (
+                <Text fontSize="$2" color="$red9">
+                  {errors[selectedPeriod]}
+                </Text>
+              )}
+            </YStack>
 
             {/* Ignore Categories Button (per period) */}
             <YStack >

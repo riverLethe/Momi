@@ -215,8 +215,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: "Don't forget to log today's expenses",
-        body: 'Tap to add your bills now.',
+        title: t("Don't forget to log today's expenses"),
+        body: t('Tap to add your bills now.'),
         sound: 'default',
       },
       trigger: {
