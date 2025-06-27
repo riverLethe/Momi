@@ -231,6 +231,7 @@ export default {
     Subscriptions: "订阅",
     Taxes: "税",
     Charity: "公益",
+    "Personal Care": "个人护理",
     // Profile Screen additions
     "Family Spaces": "家庭空间",
     "My Budgets": "我的预算",

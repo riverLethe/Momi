@@ -5,6 +5,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams, Stack, useFocusEffect } from "expo-router";
@@ -287,26 +288,32 @@ export default function BillDetailsScreen() {
             keyboardVerticalOffset={60}
           >
             {/* 内容区域 */}
-            <YStack flex={1} padding="$4">
-              {/* 金额卡片 */}
-              <BillAmountCard
-                bill={bill}
-                updating={updating}
-                onUpdateField={handleUpdateField}
-                onOpenAmountSheet={handleOpenAmountSheet}
-                locale={locale}
-              />
+            <ScrollView
+              contentContainerStyle={{ padding: 16 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <YStack gap="$4">
+                {/* 金额卡片 */}
+                <BillAmountCard
+                  bill={bill}
+                  updating={updating}
+                  onUpdateField={handleUpdateField}
+                  onOpenAmountSheet={handleOpenAmountSheet}
+                  locale={locale}
+                />
 
-              {/* 详情卡片 */}
-              <BillDetailsCard
-                bill={bill}
-                updating={updating}
-                onUpdateField={handleUpdateField}
-                onOpenCategorySheet={handleOpenCategorySheet}
-                onOpenDateSheet={handleOpenDateSheet}
-                locale={locale}
-              />
-            </YStack>
+                {/* 详情卡片 */}
+                <BillDetailsCard
+                  bill={bill}
+                  updating={updating}
+                  onUpdateField={handleUpdateField}
+                  onOpenCategorySheet={handleOpenCategorySheet}
+                  onOpenDateSheet={handleOpenDateSheet}
+                  locale={locale}
+                />
+              </YStack>
+            </ScrollView>
           </KeyboardAvoidingView>
         </YStack>
 
