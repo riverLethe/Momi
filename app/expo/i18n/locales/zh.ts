@@ -476,5 +476,11 @@ export default {
     "{{count}} Categories": "{{count}} 分类",
     "Don't forget to log today's expenses": "不要忘记记录今天的支出",
     "Tap to add your bills now.": "点击添加您的账单",
+    "Increased by {{percentage}}%": "增加了 {{percentage}}%",
+    "Decreased by {{percentage}}%": "减少了 {{percentage}}%",
+    "Similar to last period": "与上期相近",
+    "{{percentage}}% over budget": "超出预算 {{percentage}}%",
+    "{{percentage}}% of budget": "预算使用 {{percentage}}%",
+    "No comparison data": "暂无对比数据",
   },
 };

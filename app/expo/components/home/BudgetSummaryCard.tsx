@@ -38,17 +38,28 @@ export interface BudgetStatusInfo {
   percentage: number;
 }
 
-// 类别支出状态类型
-export type CategoryStatusType = "normal" | "exceeding" | "save";
+// 类别支出状态类型 (新)
+export type CategoryStatusType =
+  | "increased"   // 比上周期增加
+  | "decreased"   // 比上周期减少
+  | "unchanged"   // 基本持平(变化<5%)
+  | "overBudget"  // 超出预算
+  | "withinBudget" // 在预算内
+  | "normal"      // 兼容旧版本
+  | "exceeding"   // 兼容旧版本
+  | "save";       // 兼容旧版本
 
 // 类别支出分析
 export interface CategorySpending {
   id: string;
   label: string;
-  status: CategoryStatusType;
-  percentage: number;
-  amount: number;
+  amount: number;          // 当前周期支出
+  previousAmount?: number;  // 上个周期支出(可选)
+  budget?: number;         // 该类别的预算（可选）
+  changePercentage?: number; // 变化百分比（可选）
   color?: string;
+  status?: CategoryStatusType; // 可选，如果在组件外部已计算
+  percentage?: number;     // 兼容旧版本
 }
 
 // 组件属性定义
@@ -95,30 +106,117 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // 获取类别状态信息
+  // 计算类别状态
+  const getCategoryStatus = (current: number, previous: number = 0, budget?: number): CategoryStatusType => {
+    // 如果有预算，首先检查是否超出预算
+    if (budget && budget > 0) {
+      return current > budget ? "overBudget" : "withinBudget";
+    }
+
+    // 计算环比变化百分比
+    const changePercentage = previous === 0
+      ? (current > 0 ? 100 : 0) // 如果上期为0，本期有值则为100%增长
+      : ((current - previous) / previous) * 100;
+
+    // 环比变化判断
+    if (Math.abs(changePercentage) < 5) {
+      return "unchanged";
+    } else if (changePercentage > 0) {
+      return "increased";
+    } else {
+      return "decreased";
+    }
+  };
+
+  // 获取类别状态信息（同时处理新旧版本兼容）
   const getCategoryStatusInfo = (
-    status: CategoryStatusType,
-    percentage: number
+    category: CategorySpending
   ) => {
+    // 处理旧版本数据格式
+    if (category.status === "normal" ||
+      category.status === "exceeding" ||
+      category.status === "save") {
+      // 使用旧版本的状态处理逻辑
+      const percentage = category.percentage || 0;
+
+      switch (category.status) {
+        case "normal":
+          return {
+            color: "#aaaaaa",
+            label: t("Normal"),
+          };
+        case "exceeding":
+          return {
+            color: "#EF4444",
+            label: t(`Exceeding by {{percentage}}%`, {
+              percentage,
+            }),
+          };
+        case "save":
+          return {
+            color: "#10B981",
+            label: t(`Save {{percentage}}%`, {
+              percentage,
+            }),
+          };
+      }
+    }
+
+    // 提取新版本所需属性（设置默认值防止错误）
+    const {
+      amount,
+      previousAmount = 0,
+      budget,
+      status: providedStatus
+    } = category;
+
+    // 使用提供的状态或计算新状态
+    const status = providedStatus || getCategoryStatus(amount, previousAmount, budget);
+
+    // 计算变化百分比（用于显示）
+    const changePercentage = previousAmount === 0
+      ? (amount > 0 ? 100 : 0)
+      : Math.round(((amount - previousAmount) / previousAmount) * 100);
+
     switch (status) {
-      case "normal":
+      case "increased":
+        return {
+          color: "#EF4444", // 红色
+          label: t(`Increased by {{percentage}}%`, {
+            percentage: Math.abs(changePercentage),
+          }),
+        };
+      case "decreased":
+        return {
+          color: "#10B981", // 绿色
+          label: t(`Decreased by {{percentage}}%`, {
+            percentage: Math.abs(changePercentage),
+          }),
+        };
+      case "unchanged":
+        return {
+          color: "#aaaaaa", // 灰色
+          label: t("Similar to last period"),
+        };
+      case "overBudget":
+        return {
+          color: "#EF4444", // 红色
+          label: t(`{{percentage}}% over budget`, {
+            percentage: Math.round(((amount - (budget || 0)) / (budget || 1)) * 100),
+          }),
+        };
+      case "withinBudget":
+        return {
+          color: "#10B981", // 绿色
+          label: t(`{{percentage}}% of budget`, {
+            percentage: Math.round((amount / (budget || 1)) * 100),
+          }),
+        };
+      default:
+        // 兜底返回，确保总是有值
         return {
           color: "#aaaaaa",
-          label: t("Normal"),
-        };
-      case "exceeding":
-        return {
-          color: "#EF4444",
-          label: t(`Exceeding by {{percentage}}%`, {
-            percentage: percentage,
-          }),
-        };
-      case "save":
-        return {
-          color: "#10B981",
-          label: t(`Save {{percentage}}%`, {
-            percentage: percentage,
-          }),
+          label: t("No comparison data"),
         };
     }
   };
@@ -236,10 +334,19 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 ) : (
                   <YStack gap="$1">
                     {categories.map((category) => {
-                      const catStatus = getCategoryStatusInfo(
-                        category.status,
-                        category.percentage
-                      );
+                      // 确保类别对象总是包含必要属性
+                      const safeCategory = {
+                        id: category.id,
+                        label: category.label,
+                        amount: category.amount || 0,
+                        previousAmount: category.previousAmount || 0,
+                        percentage: category.percentage || 0,
+                        status: category.status,
+                        color: category.color,
+                      };
+
+                      const catStatus = getCategoryStatusInfo(safeCategory);
+
                       return (
                         <Pressable
                           key={category.id}

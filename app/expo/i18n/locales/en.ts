@@ -507,5 +507,11 @@ export default {
     "Don't forget to log today's expenses":
       "Don't forget to log today's expenses",
     "Tap to add your bills now.": "Tap to add your bills now.",
+    "Increased by {{percentage}}%": "Increased by {{percentage}}%",
+    "Decreased by {{percentage}}%": "Decreased by {{percentage}}%",
+    "Similar to last period": "Similar to last period",
+    "{{percentage}}% over budget": "{{percentage}}% over budget",
+    "{{percentage}}% of budget": "{{percentage}}% of budget",
+    "No comparison data": "No comparison data",
   },
 };

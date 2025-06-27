@@ -207,5 +207,11 @@ export default {
     "Don't forget to log today's expenses":
       "No olvides registrar tus gastos de hoy",
     "Tap to add your bills now.": "Toca para agregar tus facturas ahora.",
+    "Increased by {{percentage}}%": "Aumentó {{percentage}}%",
+    "Decreased by {{percentage}}%": "Disminuyó {{percentage}}%",
+    "Similar to last period": "Similar al período anterior",
+    "{{percentage}}% over budget": "{{percentage}}% por encima del presupuesto",
+    "{{percentage}}% of budget": "{{percentage}}% del presupuesto",
+    "No comparison data": "Sin datos de comparación",
   },
 };

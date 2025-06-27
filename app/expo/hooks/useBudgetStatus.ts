@@ -70,13 +70,27 @@ export const useBudgetStatus = ({
         startDate = new Date(today);
         startDate.setDate(today.getDate() - today.getDay());
         startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
       } else if (budgetPeriod === "monthly") {
         startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
       } else {
         startDate = new Date(today.getFullYear(), 0, 1);
+        endDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
       }
-      endDate = new Date(today);
     }
+
+    // Calculate previous period range --------------------------------------
+    const periodDurationMs = endDate.getTime() - startDate.getTime() + 1; // inclusive duration
+    const prevEndDate = new Date(startDate.getTime() - 1);
+    prevEndDate.setHours(23, 59, 59, 999);
+    const prevStartDate = new Date(
+      prevEndDate.getTime() - periodDurationMs + 1
+    );
+    prevStartDate.setHours(0, 0, 0, 0);
 
     // Filter helpers -------------------------------------------------------
     const isCategorySkipped = (category: string) =>
@@ -85,28 +99,53 @@ export const useBudgetStatus = ({
       (includedCategories.length === 0 &&
         excludedCategories.includes(category));
 
-    // Transactions ---------------------------------------------------------
-    const filteredTransactions = transactions.filter((tx) => {
-      if (isCategorySkipped(tx.category)) return false;
+    // Helper to filter by period -------------------------------------------
+    const filterByPeriod = <T extends { date: string | number | Date }>(
+      items: T[],
+      s: Date,
+      e: Date
+    ) =>
+      items.filter((it) => {
+        const d = new Date(it.date);
+        return d >= s && d <= e;
+      });
 
-      const txDate = new Date(tx.date);
-      return txDate >= startDate && txDate <= endDate && tx.type === "expense";
-    });
+    // Transactions ---------------------------------------------------------
+    const filteredCurrentTransactions = filterByPeriod(
+      transactions.filter(
+        (tx) => !isCategorySkipped(tx.category) && tx.type === "expense"
+      ),
+      startDate,
+      endDate
+    );
+
+    const filteredPrevTransactions = filterByPeriod(
+      transactions.filter(
+        (tx) => !isCategorySkipped(tx.category) && tx.type === "expense"
+      ),
+      prevStartDate,
+      prevEndDate
+    );
 
     // Bills ----------------------------------------------------------------
-    const filteredBills = bills.filter((bill) => {
-      if (isCategorySkipped(bill.category)) return false;
+    const filteredCurrentBills = filterByPeriod(
+      bills.filter((bill) => !isCategorySkipped(bill.category)),
+      startDate,
+      endDate
+    );
 
-      const billDate = new Date(bill.date);
-      return billDate >= startDate && billDate <= endDate;
-    });
+    const filteredPrevBills = filterByPeriod(
+      bills.filter((bill) => !isCategorySkipped(bill.category)),
+      prevStartDate,
+      prevEndDate
+    );
 
     // Totals ---------------------------------------------------------------
-    const transactionsSpent = filteredTransactions.reduce(
+    const transactionsSpent = filteredCurrentTransactions.reduce(
       (sum, tx) => sum + tx.amount,
       0
     );
-    const billsSpent = filteredBills.reduce(
+    const billsSpent = filteredCurrentBills.reduce(
       (sum, bill) => sum + bill.amount,
       0
     );
@@ -137,38 +176,54 @@ export const useBudgetStatus = ({
     });
 
     // Category breakdown ---------------------------------------------------
-    const categoryMap = new Map<string, number>();
-    filteredTransactions.forEach((tx) => {
-      categoryMap.set(
-        tx.category,
-        (categoryMap.get(tx.category) || 0) + tx.amount
-      );
-    });
-    filteredBills.forEach((bill) => {
-      categoryMap.set(
-        bill.category,
-        (categoryMap.get(bill.category) || 0) + bill.amount
-      );
-    });
+    const buildCategoryMap = (txs: typeof transactions, bs: typeof bills) => {
+      const map = new Map<string, number>();
+      txs.forEach((tx) => {
+        map.set(tx.category, (map.get(tx.category) || 0) + tx.amount);
+      });
+      bs.forEach((bill) => {
+        map.set(bill.category, (map.get(bill.category) || 0) + bill.amount);
+      });
+      return map;
+    };
+
+    const currentCategoryMap = buildCategoryMap(
+      filteredCurrentTransactions,
+      filteredCurrentBills
+    );
+    const prevCategoryMap = buildCategoryMap(
+      filteredPrevTransactions,
+      filteredPrevBills
+    );
 
     const categorySpending: CategorySpending[] = Array.from(
-      categoryMap.entries()
+      currentCategoryMap.entries()
     )
       .map(([id, amount]) => {
         const categoryInfo = getCategoryById(id);
+        const prevAmount = prevCategoryMap.get(id) || 0;
+        const changePerc =
+          prevAmount === 0 ? 100 : ((amount - prevAmount) / prevAmount) * 100;
+
+        // Keep old status logic for compatibility --------------------------
         const categoryPercentage =
           total > 0 ? Math.round((amount / total) * 100) : 0;
-
-        let status: "normal" | "exceeding" | "save" = "normal";
-        if (categoryPercentage >= 25) status = "exceeding";
-        else if (categoryPercentage <= 10) status = "save";
+        let legacyStatus: "normal" | "exceeding" | "save" = "normal";
+        if (categoryPercentage >= 25) legacyStatus = "exceeding";
+        else if (categoryPercentage <= 10) legacyStatus = "save";
 
         return {
           id,
           label: categoryInfo?.name || id,
-          status,
-          percentage: categoryPercentage > 25 ? categoryPercentage - 25 : 0,
           amount,
+          previousAmount: prevAmount,
+          changePercentage: Math.round(changePerc),
+          budget: undefined,
+          status: legacyStatus,
+          percentage:
+            legacyStatus === "exceeding"
+              ? categoryPercentage - 25
+              : categoryPercentage,
           color: categoryInfo?.color || "#999",
         } as CategorySpending;
       })
