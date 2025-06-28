@@ -9,7 +9,6 @@ import {
   Gift,
   BookOpen,
   Coffee,
-  Utensils,
   DollarSign,
   ShoppingCart,
   Shield,
@@ -20,6 +19,7 @@ import {
   Heart,
   ReceiptText,
   CreditCard,
+  AppleIcon,
 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
@@ -32,6 +32,13 @@ export interface ExpenseCategory {
 }
 
 export const EXPENSE_CATEGORIES = [
+  {
+    id: "fruit",
+    name: "Fruit",
+    color: "#F43F5E",
+    lightColor: "#FEE2E2",
+    icon: "Apple",
+  },
   {
     id: "food",
     name: "Food",
@@ -192,6 +199,8 @@ export const getCategoryIcon = (categoryId: string) => {
   const category = getCategoryById(categoryId);
 
   switch (category.icon) {
+    case "Apple":
+      return AppleIcon;
     case "Utensils":
     case "PizzaIcon":
       return PizzaIcon;

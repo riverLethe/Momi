@@ -65,6 +65,10 @@ export interface AppleLoginRequest {
   state: string;
 }
 
+export interface WeChatLoginRequest {
+  code: string;
+}
+
 export interface RegisterRequest {
   email: string;
   password: string;
@@ -164,6 +168,22 @@ export const apiClient = {
 
     appleLogin: async (data: AppleLoginRequest): Promise<LoginResponse> => {
       const response = await fetch(`${API_URL}/api/auth/apple`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    wechatLogin: async (data: WeChatLoginRequest): Promise<LoginResponse> => {
+      const response = await fetch(`${API_URL}/api/auth/wechat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

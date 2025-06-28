@@ -25,6 +25,8 @@ model User {
   password  String?  // 邮箱登录密码，OAuth用户可能为空
   googleId  String?  @unique // Google OAuth ID
   appleId   String?  @unique // Apple Sign In ID
+  wechatOpenId String? @unique // WeChat OpenID
+  wechatUnionId String? // WeChat UnionID
   
   // 用户偏好设置
   currency          String   @default("USD")

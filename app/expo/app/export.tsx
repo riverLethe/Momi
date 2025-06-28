@@ -1,31 +1,53 @@
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Download } from "lucide-react-native";
-import { Button, H2, Text, XStack, YStack, Card } from "tamagui";
+import { ChevronLeftIcon } from "lucide-react-native";
+import { Button, H2, Text, XStack, YStack, View } from "tamagui";
 import { exportBillsAsCsv } from "@/utils/export.utils";
 import { getBills } from "@/utils/bills.utils";
-import { Alert } from "react-native";
-import { DateRangeSheet } from "@/components/ui/DateRangeSheet";
-import { addMonths, isAfter } from "date-fns";
+import { Alert, StyleSheet, Platform } from "react-native";
+import { addMonths, isAfter, startOfDay, endOfDay } from "date-fns";
 import { useTranslation } from "react-i18next";
+import DatePickerSheet from "@/components/ui/DatePickerSheet";
 
 export default function ExportDataScreen() {
   const router = useRouter();
   const { t } = useTranslation();
 
-  const [rangeSheetOpen, setRangeSheetOpen] = useState(false);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-
+  const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(1))); // First day of current month
+  const [endDate, setEndDate] = useState<Date>(new Date());
   const [hasBillsInRange, setHasBillsInRange] = useState<boolean>(false);
   const [loadingBills, setLoadingBills] = useState<boolean>(true);
 
+  const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
+  const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
+
   const today = new Date();
 
-  const onApplyRange = (start: Date | null, end: Date | null) => {
-    setStartDate(start);
-    setEndDate(end);
+  const handleStartDateChange = (newDate: Date) => {
+    const newStartDate = startOfDay(newDate);
+
+    // If new start date would cause a range greater than 3 months, adjust the end date
+    const maxEndDate = addMonths(newStartDate, 3);
+    if (isAfter(endDate, maxEndDate)) {
+      setEndDate(maxEndDate);
+    }
+
+    setStartDate(newStartDate);
+  };
+
+  const handleEndDateChange = (newDate: Date) => {
+    // Ensure end date isn't after today
+    const adjustedEndDate = isAfter(newDate, today) ? today : newDate;
+    const newEndDate = endOfDay(adjustedEndDate);
+
+    // If new end date would cause a range greater than 3 months, adjust the start date
+    const minStartDate = addMonths(newEndDate, -3);
+    if (startDate < minStartDate) {
+      setStartDate(minStartDate);
+    }
+
+    setEndDate(newEndDate);
   };
 
   const refreshBillsStatus = async (s: Date | null, e: Date | null) => {
@@ -57,109 +79,121 @@ export default function ExportDataScreen() {
 
   const handleExport = async () => {
     try {
-      // Validate range & bills existence
-      if (!startDate || !endDate) {
-        Alert.alert(t("Select Range"), t("Please select a start and end date first."));
-        return;
-      }
-
-      if (!hasBillsInRange) {
-        Alert.alert(t("No Bills"), t("No bills available for export."));
-        return;
-      }
-
-      if (isAfter(endDate, today)) {
-        Alert.alert(t("Invalid Range"), t("End date cannot be later than today."));
-        return;
-      }
-
-      const maxEnd = addMonths(startDate, 3);
-      if (isAfter(endDate, maxEnd)) {
-        Alert.alert(t("Too Large Range"), t("You can only export up to 3 months of bills at once."));
-        return;
-      }
-
-      const uri = await exportBillsAsCsv(startDate, endDate);
-      if (uri) {
-        console.log(`Exported to ${uri}`);
-      }
+      await exportBillsAsCsv(startDate, endDate);
     } catch (err) {
       console.error(err);
       Alert.alert(t("Export failed"), t("Failed to export data. Please try again."));
     }
   };
 
+  // Prevent selecting dates that would cause more than 3 months range
+  const canSelectStartDate = (date: Date) => {
+    return !isAfter(addMonths(date, 3), endDate);
+  };
+
+  const canSelectEndDate = (date: Date) => {
+    return !isAfter(date, addMonths(startDate, 3)) && !isAfter(date, today);
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
-      <YStack flex={1} padding="$4">
-        <XStack alignItems="center" marginBottom="$4">
-          <Button
-            size="$3"
-            circular
-            icon={<ArrowLeft size={24} color="#000" />}
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <YStack flex={1} padding="$2" gap="$6">
+        <XStack alignItems="center">
+          <Button size="$3"
+            circular borderRadius="$2"
+            chromeless
             onPress={() => router.back()}
+            icon={<ChevronLeftIcon size={20} />}
+            pressStyle={{
+              backgroundColor: "transparent",
+              opacity: 0.5,
+              borderColor: "transparent",
+            }}
           />
-          <H2 marginLeft="$2">{t("Export Data")}</H2>
         </XStack>
+        <YStack flex={1} paddingHorizontal="$4" paddingTop="$4">
 
-        <YStack space="$4" marginTop="$4">
-          {/* Date Range Picker */}
-          <Card padding="$4" elevate>
-            <Text fontSize="$5" fontWeight="$6" marginBottom="$2">
-              {t("Date Range")}
+
+          <YStack alignItems="center" gap="$2" marginTop="$4">
+            <H2>{t("Export Data")}</H2>
+            <Text color="$gray10" textAlign="center">
+              {t("Select a date range to export your financial data")}
             </Text>
-            {startDate && endDate ? (
-              <Text marginBottom="$3">
-                {startDate.toDateString()} - {endDate.toDateString()}
-              </Text>
-            ) : (
-              <Text marginBottom="$3" color="$gray10">
-                {t("No range selected")}
-              </Text>
-            )}
-            <Button onPress={() => setRangeSheetOpen(true)} theme="blue">
-              {t("Select Range")}
-            </Button>
-          </Card>
+          </YStack>
 
-          <Card padding="$4" elevate>
-            <Text fontSize="$5" fontWeight="$6" marginBottom="$2">
-              {t("Export Options")}
-            </Text>
-            <Text color="$gray10" marginBottom="$4">
-              {t("Choose a format to export your financial data")}
-            </Text>
+          <YStack gap="$5" marginTop="$6">
+            {/* Date Range Selection */}
+            <YStack gap="$4">
 
-            {loadingBills ? (
-              <Text color="$gray10">{t("Checking bills...")}</Text>
-            ) : !hasBillsInRange ? (
-              <Text color="$red10">{t("No bills available for export.")}</Text>
-            ) : null}
+              <YStack gap="$3">
+                <Text>{t("Start Date")}</Text>
+                <Button
+                  onPress={() => setStartDatePickerOpen(true)}
+                  theme={"gray" as any}
+                  borderRadius="$4"
+                  height={48}
+                  justifyContent="flex-start"
+                  paddingLeft="$3"
+                >
+                  {startDate.toLocaleDateString()}
+                </Button>
 
-            <YStack space="$3">
-              <Button
-                icon={<Download size={20} color="#fff" />}
-                backgroundColor="$blue9"
-                onPress={handleExport}
-                disabled={!hasBillsInRange}
-              >
-                <Text color="white" fontWeight="$6">{t("Export as CSV")}</Text>
-              </Button>
+                <Text marginTop="$2">{t("End Date")}</Text>
+                <Button
+                  onPress={() => setEndDatePickerOpen(true)}
+                  theme={"gray" as any}
+                  borderRadius="$4"
+                  height={48}
+                  justifyContent="flex-start"
+                  paddingLeft="$3"
+                >
+                  {endDate.toLocaleDateString()}
+                </Button>
+
+                {loadingBills ? (
+                  <Text color="$gray10">{t("Checking bills...")}</Text>
+                ) : !hasBillsInRange ? (
+                  <Text color="$red10">{t("No bills available for selected date range.")}</Text>
+                ) : (
+                  <></>
+                )}
+              </YStack>
             </YStack>
-          </Card>
-        </YStack>
 
-        {/* Range selection sheet */}
-        <DateRangeSheet
-          isOpen={rangeSheetOpen}
-          setIsOpen={setRangeSheetOpen}
-          onApply={onApplyRange}
-          initialStartDate={startDate}
-          initialEndDate={endDate}
-          maxDate={today}
-          maxRangeMonths={3}
-        />
+            {/* Export Button */}
+            <Button
+              backgroundColor="$blue9"
+              color="white"
+              onPress={handleExport}
+              disabled={!hasBillsInRange}
+              marginTop="$4"
+              size="$4"
+            >
+              <Text color="white" fontWeight="$6">{t("Export as CSV")}</Text>
+            </Button>
+          </YStack>
+        </YStack>
       </YStack>
+
+      {/* Date Picker Sheets */}
+      <DatePickerSheet
+        open={startDatePickerOpen}
+        onOpenChange={setStartDatePickerOpen}
+        initialDate={startDate}
+        onConfirm={handleStartDateChange}
+        title={t("Select Start Date")}
+        maximumDate={today}
+      />
+
+      <DatePickerSheet
+        open={endDatePickerOpen}
+        onOpenChange={setEndDatePickerOpen}
+        initialDate={endDate}
+        onConfirm={handleEndDateChange}
+        title={t("Select End Date")}
+        minimumDate={startDate}
+        maximumDate={today}
+      />
     </SafeAreaView>
   );
 } 

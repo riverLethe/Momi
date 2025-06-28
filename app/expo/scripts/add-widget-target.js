@@ -17,6 +17,19 @@ if (!fs.existsSync(PBX)) {
 const proj = xcode.project(PBX);
 proj.parseSync();
 
+// Recursively copy a directory (fallback for pre-v16 Node where fs.cpSync may be missing)
+function copyRecursiveSync(src, dest) {
+  const stats = fs.statSync(src);
+  if (stats.isDirectory()) {
+    fs.mkdirSync(dest, { recursive: true });
+    fs.readdirSync(src).forEach((name) => {
+      copyRecursiveSync(path.join(src, name), path.join(dest, name));
+    });
+  } else {
+    fs.copyFileSync(src, dest);
+  }
+}
+
 EXT_LIST.forEach((EXT) => {
   const SRC = path.join(__dirname, "..", "plugins", "widget", EXT);
   const EXT_IOS_DIR = path.join(IOS, EXT);
@@ -29,6 +42,17 @@ EXT_LIST.forEach((EXT) => {
     templateFiles.forEach((f) => {
       const srcFile = path.join(SRC, f);
       const destFile = path.join(EXT_IOS_DIR, f);
+
+      // Handle directory templates (e.g., *.lproj localization folders)
+      if (fs.statSync(srcFile).isDirectory()) {
+        // Prefer fs.cpSync when available (Node v16.7+)
+        if (typeof fs.cpSync === "function") {
+          fs.cpSync(srcFile, destFile, { recursive: true, force: true });
+        } else {
+          copyRecursiveSync(srcFile, destFile);
+        }
+        return; // proceed to next template file
+      }
 
       // Only copy if file does not exist or content differs
       let shouldCopy = true;
@@ -128,12 +152,45 @@ EXT_LIST.forEach((EXT) => {
       extGroupKey,
       proj.getFirstProject().firstProject.mainGroup
     );
+    console.log(`Created group ${EXT} with key ${extGroupKey}`);
+  } else {
+    console.log(`Found existing group ${EXT} with key ${extGroupKey}`);
   }
 
   // Make sure main swift file added to extension
   templateFiles.forEach((file) => {
     if (file === `${EXT}.swift`) {
       proj.addSourceFile(file, { target: widgetTargetUUID }, extGroupKey);
+    }
+
+    // Add localized strings inside *.lproj folders as resources for the widget target
+    if (file.endsWith(".lproj")) {
+      const stringsPath = `${EXT}/${file}/Localizable.strings`;
+      const stringsFilePath = path.join(
+        EXT_IOS_DIR,
+        file,
+        "Localizable.strings"
+      );
+      console.log("stringsPath", stringsPath, EXT, widgetTargetUUID);
+
+      // Check if the actual file exists and add it
+      if (fs.existsSync(stringsFilePath)) {
+        // Force add the resource file - remove or bypass the hasFile check
+        try {
+          console.log(
+            `Adding resource file: ${stringsPath} to target ${widgetTargetUUID} in group ${extGroupKey}`
+          );
+          const fileRef = proj.addResourceFile(
+            stringsPath,
+            { target: widgetTargetUUID },
+            extGroupKey
+          );
+        } catch (error) {
+          console.log(`Error adding ${stringsPath}: ${error.message}`);
+        }
+      } else {
+        console.log(`${stringsFilePath} file not found`);
+      }
     }
   });
 

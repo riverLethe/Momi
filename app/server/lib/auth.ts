@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "./database";
+import querystring from "querystring";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
@@ -370,6 +371,121 @@ export class AuthService {
       };
     } catch (error) {
       console.error("Apple login failed:", error);
+      return null;
+    }
+  }
+
+  /**
+   * WeChat OAuth登录
+   * 使用通过 Expo AuthSession 或前端SDK 获取的 `code` 参数交换 access_token 和用户信息
+   */
+  static async loginWithWeChat(
+    code: string,
+    deviceInfo?: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<LoginResult | null> {
+    try {
+      const WECHAT_APP_ID = process.env.WECHAT_APP_ID;
+      const WECHAT_APP_SECRET = process.env.WECHAT_APP_SECRET;
+
+      if (!WECHAT_APP_ID || !WECHAT_APP_SECRET) {
+        throw new Error("WeChat app credentials are not configured");
+      }
+
+      // 通过 code 获取 access_token
+      const tokenParams = querystring.stringify({
+        appid: WECHAT_APP_ID,
+        secret: WECHAT_APP_SECRET,
+        code,
+        grant_type: "authorization_code",
+      });
+
+      const tokenRes = await fetch(
+        `https://api.weixin.qq.com/sns/oauth2/access_token?${tokenParams}`
+      );
+      const tokenData: any = await tokenRes.json();
+
+      if (!tokenData || !tokenData.access_token || !tokenData.openid) {
+        console.error("WeChat token response invalid:", tokenData);
+        return null;
+      }
+
+      // 获取用户信息
+      const userInfoParams = querystring.stringify({
+        access_token: tokenData.access_token,
+        openid: tokenData.openid,
+        lang: "zh_CN",
+      });
+
+      const userRes = await fetch(
+        `https://api.weixin.qq.com/sns/userinfo?${userInfoParams}`
+      );
+      const userData: any = await userRes.json();
+
+      if (!userData || !userData.openid) {
+        console.error("WeChat userinfo response invalid:", userData);
+        return null;
+      }
+
+      const email = `${userData.openid}@wechat.momiq`; // WeChat 不提供邮箱，生成占位邮箱
+      const name = userData.nickname || "WeChat User";
+      const avatar = userData.headimgurl;
+
+      // 查找或创建用户
+      let user = await prisma.user.findFirst({
+        where: {
+          OR: [{ wechatOpenId: userData.openid }, { email }],
+        },
+      });
+
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            email,
+            name,
+            avatar,
+            wechatOpenId: userData.openid,
+            wechatUnionId: userData.unionid ?? undefined,
+            lastLoginAt: new Date(),
+          },
+        });
+      } else {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            name,
+            avatar: avatar || user.avatar,
+            wechatOpenId: userData.openid,
+            wechatUnionId: userData.unionid ?? user.wechatUnionId ?? undefined,
+            lastLoginAt: new Date(),
+          },
+        });
+      }
+
+      // 创建会话
+      const { session, token } = await this.createSession(
+        user.id,
+        deviceInfo,
+        ipAddress,
+        userAgent
+      );
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar || undefined,
+        },
+        token,
+        session: {
+          id: session.id,
+          expiresAt: session.expiresAt,
+        },
+      };
+    } catch (error) {
+      console.error("WeChat login failed:", error);
       return null;
     }
   }

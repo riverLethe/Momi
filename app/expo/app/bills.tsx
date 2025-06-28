@@ -334,9 +334,17 @@ export default function BillsScreen() {
                 alignItems="center"
                 justifyContent="space-between"
               >
-                <Button size="$3" circular chromeless onPress={() => router.back()}>
-                  <ChevronLeft size={20} color="#64748B" />
-                </Button>
+                <Button size="$3"
+                  circular borderRadius="$2"
+                  chromeless
+                  onPress={() => router.back()}
+                  icon={<ChevronLeft size={20} />}
+                  pressStyle={{
+                    backgroundColor: "transparent",
+                    opacity: 0.5,
+                    borderColor: "transparent",
+                  }}
+                />
 
                 <FilterWithTotalExpense
                   categoryFilter={categoryFilter}

@@ -24,7 +24,6 @@ import {
   Spinner,
   View,
 } from "tamagui";
-import { installQuickScreenshotBillShortcut } from '@/utils/shortcutInstaller';
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useDataSync } from "@/hooks/useDataSync";
@@ -84,7 +83,7 @@ export default function ProfileScreen() {
           {/* Sync Status Section */}
           {isAuthenticated && (
             <ProfileSection title={t("Data Sync")}>
-              <YStack space="$3">
+              <YStack gap="$3">
                 {/* Sync Status */}
                 <XStack alignItems="center" justifyContent="space-between">
                   <XStack alignItems="center" gap="$3">
@@ -143,7 +142,7 @@ export default function ProfileScreen() {
           )}
 
           {/* Family Space Section */}
-          <ProfileSection title={t("Family")}>
+          {/* <ProfileSection title={t("Family")}>
             <ProfileRow
               icon={
                 <Circle size="$3" backgroundColor="$blue4">
@@ -153,7 +152,7 @@ export default function ProfileScreen() {
               label={t("Family Spaces")}
               onPress={handleFamilySpacePress}
             />
-          </ProfileSection>
+          </ProfileSection> */}
 
 
           {/* Settings Section */}
@@ -182,7 +181,25 @@ export default function ProfileScreen() {
             <ProfileRow
               icon={
                 <Circle size="$3" backgroundColor="$purple4">
-                  <FileText size={22} color="#8B5CF6" />
+                  <CreditCard size={22} color="#8B5CF6" />
+                </Circle>
+              }
+              label={t("Quick Bill Screenshot Setup")}
+              onPress={() => router.push("/shortcut-guide")}
+            />
+            <ProfileRow
+              icon={
+                <Circle size="$3" backgroundColor="$green4">
+                  <Home size={22} color="#10B981" />
+                </Circle>
+              }
+              label={t("iOS Widget Setup")}
+              onPress={() => router.push("/widget-guide")}
+            />
+            <ProfileRow
+              icon={
+                <Circle size="$3" backgroundColor="$blue4">
+                  <FileText size={22} color="#3B82F6" />
                 </Circle>
               }
               label={t("Export Data")}
@@ -212,10 +229,6 @@ export default function ProfileScreen() {
               </XStack>
             </Button>
           )}
-
-          <Button onPress={() => installQuickScreenshotBillShortcut()}>
-            {t("Install Quick Screenshot Shortcut")}
-          </Button>
         </ScrollView>
       </YStack>
     </View>

@@ -213,5 +213,18 @@ export default {
     "{{percentage}}% over budget": "{{percentage}}% por encima del presupuesto",
     "{{percentage}}% of budget": "{{percentage}}% del presupuesto",
     "No comparison data": "Sin datos de comparación",
+    "No bills available for selected date range.":
+      "No hay facturas disponibles para el rango de fechas seleccionado.",
+    "Checking bills...": "Verificando facturas...",
+    "Bills available for export": "Facturas disponibles para exportar",
+    "Select Start Date": "Seleccionar fecha de inicio",
+    "Select End Date": "Seleccionar fecha de fin",
+    "Select a date range to export your financial data":
+      "Selecciona un rango de fechas para exportar tus datos financieros",
+    "Start Date": "Fecha de inicio",
+    "End Date": "Fecha de fin",
+    "Date Range": "Rango de fechas",
+    "Customize which notifications you want to receive":
+      "Personaliza las notificaciones que quieres recibir",
   },
 };

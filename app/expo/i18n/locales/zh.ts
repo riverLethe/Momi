@@ -239,6 +239,24 @@ export default {
     Notifications: "通知",
     Logout: "退出登录",
     "Install Quick Screenshot Shortcut": "安装快速截屏记账快捷方式",
+    "Quick Bill Screenshot Setup": "快速截屏记账设置",
+    "Quick Screenshot Bill": "快速截屏记账",
+    "Easily add bills by taking screenshots of receipts":
+      "通过截屏收据快速添加账单",
+    "Add Shortcut": "添加快捷方式",
+    "Tap the 'Install Shortcut' button below to add this feature to your device":
+      "点击下方'安装快捷方式'按钮将此功能添加到您的设备",
+    Setup: "设置",
+    "Go to your device Settings → Accessibility → Touch → Back Tap":
+      "前往设备设置 → 辅助功能 → 触控 → 轻点背面",
+    "Choose either Double Tap or Triple Tap, then select 'Quick Bill Screenshot'":
+      "选择'轻点两下'或'轻点三下'，然后选择'鲨鱼记账-截屏自动记账'",
+    Usage: "使用",
+    "When viewing a receipt or bill, simply double/triple tap the back of your device":
+      "查看收据或账单时，只需轻点两下/三下设备背面",
+    "The app will automatically open and process the screenshot for quick bill entry":
+      "应用将自动打开并处理截图，快速录入账单",
+    "Install Shortcut": "安装快捷方式",
 
     // Login / Auth
     "Welcome back": "欢迎回来",
@@ -251,12 +269,14 @@ export default {
     Or: "或",
     "Continue with Apple": "使用 Apple 登录",
     "Continue with Google": "使用 Google 登录",
+    "Continue with WeChat": "使用微信登录",
     "Please enter both email and password": "请输入邮箱和密码",
     "Please enter a valid email address": "请输入有效的邮箱地址",
     "Login Failed": "登录失败",
     "Please check your credentials and try again.": "请检查您的凭据并重试。",
     "Google login failed. Please try again.": "Google登录失败，请重试。",
     "Apple login failed. Please try again.": "Apple登录失败，请重试。",
+    "WeChat login failed. Please try again.": "微信登录失败，请重试。",
     "Back to other options": "返回其他选项",
     "By continuing, you agree to our Terms of Service and Privacy Policy":
       "继续即表示您同意我们的服务条款和隐私政策",
@@ -482,5 +502,38 @@ export default {
     "{{percentage}}% over budget": "超出预算 {{percentage}}%",
     "{{percentage}}% of budget": "预算使用 {{percentage}}%",
     "No comparison data": "暂无对比数据",
+    "No bills available for selected date range.":
+      "所选范围内没有可导出的账单。",
+    "Bills available for export": "账单可导出",
+    "Select Start Date": "选择开始日期",
+    "Select End Date": "选择结束日期",
+    "Select a date range to export your financial data":
+      "选择日期范围以导出您的财务数据",
+    "Start Date": "开始日期",
+    "End Date": "结束日期",
+    "Customize which notifications you want to receive":
+      "自定义您想要接收的通知",
+    "iOS Widget Setup": "iOS小组件设置",
+    "Add MomiQ widgets to your home screen for quick access":
+      "在主屏幕添加MomiQ小组件，快速访问应用功能",
+    "Access Home Screen": "访问主屏幕",
+    "On your home screen where you want to add the widget, press and hold until apps start jiggling":
+      "在你想添加小组件的屏幕，长按，直到App开始晃动",
+    "Add Widget": "添加小组件",
+    "Tap the + button in the top left corner": '轻点左上角的"添加"按钮(+)',
+    "Find MomiQ": "查找MomiQ",
+    "Scroll through the list or search for 'MomiQ' to find our widgets":
+      '选择或者直接搜索"MomiQ"，找到小组件',
+    "Select Widget": "选择小组件",
+    "Swipe left or right to choose the widget type, then tap 'Add Widget'":
+      '左右滑动可以选择小组件的功能，找到你想要的记账功能，轻点"添加小组件"',
+    "Finish Setup": "完成设置",
+    "Tap 'Done' to complete adding the widget": '轻点"完成"',
+    "Customize Widget": "自定义小组件",
+    "Long press on the widget to edit and customize the displayed content":
+      "你还可以通过长按桌面图标编辑小组件，定制显示的内容",
+    Compatibility: "兼容性",
+    "Widgets are only supported on iOS 14 and above":
+      "小组件仅支持iOS 14及以上版本",
   },
 };

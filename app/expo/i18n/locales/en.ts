@@ -213,6 +213,7 @@ export default {
       "Sign in to continue and sync your data",
     "Continue with Apple": "Continue with Apple",
     "Continue with Google": "Continue with Google",
+    "Continue with WeChat": "Continue with WeChat",
     Or: "Or",
     Email: "Email",
     "Enter your email": "Enter your email",
@@ -229,6 +230,8 @@ export default {
       "Google login failed. Please try again.",
     "Apple login failed. Please try again.":
       "Apple login failed. Please try again.",
+    "WeChat login failed. Please try again.":
+      "WeChat login failed. Please try again.",
     "Back to other options": "Back to other options",
     "By continuing, you agree to our Terms of Service and Privacy Policy":
       "By continuing, you agree to our Terms of Service and Privacy Policy",
@@ -513,5 +516,59 @@ export default {
     "{{percentage}}% over budget": "{{percentage}}% over budget",
     "{{percentage}}% of budget": "{{percentage}}% of budget",
     "No comparison data": "No comparison data",
+    "No bills available for selected date range.":
+      "No bills available for selected date range.",
+    "Bills available for export": "Bills available for export",
+    "Select Start Date": "Select Start Date",
+    "Select End Date": "Select End Date",
+    "Select a date range to export your financial data":
+      "Select a date range to export your financial data",
+    "Start Date": "Start Date",
+    "End Date": "End Date",
+    "Customize which notifications you want to receive":
+      "Customize which notifications you want to receive",
+    "Install Quick Screenshot Shortcut": "Install Quick Screenshot Shortcut",
+    "Quick Bill Screenshot Setup": "Quick Bill Screenshot Setup",
+    "Quick Screenshot Bill": "Quick Screenshot Bill",
+    "Easily add bills by taking screenshots of receipts":
+      "Easily add bills by taking screenshots of receipts",
+    "Add Shortcut": "Add Shortcut",
+    "Tap the 'Install Shortcut' button below to add this feature to your device":
+      "Tap the 'Install Shortcut' button below to add this feature to your device",
+    Setup: "Setup",
+    "Go to your device Settings → Accessibility → Touch → Back Tap":
+      "Go to your device Settings → Accessibility → Touch → Back Tap",
+    "Choose either Double Tap or Triple Tap, then select 'Quick Bill Screenshot'":
+      "Choose either Double Tap or Triple Tap, then select 'Quick Bill Screenshot'",
+    Usage: "Usage",
+    "When viewing a receipt or bill, simply double/triple tap the back of your device":
+      "When viewing a receipt or bill, simply double/triple tap the back of your device",
+    "The app will automatically open and process the screenshot for quick bill entry":
+      "The app will automatically open and process the screenshot for quick bill entry",
+    "Install Shortcut": "Install Shortcut",
+    "iOS Widget Setup": "iOS Widget Setup",
+    "Add MomiQ widgets to your home screen for quick access":
+      "Add MomiQ widgets to your home screen for quick access",
+    "Access Home Screen": "Access Home Screen",
+    "On your home screen where you want to add the widget, press and hold until apps start jiggling":
+      "On your home screen where you want to add the widget, press and hold until apps start jiggling",
+    "Add Widget": "Add Widget",
+    "Tap the + button in the top left corner":
+      "Tap the + button in the top left corner",
+    "Find MomiQ": "Find MomiQ",
+    "Scroll through the list or search for 'MomiQ' to find our widgets":
+      "Scroll through the list or search for 'MomiQ' to find our widgets",
+    "Select Widget": "Select Widget",
+    "Swipe left or right to choose the widget type, then tap 'Add Widget'":
+      "Swipe left or right to choose the widget type, then tap 'Add Widget'",
+    "Finish Setup": "Finish Setup",
+    "Tap 'Done' to complete adding the widget":
+      "Tap 'Done' to complete adding the widget",
+    "Customize Widget": "Customize Widget",
+    "Long press on the widget to edit and customize the displayed content":
+      "Long press on the widget to edit and customize the displayed content",
+    Compatibility: "Compatibility",
+    "Widgets are only supported on iOS 14 and above":
+      "Widgets are only supported on iOS 14 and above",
   },
 };

@@ -53,6 +53,7 @@ interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   loginWithApple: () => Promise<boolean>;
+  loginWithWeChat: () => Promise<boolean>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
   syncData: () => Promise<void>;
@@ -97,6 +98,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [appleRequest, appleResponse, applePromptAsync] = AuthSession.useAuthRequest(
     appleRequestConfig,
     appleServiceConfig
+  );
+
+  // WeChat Auth Request Setup (only if APP_ID exists)
+  const wechatRequestConfig = React.useMemo(() => {
+    const wechatAppId = process.env.EXPO_PUBLIC_WECHAT_APP_ID;
+    if (!wechatAppId) return null;
+
+    return {
+      clientId: wechatAppId,
+      scopes: ["snsapi_userinfo"],
+      redirectUri,
+      responseType: AuthSession.ResponseType.Code,
+      state: Crypto.randomUUID(),
+      extraParams: {
+        appid: wechatAppId,
+        scope: "snsapi_userinfo",
+      },
+    };
+  }, [redirectUri]);
+
+  const wechatServiceConfig = React.useMemo(() => {
+    if (!wechatRequestConfig) return null;
+    return {
+      authorizationEndpoint: "https://open.weixin.qq.com/connect/oauth2/authorize",
+      tokenEndpoint: "https://api.weixin.qq.com/sns/oauth2/access_token",
+    };
+  }, [wechatRequestConfig]);
+
+  const [wechatRequest, wechatResponse, wechatPromptAsync] = AuthSession.useAuthRequest(
+    // If WeChat is not configured, provide a dummy config to satisfy hook rules
+    (wechatRequestConfig ?? {
+      clientId: "",
+      redirectUri,
+      scopes: [],
+      responseType: AuthSession.ResponseType.Token,
+    }),
+    wechatServiceConfig ?? null
   );
 
   // Check if user is authenticated on mount
@@ -153,6 +191,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       handleAppleSignInResponse(appleResponse);
     }
   }, [appleResponse]);
+
+  // Handle WeChat response
+  useEffect(() => {
+    if (wechatResponse?.type === 'success') {
+      handleWeChatSignInResponse(wechatResponse);
+    }
+  }, [wechatResponse]);
 
   /**
    * Sync data with server
@@ -338,6 +383,66 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [syncData]);
 
   /**
+   * WeChat Sign In
+   */
+  const loginWithWeChat = useCallback(async (): Promise<boolean> => {
+    try {
+      if (!wechatPromptAsync || typeof wechatPromptAsync !== 'function') {
+        Alert.alert('Error', 'WeChat login is not configured');
+        return false;
+      }
+
+      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+
+      const result = await wechatPromptAsync();
+
+      if (result.type === 'success') {
+        return await handleWeChatSignInResponse(result);
+      }
+
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+      return false;
+    } catch (error) {
+      console.error('WeChat sign-in error:', error);
+      setAuthState(prev => ({ ...prev, isLoading: false, error: 'WeChat sign-in failed' }));
+      return false;
+    }
+  }, [wechatPromptAsync, syncData]);
+
+  /**
+   * Handle WeChat Sign In response
+   */
+  const handleWeChatSignInResponse = useCallback(async (response: AuthSession.AuthSessionResult): Promise<boolean> => {
+    try {
+      if (response.type === 'success' && response.params.code) {
+        const apiResponse = await apiClient.auth.wechatLogin({ code: response.params.code });
+
+        if (apiResponse.token) {
+          await storeAuthToken(apiResponse.token);
+
+          setAuthState({
+            isAuthenticated: true,
+            isLoading: false,
+            user: apiResponse.user,
+            error: null,
+          });
+
+          // Trigger data sync
+          syncData();
+
+          return true;
+        }
+      }
+
+      throw new Error('WeChat sign-in failed');
+    } catch (error) {
+      console.error('WeChat sign-in response error:', error);
+      setAuthState(prev => ({ ...prev, isLoading: false, error: 'WeChat sign-in failed' }));
+      return false;
+    }
+  }, [syncData]);
+
+  /**
    * Logout function
    */
   const logout = useCallback(async (): Promise<void> => {
@@ -392,6 +497,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     loginWithGoogle,
     loginWithApple,
+    loginWithWeChat,
     logout,
     updateUser,
     syncData,

@@ -1,18 +1,18 @@
 import React from "react";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Bell, DollarSign, Calendar, Users, List, Clock } from "lucide-react-native";
+import { ChevronLeftIcon, DollarSign, Calendar, Clock } from "lucide-react-native";
 import {
   Button,
+  H2,
   Text,
   XStack,
   YStack,
   Card,
   Switch,
   Circle,
-  Separator,
   ScrollView,
-  View,
+  Separator,
 } from "tamagui";
 
 import { useNotifications } from "@/providers/NotificationProvider";
@@ -22,75 +22,54 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { settings, updateSettings } = useNotifications();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
 
   const toggleNotification = (key: keyof typeof settings) => {
     updateSettings({ [key]: !settings[key] });
   };
 
   return (
-    <View flex={1}>
-      <YStack flex={1}>
-        {/* Custom Header matching bill details style */}
-        <XStack
-          paddingHorizontal="$4"
-          alignItems="center"
-          justifyContent="space-between"
-          backgroundColor="white"
-          borderBottomWidth={1}
-          borderBottomColor="$gray4"
-          paddingTop={insets.top}
-          paddingBottom="$3"
-        >
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <YStack flex={1} padding="$2" gap="$6">
+        <XStack alignItems="center">
           <Button
             size="$3"
             circular
+            borderRadius="$2"
             chromeless
             onPress={() => router.back()}
-          >
-            <ArrowLeft size={20} color="#64748B" />
-          </Button>
-          <Text fontSize="$4" fontWeight="$6">
-            {t("Notification Settings")}
-          </Text>
-          {/* Placeholder for right side spacing */}
-          <XStack width={32} />
+            icon={<ChevronLeftIcon size={20} />}
+            pressStyle={{
+              backgroundColor: "transparent",
+              opacity: 0.5,
+              borderColor: "transparent",
+            }}
+          />
         </XStack>
 
-        <ScrollView flex={1} contentContainerStyle={{ height: "100%", padding: 16, backgroundColor: "#eee" }}>
-          <YStack gap="$4">
-            <Card padding="$4" elevate>
-              <Text fontSize="$4" fontWeight="$7" marginBottom="$4">
-                {t("Global Switch")}
-              </Text>
+        <YStack flex={1} paddingHorizontal="$4" paddingTop="$4">
+          <YStack alignItems="center" gap="$2" marginTop="$4">
+            <H2>{t("Notification Settings")}</H2>
+            <Text color="$gray10" textAlign="center">
+              {t("Customize which notifications you want to receive")}
+            </Text>
+          </YStack>
 
-              <XStack alignItems="center" justifyContent="space-between" marginBottom="$4" paddingVertical="$2">
-                <XStack alignItems="center" gap="$3">
-                  <Circle size="$3" backgroundColor="$yellow4">
-                    <Bell size={20} color="#F59E0B" />
-                  </Circle>
-                  <Text fontSize="$4" fontWeight="$6" lineHeight={20}>{t("Push Notifications")}</Text>
-                </XStack>
-                <Switch
-                  size="$2"
-                  checked={settings.pushEnabled}
-                  onCheckedChange={() => toggleNotification('pushEnabled')}
-                ><Switch.Thumb animation="bouncy" /></Switch>
-              </XStack>
+          <ScrollView flex={1} contentContainerStyle={{ paddingVertical: 24 }}>
+            <Card backgroundColor="$gray1" borderRadius="$4" borderWidth={1} borderColor="$gray4">
 
-              <Separator marginVertical="$2" />
-
-              <Text fontSize="$4" fontWeight="$6" marginVertical="$4">
-                {t("Alert Types")}
-              </Text>
-
-              <YStack gap="$4">
-
+              <YStack>
                 {/* Log Reminders */}
-                <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
+                <XStack
+                  alignItems="center"
+                  justifyContent="space-between"
+                  padding="$4"
+                  onPress={() => settings.pushEnabled && toggleNotification('logReminders')}
+                  opacity={settings.pushEnabled ? 1 : 0.6}
+                  pressStyle={settings.pushEnabled ? { opacity: 0.8 } : {}}
+                >
                   <XStack alignItems="center" gap="$3">
                     <Circle size="$2.5" backgroundColor="$cyan4">
-                      <Clock size={16} color="#06B6D4" />
+                      <Clock size={24} color="#06B6D4" />
                     </Circle>
                     <Text>{t("Log Reminders")}</Text>
                   </XStack>
@@ -101,9 +80,17 @@ export default function NotificationsScreen() {
                     onCheckedChange={() => toggleNotification('logReminders')}
                   ><Switch.Thumb animation="bouncy" /></Switch>
                 </XStack>
+                <Separator />
 
                 {/* Budget Alerts */}
-                <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
+                <XStack
+                  alignItems="center"
+                  justifyContent="space-between"
+                  padding="$4"
+                  onPress={() => settings.pushEnabled && toggleNotification('budgetAlerts')}
+                  opacity={settings.pushEnabled ? 1 : 0.6}
+                  pressStyle={settings.pushEnabled ? { opacity: 0.8 } : {}}
+                >
                   <XStack alignItems="center" gap="$3">
                     <Circle size="$2.5" backgroundColor="$green4">
                       <DollarSign size={16} color="#10B981" />
@@ -117,9 +104,17 @@ export default function NotificationsScreen() {
                     onCheckedChange={() => toggleNotification('budgetAlerts')}
                   ><Switch.Thumb animation="bouncy" /></Switch>
                 </XStack>
+                <Separator />
 
-                {/* Weekly Reports (active) */}
-                <XStack alignItems="center" justifyContent="space-between" paddingVertical="$2.5">
+                {/* Weekly Reports */}
+                <XStack
+                  alignItems="center"
+                  justifyContent="space-between"
+                  padding="$4"
+                  onPress={() => settings.pushEnabled && toggleNotification('weeklyReports')}
+                  opacity={settings.pushEnabled ? 1 : 0.6}
+                  pressStyle={settings.pushEnabled ? { opacity: 0.8 } : {}}
+                >
                   <XStack alignItems="center" gap="$3">
                     <Circle size="$2.5" backgroundColor="$red4">
                       <Calendar size={16} color="#EF4444" />
@@ -133,11 +128,10 @@ export default function NotificationsScreen() {
                     onCheckedChange={() => toggleNotification('weeklyReports')}
                   ><Switch.Thumb animation="bouncy" /></Switch>
                 </XStack>
-
               </YStack>
             </Card>
 
-            <Card padding="$4" elevate backgroundColor="$blue2">
+            <Card padding="$4" backgroundColor="$blue2" marginTop="$5" >
               <Text color="$blue11" fontWeight="$6">
                 {t("Notification Delivery")}
               </Text>
@@ -145,9 +139,9 @@ export default function NotificationsScreen() {
                 {t("We'll only send you notifications during daytime hours (8:00 AM - 10:00 PM) based on your device's time zone.")}
               </Text>
             </Card>
-          </YStack>
-        </ScrollView>
+          </ScrollView>
+        </YStack>
       </YStack>
-    </View>
+    </SafeAreaView >
   );
 } 

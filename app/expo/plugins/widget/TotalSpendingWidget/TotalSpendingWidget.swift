@@ -112,6 +112,18 @@ extension Color {
     }
 }
 
+// MARK: - Localization Helper ---------------------------------------
+
+func localizedString(_ key: String, comment: String) -> String {
+    // 使用更可靠的方法获取Bundle
+    let bundle = Bundle.main
+    
+    // 先尝试获取本地化字符串
+    let localizedValue = NSLocalizedString(key, tableName: "Localizable", bundle: bundle, value: key, comment: comment)
+    
+    return localizedValue
+}
+
 // MARK: - Donut Chart View -------------------------------------------
 
 struct DonutChartView: View {
@@ -270,8 +282,8 @@ struct WeeklyTotalSpendingWidget: Widget {
             SpendingWidgetEntryView(entry: entry)
         }
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .configurationDisplayName("Weekly Spending")
-        .description("Shows your total spending for this week.")
+        .configurationDisplayName(localizedString("Weekly Spending Analytics", comment: "Weekly Spending widget title"))
+        .description(localizedString("Visualize your weekly spending categories and track your expenses", comment: "Visualize your weekly spending categories and track your expenses"))
     }
 }
 
@@ -284,8 +296,8 @@ struct MonthlyTotalSpendingWidget: Widget {
             SpendingWidgetEntryView(entry: entry)
         }
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .configurationDisplayName("Monthly Spending")
-        .description("Shows your total spending for this month.")
+        .configurationDisplayName(localizedString("Monthly Spending Insights", comment: "Monthly Spending widget title"))
+        .description(localizedString("Analyze your monthly spending patterns and category distribution", comment: "Analyze your monthly spending patterns and category distribution"))
     }
 }
 
@@ -298,8 +310,8 @@ struct YearlyTotalSpendingWidget: Widget {
             SpendingWidgetEntryView(entry: entry)
         }
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .configurationDisplayName("Yearly Spending")
-        .description("Shows your total spending for this year.")
+        .configurationDisplayName(localizedString("Annual Finance Review", comment: "Yearly Spending widget title"))
+        .description(localizedString("Monitor your annual spending trends across different categories", comment: "Monitor your annual spending trends across different categories"))
     }
 }
 

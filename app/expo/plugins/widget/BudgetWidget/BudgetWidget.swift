@@ -119,6 +119,18 @@ extension Color {
     }
 }
 
+// MARK: - Localization Helper ---------------------------------------
+
+func localizedString(_ key: String, comment: String) -> String {
+    // 使用更可靠的方法获取Bundle
+    let bundle = Bundle.main
+    
+    // 先尝试获取本地化字符串
+    let localizedValue = NSLocalizedString(key, tableName: "Localizable", bundle: bundle, value: key, comment: comment)
+    
+    return localizedValue
+}
+
 // MARK: - Donut Chart View -------------------------------------------
 
 struct BudgetDonutChartView: View {
@@ -256,8 +268,8 @@ struct WeeklyBudgetWidget: Widget {
             BudgetWidgetEntryView(entry: entry)
         }
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .configurationDisplayName("Weekly Budget")
-        .description("Shows your budget usage for this week.")
+        .configurationDisplayName(localizedString("Weekly Budget Tracker", comment: "Weekly Budget widget title"))
+        .description(localizedString("Track your weekly spending and remaining budget at a glance", comment: "Track your weekly spending and remaining budget at a glance"))
     }
 }
 
@@ -269,8 +281,8 @@ struct MonthlyBudgetWidget: Widget {
             BudgetWidgetEntryView(entry: entry)
         }
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .configurationDisplayName("Monthly Budget")
-        .description("Shows your budget usage for this month.")
+        .configurationDisplayName(localizedString("Monthly Budget Monitor", comment: "Monthly Budget widget title"))
+        .description(localizedString("Monitor your monthly spending pattern and budget status", comment: "Monitor your monthly spending pattern and budget status"))
     }
 }
 
@@ -282,8 +294,8 @@ struct YearlyBudgetWidget: Widget {
             BudgetWidgetEntryView(entry: entry)
         }
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .configurationDisplayName("Yearly Budget")
-        .description("Shows your budget usage for this year.")
+        .configurationDisplayName(localizedString("Annual Budget Overview", comment: "Yearly Budget widget title"))
+        .description(localizedString("View your annual budget progress and long-term financial health", comment: "View your annual budget progress and long-term financial health"))
     }
 }
 

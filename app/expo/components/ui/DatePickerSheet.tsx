@@ -16,6 +16,8 @@ export interface DatePickerSheetProps {
   /** 选择模式，默认为 "date" */
   mode?: "date" | "time" | "datetime";
   onlyContent?: boolean;
+  maximumDate?: Date;
+  minimumDate?: Date;
 }
 
 /**
@@ -34,6 +36,8 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
   title,
   mode = "date",
   onlyContent = false,
+  maximumDate,
+  minimumDate,
 }) => {
   const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
@@ -84,7 +88,8 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
           }
         }}
         style={{ alignSelf: "center" }}
-        maximumDate={new Date()}
+        maximumDate={maximumDate || new Date()}
+        minimumDate={minimumDate}
       />
     </YStack>
   );
