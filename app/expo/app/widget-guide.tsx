@@ -134,6 +134,19 @@ export default function WidgetGuideScreen() {
                                         "Swipe left or right to choose the widget type, then tap 'Add Widget'"
                                     )}
                                 </Text>
+
+                                <Image
+                                    source={require("@/assets/images/guide/widget-4.png")}
+                                    width="100%"
+                                    height={800}
+                                    borderRadius="$10"
+                                    overflow="hidden"
+                                    backgroundColor="$gray5"
+                                    objectFit="cover"
+                                    borderWidth="$2.5"
+                                    borderColor="$black"
+                                    marginTop="$2"
+                                />
                             </YStack>
 
                             <YStack gap="$2">
