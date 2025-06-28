@@ -11,7 +11,7 @@ export default function WidgetGuideScreen() {
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-            <YStack flex={1} paddingVertical="$2" gap="$6">
+            <YStack flex={1} paddingVertical="$2" gap="$2">
                 <XStack paddingHorizontal="$2" alignItems="center" gap="$2">
                     <Button
                         size="$3"
@@ -36,6 +36,7 @@ export default function WidgetGuideScreen() {
                         contentContainerStyle={{
                             paddingBottom: 100,
                             paddingHorizontal: 24,
+                            paddingTop: 10,
                         }}
                     >
                         {/* How to use guide */}
