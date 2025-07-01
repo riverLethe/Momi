@@ -15,6 +15,7 @@ import { DataProvider } from "@/providers/DataProvider";
 import { ChatProvider } from "@/providers/ChatProvider";
 import NotificationProvider from "@/providers/NotificationProvider";
 import I18nProvider from "@/providers/I18nProvider";
+import ThemeProvider, { useTheme } from "@/providers/ThemeProvider";
 
 // Import i18n instance to initialize it
 import "@/i18n";
@@ -36,6 +37,32 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   } as any),
 });
+
+// Add wrapper component to use theme inside TamaguiProvider
+function AppContent() {
+  const { actualTheme } = useTheme();
+
+  return (
+    <TamaguiProvider config={config} defaultTheme={actualTheme}>
+      <I18nProvider>
+        <AuthProvider>
+          <DataProvider>
+            <ChatProvider>
+              <NotificationProvider>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    animation: "slide_from_right",
+                  }}
+                />
+              </NotificationProvider>
+            </ChatProvider>
+          </DataProvider>
+        </AuthProvider>
+      </I18nProvider>
+    </TamaguiProvider>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -111,24 +138,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <TamaguiProvider config={config}>
-          <I18nProvider>
-            <AuthProvider>
-              <DataProvider>
-                <ChatProvider>
-                  <NotificationProvider>
-                    <Stack
-                      screenOptions={{
-                        headerShown: false,
-                        animation: "slide_from_right",
-                      }}
-                    />
-                  </NotificationProvider>
-                </ChatProvider>
-              </DataProvider>
-            </AuthProvider>
-          </I18nProvider>
-        </TamaguiProvider>
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

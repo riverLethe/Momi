@@ -1,8 +1,8 @@
-import { Bill } from "@/types/bills.types";
 import React, { useMemo } from "react";
-import { Card, YStack, Separator } from "tamagui";
-import { BillListItem } from "../bills/BillListItem";
+import { Card, Separator, YStack } from "tamagui";
+import { Bill } from "@/types/bills.types";
 import { useData } from "@/providers/DataProvider";
+import { BillListItem } from "@/components/bills/BillListItem";
 
 interface ExpenseListProps {
   bills: Bill[];
@@ -23,7 +23,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({ bills }) => {
       borderRadius="$4"
       overflow="hidden"
       elevation={0.5}
-      backgroundColor="white"
+      backgroundColor="$card"
     >
       <YStack paddingVertical="$2">
         {bills.map((bill, index) => {
@@ -33,7 +33,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({ bills }) => {
             <React.Fragment key={bill.id}>
               <BillListItem item={bill} disabled={isDeleted} />
               {index < bills.length - 1 && (
-                <Separator marginVertical="$2" borderColor="$gray3" />
+                <Separator marginVertical="$2" borderColor="$borderColor" />
               )}
             </React.Fragment>
           );

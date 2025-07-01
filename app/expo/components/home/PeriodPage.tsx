@@ -210,7 +210,7 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
 
     const mainContent = useMemo(() => {
         return (
-            <View style={{ flex: 1, backgroundColor: "#eee" }}>
+            <YStack flex={1} backgroundColor="$background">
                 <YStack flex={1}>
                     <ScrollView
                         style={{ flex: 1 }}
@@ -243,14 +243,12 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
 
                             <MemoizedRecentBillsList
                                 bills={bills}
-                                periodStart={currentSelector?.startDate}
-                                periodEnd={currentSelector?.endDate}
                                 maxItems={5}
                             />
                         </YStack>
                     </ScrollView>
                 </YStack>
-            </View>
+            </YStack>
         );
     }, [
         hasBills,

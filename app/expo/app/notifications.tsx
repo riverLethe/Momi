@@ -13,6 +13,7 @@ import {
   Circle,
   ScrollView,
   Separator,
+  useTheme,
 } from "tamagui";
 
 import { useNotifications } from "@/providers/NotificationProvider";
@@ -22,14 +23,15 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { settings, updateSettings } = useNotifications();
   const { t } = useTranslation();
+  const theme = useTheme();
 
   const toggleNotification = (key: keyof typeof settings) => {
     updateSettings({ [key]: !settings[key] });
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <YStack flex={1} padding="$2" gap="$6">
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <YStack flex={1} padding="$2" gap="$6" backgroundColor="$background">
         <XStack alignItems="center">
           <Button
             size="$3"
@@ -37,7 +39,7 @@ export default function NotificationsScreen() {
             borderRadius="$2"
             chromeless
             onPress={() => router.back()}
-            icon={<ChevronLeftIcon size={20} />}
+            icon={<ChevronLeftIcon size={20} color={theme.color?.get()} />}
             pressStyle={{
               backgroundColor: "transparent",
               opacity: 0.5,
@@ -48,14 +50,14 @@ export default function NotificationsScreen() {
 
         <YStack flex={1} paddingHorizontal="$4" paddingTop="$4">
           <YStack alignItems="center" gap="$2" marginTop="$4">
-            <H2>{t("Notification Settings")}</H2>
-            <Text color="$gray10" textAlign="center">
-              {t("Customize which notifications you want to receive")}
+            <H2 color="$color">{t("Notification Settings")}</H2>
+            <Text color="$color10" textAlign="center">
+              {t("Manage your notification preferences")}
             </Text>
           </YStack>
 
           <ScrollView flex={1} contentContainerStyle={{ paddingVertical: 24 }}>
-            <Card backgroundColor="$gray1" borderRadius="$4" borderWidth={1} borderColor="$gray4">
+            <Card backgroundColor="$card" borderRadius="$4" borderWidth={1} borderColor="$borderColor">
 
               <YStack>
                 {/* Log Reminders */}
@@ -71,14 +73,21 @@ export default function NotificationsScreen() {
                     <Circle size="$2.5" backgroundColor="$cyan4">
                       <Clock size={24} color="#06B6D4" />
                     </Circle>
-                    <Text>{t("Log Reminders")}</Text>
+                    <Text color="$color">{t("Log Reminders")}</Text>
                   </XStack>
                   <Switch
-                    size="$2"
+                    size="$3"
                     checked={settings.logReminders}
                     disabled={!settings.pushEnabled}
                     onCheckedChange={() => toggleNotification('logReminders')}
-                  ><Switch.Thumb animation="bouncy" /></Switch>
+                    backgroundColor={settings.logReminders ? "$blue9" : "$gray5"}
+                  >
+                    <Switch.Thumb
+                      animation="bouncy"
+                      backgroundColor="white"
+                      scale={settings.logReminders ? 0.9 : 0.8}
+                    />
+                  </Switch>
                 </XStack>
                 <Separator />
 
@@ -92,17 +101,24 @@ export default function NotificationsScreen() {
                   pressStyle={settings.pushEnabled ? { opacity: 0.8 } : {}}
                 >
                   <XStack alignItems="center" gap="$3">
-                    <Circle size="$2.5" backgroundColor="$green4">
-                      <DollarSign size={16} color="#10B981" />
+                    <Circle size="$2.5" backgroundColor="$yellow4">
+                      <DollarSign size={16} color="#F59E0B" />
                     </Circle>
-                    <Text>{t("Budget Alerts")}</Text>
+                    <Text color="$color">{t("Budget Alerts")}</Text>
                   </XStack>
                   <Switch
-                    size="$2"
+                    size="$3"
                     checked={settings.budgetAlerts}
                     disabled={!settings.pushEnabled}
                     onCheckedChange={() => toggleNotification('budgetAlerts')}
-                  ><Switch.Thumb animation="bouncy" /></Switch>
+                    backgroundColor={settings.budgetAlerts ? "$blue9" : "$gray5"}
+                  >
+                    <Switch.Thumb
+                      animation="bouncy"
+                      backgroundColor="white"
+                      scale={settings.budgetAlerts ? 0.9 : 0.8}
+                    />
+                  </Switch>
                 </XStack>
                 <Separator />
 
@@ -119,14 +135,21 @@ export default function NotificationsScreen() {
                     <Circle size="$2.5" backgroundColor="$red4">
                       <Calendar size={16} color="#EF4444" />
                     </Circle>
-                    <Text>{t("Weekly Reports")}</Text>
+                    <Text color="$color">{t("Weekly Reports")}</Text>
                   </XStack>
                   <Switch
-                    size="$2"
+                    size="$3"
                     checked={settings.weeklyReports}
                     disabled={!settings.pushEnabled}
                     onCheckedChange={() => toggleNotification('weeklyReports')}
-                  ><Switch.Thumb animation="bouncy" /></Switch>
+                    backgroundColor={settings.weeklyReports ? "$blue9" : "$gray5"}
+                  >
+                    <Switch.Thumb
+                      animation="bouncy"
+                      backgroundColor="white"
+                      scale={settings.weeklyReports ? 0.9 : 0.8}
+                    />
+                  </Switch>
                 </XStack>
               </YStack>
             </Card>

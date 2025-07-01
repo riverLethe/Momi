@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Platform, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
-import { YStack, XStack, Button, Text, Input, ScrollView } from "tamagui";
+import { YStack, XStack, Button, Text, Input, ScrollView, useTheme } from "tamagui";
 import {
   Calendar as CalendarIcon,
   Delete as DeleteIcon,
@@ -27,7 +27,8 @@ import {
 // Memoised category icon to avoid re-renders
 const CategoryIcon = React.memo(({ categoryId }: { categoryId: string }) => {
   const IconComponent = getCategoryIcon(categoryId);
-  return <IconComponent size={24} color="#333" />;
+  const theme = useTheme();
+  return <IconComponent size={24} color={theme.color?.get()} />;
 });
 
 // Category item extracted for render-level memoization
@@ -84,6 +85,7 @@ export default function AddBillScreen() {
   const { refreshData } = useData();
   const { user } = useAuth();
   const { viewMode, currentFamilySpace } = useViewStore();
+  const theme = useTheme();
 
   const [amount, setAmount] = useState("0");
   const [notes, setNotes] = useState("");
@@ -298,13 +300,13 @@ export default function AddBillScreen() {
             <Button f={1} onPress={() => handleKeypadPress("0")} size="$5">
               <Text fontSize="$6">0</Text>
             </Button>
-            <Button f={1} icon={<DeleteIcon size={24} color="#333" />} onPress={handleDeletePress} size="$5" />
+            <Button f={1} icon={<DeleteIcon size={24} color={theme.color?.get()} />} onPress={handleDeletePress} size="$5" />
           </XStack>
         </YStack>
         <YStack f={1} gap="$2">
-          <Button f={1} icon={<CalendarIcon size={24} color="#333" />} onPress={() => setShowDatePicker(true)} size="$5" />
-          <Button f={1} icon={<PlusIcon size={24} color="#333" />} onPress={() => handleOperatorPress("+")} size="$5" />
-          <Button f={1} icon={<MinusIcon size={24} color="#333" />} onPress={() => handleOperatorPress("-")} size="$5" />
+          <Button f={1} icon={<CalendarIcon size={24} color={theme.color?.get()} />} onPress={() => setShowDatePicker(true)} size="$5" />
+          <Button f={1} icon={<PlusIcon size={24} color={theme.color?.get()} />} onPress={() => handleOperatorPress("+")} size="$5" />
+          <Button f={1} icon={<MinusIcon size={24} color={theme.color?.get()} />} onPress={() => handleOperatorPress("-")} size="$5" />
           <Button f={1} theme="active" onPress={showEquals ? handleCalculate : handleSave} disabled={isSaving} size="$5" bg="$blue10">
             {showEquals ? <EqualIcon size={24} color="white" /> : <Text color="white" fontWeight="bold">{t("Done")}</Text>}
           </Button>
@@ -327,7 +329,7 @@ export default function AddBillScreen() {
         <YStack f={1}>
           {/* Header */}
           <XStack p="$3">
-            <Button chromeless icon={<ChevronLeftIcon size={24} color="#333" />} onPress={() => router.back()} />
+            <Button chromeless icon={<ChevronLeftIcon size={24} color={theme.color?.get()} />} onPress={() => router.back()} />
           </XStack>
 
           {/* Category selector */}
@@ -348,7 +350,7 @@ export default function AddBillScreen() {
           </ScrollView>
 
           {/* Amount & notes + keypad */}
-          <YStack p="$2" bg="white">
+          <YStack p="$2" bg="$card">
             <YStack p="$2" gap="$3">
               <Text fontSize={getFontSize(displayString)} fontWeight="bold" textAlign="right">
                 {displayString}
@@ -362,7 +364,7 @@ export default function AddBillScreen() {
                   size="$4"
                   bg="$gray5"
                 />
-                <Button icon={<CameraIcon size={24} color="#333" />} onPress={handleScanReceipt} />
+                <Button icon={<CameraIcon size={24} color={theme.color?.get()} />} onPress={handleScanReceipt} />
               </XStack>
             </YStack>
             {renderKeypad()}

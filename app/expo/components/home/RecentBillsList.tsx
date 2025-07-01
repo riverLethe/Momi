@@ -2,7 +2,6 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import {
-  ChevronRight,
   ReceiptText,
   MessageSquarePlus,
 } from "lucide-react-native";
@@ -15,6 +14,7 @@ import {
   AnimatePresence,
   Spinner,
   Separator,
+  useTheme,
 } from "tamagui";
 
 import { Bill } from "@/types/bills.types";
@@ -26,34 +26,21 @@ interface RecentBillsListProps {
   isLoading?: boolean;
   /** Maximum items to display */
   maxItems?: number;
-  /** Optional start date for filtering (inclusive) */
-  periodStart?: Date;
-  /** Optional end date for filtering (inclusive) */
-  periodEnd?: Date;
 }
 
 export const RecentBillsList: React.FC<RecentBillsListProps> = ({
   bills,
   isLoading = false,
   maxItems = 4,
-  periodStart,
-  periodEnd,
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
+  const theme = useTheme();
 
-  // Filter by period if provided, then sort by date (latest first), slice to maxItems
+  // Always sort by date (latest first) and slice to maxItems
   const displayBills = useMemo(() => {
-    let list = bills;
-
-    if (periodStart && periodEnd) {
-      list = list.filter((b) => {
-        const d = new Date(b.date);
-        return d >= periodStart && d <= periodEnd;
-      });
-    }
-
-    return [...list]
+    // Always take the most recent records by date
+    return [...bills]
       .sort((a, b) => {
         // Ensure we compare using timestamps to avoid potential type issues
         const timeA = new Date(a.date).getTime();
@@ -61,11 +48,11 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
         return timeB - timeA;
       })
       .slice(0, maxItems);
-  }, [bills, maxItems, periodStart, periodEnd]);
+  }, [bills, maxItems]);
 
   return (
     <Card
-      backgroundColor="white"
+      backgroundColor="$card"
       marginHorizontal="$3"
       paddingVertical="$3"
     >
@@ -76,8 +63,8 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
           paddingHorizontal="$3"
         >
           <XStack gap="$2" alignItems="center">
-            <ReceiptText size={24} color="#6366F1" />
-            <Text fontSize="$4" fontWeight="$8" color="$gray12">
+            <ReceiptText size={24} color={theme.blue9?.get()} />
+            <Text fontSize="$4" fontWeight="$8" color="$color">
               {t("Recent Bills")}
             </Text>
           </XStack>
@@ -93,7 +80,7 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
               gap="$2"
             >
               <Spinner size="large" color="$blue9" />
-              <Text color="$gray9">{t("Loading...")}</Text>
+              <Text color="$color9">{t("Loading...")}</Text>
             </YStack>
           ) : displayBills.length > 0 ? (
             <YStack gap="$2">
@@ -101,14 +88,14 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
                 <React.Fragment key={bill.id}>
                   <BillListItem item={bill} />
                   {index < displayBills.length - 1 && (
-                    <Separator marginVertical="$0" borderColor="$gray3" />
+                    <Separator marginVertical="$0" borderColor="$borderColor" />
                   )}
                 </React.Fragment>
               ))}
             </YStack>
           ) : (
             <YStack padding="$6" alignItems="center" justifyContent="center">
-              <Text color="$gray9" fontSize="$3" textAlign="center">
+              <Text color="$color9" fontSize="$3" textAlign="center">
                 {t("No recent bills")}
               </Text>
               <Button
@@ -125,7 +112,7 @@ export const RecentBillsList: React.FC<RecentBillsListProps> = ({
                 alignItems="center"
                 gap="$2"
               >
-                <MessageSquarePlus size={16} color="#3B82F6" />
+                <MessageSquarePlus size={16} color={theme.blue9?.get()} />
                 <Text color="$blue9" fontWeight="$6">
                   {t("Add Your First Bill")}
                 </Text>

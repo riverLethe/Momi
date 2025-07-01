@@ -284,8 +284,8 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
               minDate={minDate ? format(minDate, "yyyy-MM-dd") : undefined}
               maxDate={computedMaxDate ? format(computedMaxDate, "yyyy-MM-dd") : undefined}
               theme={{
-                backgroundColor: theme.background?.val,
-                calendarBackground: theme.background?.val,
+                backgroundColor: theme.card?.val,
+                calendarBackground: theme.card?.val,
                 textSectionTitleColor: theme.color11?.val,
                 selectedDayBackgroundColor: theme.blue9?.val,
                 selectedDayTextColor: "#ffffff",

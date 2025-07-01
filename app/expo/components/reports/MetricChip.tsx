@@ -1,5 +1,5 @@
 import React from "react";
-import { XStack, Text } from "tamagui";
+import { XStack, Text, useTheme } from "tamagui";
 
 interface MetricChipProps {
     label: string;
@@ -8,19 +8,21 @@ interface MetricChipProps {
 }
 
 const MetricChip: React.FC<MetricChipProps> = ({ label, value, warning }) => {
+    const theme = useTheme();
+
     return (
         <XStack
             paddingVertical="$1"
             paddingHorizontal="$2"
             borderRadius="$3"
-            backgroundColor={warning ? "#FEF3C7" : "#ECFDF5"}
+            backgroundColor={warning ? "$orange2" : "$green2"}
             alignItems="center"
             gap="$1"
         >
-            <Text fontSize="$2" color="$gray11">
+            <Text fontSize="$2" color="$color11">
                 {label}
             </Text>
-            <Text fontSize="$2" fontWeight="$7" color={warning ? "#D97706" : "#059669"}>
+            <Text fontSize="$2" fontWeight="$7" color={warning ? "$orange9" : "$green9"}>
                 {value}
             </Text>
         </XStack>

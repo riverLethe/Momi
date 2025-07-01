@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useMemo, useCallback } from "react";
 import { Dimensions, ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
-import { Card, XStack, Text, Button, View } from "tamagui";
+import { Card, XStack, Text, Button, View, useTheme } from "tamagui";
 import { ChartNoAxesCombinedIcon, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { LineChart } from "react-native-chart-kit";
 import { TrendData } from "@/types/reports.types";
@@ -17,6 +17,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
   averageSpending,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const scrollViewRef = useRef<ScrollView>(null);
 
   // 缓存屏幕宽度和图表配置
@@ -47,28 +48,28 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
 
   // 缓存图表配置
   const chartConfig = useMemo(() => ({
-    backgroundColor: "white",
-    backgroundGradientFrom: "white",
-    backgroundGradientTo: "white",
+    backgroundColor: theme.card?.get() || "white",
+    backgroundGradientFrom: theme.card?.get() || "white",
+    backgroundGradientTo: theme.card?.get() || "white",
     decimalPlaces: 0,
     color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+    labelColor: (opacity = 1) => theme.color8?.get() || `rgba(100, 116, 139, ${opacity})`,
     propsForDots: {
       r: "5",
       strokeWidth: "2",
-      stroke: "#fff",
+      stroke: theme.card?.get() || "#fff",
     },
     propsForBackgroundLines: {
       strokeDasharray: "",
       strokeWidth: 1,
-      stroke: "rgba(230, 235, 245, 1)",
+      stroke: theme.borderColor?.get() || "rgba(230, 235, 245, 1)",
     },
     formatYLabel: (value: string) => {
       const num = parseFloat(value);
       const rounded = Math.round(num * 100) / 100;
       return formatCurrency(rounded);
     },
-  }), []);
+  }), [theme]);
 
   // 防抖滚动到末尾
   const scrollToEndDebounced = useCallback(() => {
@@ -124,7 +125,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
       >
         <Text
           style={{
-            color: isHigherThanAvg ? "#EF4444" : "#10B981",
+            color: isHigherThanAvg ? theme.red9?.get() : theme.green9?.get(),
             fontWeight: "bold",
             fontSize: 10,
           }}
@@ -133,7 +134,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
         </Text>
       </View>
     );
-  }, [data, averageSpending]);
+  }, [data, averageSpending, theme]);
 
   // 缓存平均支出格式化
   const formattedAverageSpending = useMemo(() =>
@@ -143,7 +144,7 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
 
   return (
     <Card
-      backgroundColor="white"
+      backgroundColor="$card"
       marginHorizontal="$3"
       paddingVertical="$3"
       paddingHorizontal="$3"
@@ -159,8 +160,8 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
           alignItems="center"
         >
           <XStack gap="$2" alignItems="center">
-            <ChartNoAxesCombinedIcon size={24} color="#6366F1" />
-            <Text fontSize="$4" fontWeight="$8" color="$gray12">
+            <ChartNoAxesCombinedIcon size={24} color={theme.blue9?.get()} />
+            <Text fontSize="$4" fontWeight="$8" color="$color">
               {t("Expense Trends")}
             </Text>
           </XStack>
@@ -171,11 +172,11 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
               style={{
                 width: 10,
                 height: 2,
-                backgroundColor: "#3B82F6",
+                backgroundColor: theme.blue9?.get(),
                 borderRadius: 1,
               }}
             />
-            <Text fontSize="$2" color="$gray10">
+            <Text fontSize="$2" color="$color10">
               {t("Expenses")}
             </Text>
           </XStack>
@@ -185,12 +186,12 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
                 width: 10,
                 height: 0,
                 borderWidth: 0.5,
-                borderColor: "#3B82F6",
+                borderColor: theme.blue9?.get(),
                 borderStyle: "dashed",
                 borderRadius: 1,
               }}
             />
-            <Text fontSize="$2" color="$gray10">
+            <Text fontSize="$2" color="$color10">
               {t("Average")}: {formattedAverageSpending}
             </Text>
           </XStack>
@@ -201,10 +202,10 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
         <Button
           size="$2"
           circular
-          backgroundColor="$gray2"
+          backgroundColor="$backgroundSoft"
           onPress={scrollToStart}
         >
-          <ChevronLeft size={16} color="#64748B" />
+          <ChevronLeft size={16} color={theme.color8?.get()} />
         </Button>
         <ScrollView
           ref={scrollViewRef}
@@ -231,10 +232,10 @@ const ExpenseTrendChart: React.FC<ExpenseTrendChartProps> = ({
         <Button
           size="$2"
           circular
-          backgroundColor="$gray2"
+          backgroundColor="$backgroundSoft"
           onPress={scrollToEnd}
         >
-          <ChevronRight size={16} color="#64748B" />
+          <ChevronRight size={16} color={theme.color8?.get()} />
         </Button>
       </XStack>
     </Card>

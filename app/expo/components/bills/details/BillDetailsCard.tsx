@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { Pressable } from "react-native";
-import { Avatar, Button, Card, Input, Separator, Text, XStack, YStack } from "tamagui";
+import { Avatar, Button, Card, Input, Separator, Text, XStack, YStack, useTheme } from "tamagui";
 import { useTranslation } from "react-i18next";
 import { getCategoryById, getCategoryIcon } from "@/constants/categories";
 import { BillDetailsCardProps } from "./types";
@@ -27,6 +27,7 @@ export const BillDetailsCard: React.FC<BillDetailsCardProps> = React.memo(({
     locale
 }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
 
     // 编辑状态 - 使用懒初始化避免每次渲染时重新计算
     const [editingMerchant, setEditingMerchant] = useState(false);
@@ -116,11 +117,11 @@ export const BillDetailsCard: React.FC<BillDetailsCardProps> = React.memo(({
         , [category?.color]);
 
     return (
-        <Card backgroundColor="white" elevate>
+        <Card backgroundColor="$card" elevate>
             <YStack padding="$4" gap="$4">
                 {/* Category */}
                 <XStack justifyContent="space-between" alignItems="center">
-                    <Text color="$gray10" fontSize="$3">
+                    <Text color="$color10" fontSize="$3">
                         {t("Category")}
                     </Text>
                     <Button
@@ -139,7 +140,7 @@ export const BillDetailsCard: React.FC<BillDetailsCardProps> = React.memo(({
                             >
                                 <CategoryIcon size={14} color={iconColor} />
                             </Avatar>
-                            <Text fontSize="$3" fontWeight="$6">
+                            <Text fontSize="$3" fontWeight="$6" color="$color">
                                 {categoryName}
                             </Text>
                         </XStack>

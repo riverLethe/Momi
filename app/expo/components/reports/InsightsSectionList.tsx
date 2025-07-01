@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { YStack, XStack, Text, Separator, Circle, Card } from "tamagui";
+import { YStack, XStack, Text, Separator, Circle, Card, useTheme } from "tamagui";
 import { SectionList } from "react-native";
 import {
     TrendingDown,
@@ -19,18 +19,19 @@ interface InsightsSectionListProps {
 
 type ThemeKey = NonNullable<Insight["theme"]>;
 
-const themeMeta: Record<ThemeKey, { title: string; icon: JSX.Element }> = {
-    overspend: { title: "Overspending", icon: <TrendingDown size={16} color="#EF4444" /> },
-    underutilised_budget: { title: "Budget Not Used", icon: <PieChart size={16} color="#64748B" /> },
-    volatility: { title: "Spending Volatility", icon: <AlertTriangle size={16} color="#F59E0B" /> },
-    momentum: { title: "Category Momentum", icon: <RefreshCcw size={16} color="#3B82F6" /> },
-    savings_opportunity: { title: "Savings Opportunity", icon: <TrendingUp size={16} color="#10B981" /> },
-    recurring_risk: { title: "Recurring Risk", icon: <SkipForward size={16} color="#EF4444" /> },
-    cashflow: { title: "Cashflow", icon: <DollarSign size={16} color="#3B82F6" /> },
-};
-
 const InsightsSectionList: React.FC<InsightsSectionListProps> = ({ insights }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
+
+    const themeMeta: Record<ThemeKey, { title: string; icon: JSX.Element }> = {
+        overspend: { title: "Overspending", icon: <TrendingDown size={16} color={theme.red9?.get()} /> },
+        underutilised_budget: { title: "Budget Not Used", icon: <PieChart size={16} color={theme.color8?.get()} /> },
+        volatility: { title: "Spending Volatility", icon: <AlertTriangle size={16} color={theme.orange9?.get()} /> },
+        momentum: { title: "Category Momentum", icon: <RefreshCcw size={16} color={theme.blue9?.get()} /> },
+        savings_opportunity: { title: "Savings Opportunity", icon: <TrendingUp size={16} color={theme.green9?.get()} /> },
+        recurring_risk: { title: "Recurring Risk", icon: <SkipForward size={16} color={theme.red9?.get()} /> },
+        cashflow: { title: "Cashflow", icon: <DollarSign size={16} color={theme.blue9?.get()} /> },
+    };
 
     // group by theme
     const group: Record<string, Insight[]> = {};
@@ -49,14 +50,14 @@ const InsightsSectionList: React.FC<InsightsSectionListProps> = ({ insights }) =
 
     const renderItem = ({ item }: { item: Insight }) => (
         <XStack gap="$3" alignItems="flex-start" paddingVertical="$2">
-            <Circle size="$3" backgroundColor="#F1F5F9">
-                {themeMeta[item.theme as ThemeKey]?.icon || <DollarSign size={16} color="#64748B" />}
+            <Circle size="$3" backgroundColor="$backgroundSoft">
+                {themeMeta[item.theme as ThemeKey]?.icon || <DollarSign size={16} color={theme.color8?.get()} />}
             </Circle>
             <YStack flex={1} gap="$1">
-                <Text fontSize="$3" fontWeight="$6">
+                <Text fontSize="$3" fontWeight="$6" color="$color">
                     {t(item.title)}
                 </Text>
-                <Text fontSize="$2" color="$gray10">
+                <Text fontSize="$2" color="$color10">
                     {t(item.description)}
                 </Text>
                 {item.recommendedAction && (
@@ -72,7 +73,7 @@ const InsightsSectionList: React.FC<InsightsSectionListProps> = ({ insights }) =
         <YStack paddingVertical="$2">
             <XStack gap="$2" alignItems="center">
                 {themeMeta[section.key]?.icon}
-                <Text fontWeight="$7" fontSize="$3" color="$gray12">
+                <Text fontWeight="$7" fontSize="$3" color="$color">
                     {t(themeMeta[section.key]?.title)}
                 </Text>
             </XStack>
@@ -83,10 +84,10 @@ const InsightsSectionList: React.FC<InsightsSectionListProps> = ({ insights }) =
         <Card
             padding="$2"
             borderRadius="$4"
-            backgroundColor="white"
+            backgroundColor="$card"
             marginBottom="$4"
         >
-            <Text fontSize="$3" fontWeight="$7" color="$gray12">
+            <Text fontSize="$3" fontWeight="$7" color="$color">
                 {t("Financial Insights")}
             </Text>
 

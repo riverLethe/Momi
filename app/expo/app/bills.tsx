@@ -6,6 +6,7 @@ import { Button, XStack, YStack } from "tamagui";
 import { useTranslation } from "react-i18next";
 import { router, useLocalSearchParams } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
+import { useTheme } from "tamagui";
 
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
@@ -85,6 +86,8 @@ export default function BillsScreen() {
     }
     return null;
   });
+
+  const theme = useTheme();
 
   // 后台同步远程数据，不阻塞UI
   useEffect(() => {
@@ -308,15 +311,15 @@ export default function BillsScreen() {
   const showLoading = bills.length === 0 && (dataLoading.bills || syncingRemote);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <YStack flex={1}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <YStack flex={1} backgroundColor="$background">
         {
           /* When there is no data yet, show loading or empty state */
           bills.length === 0 ? (
             showLoading ? (
               <YStack flex={1} justifyContent="center" alignItems="center">
-                <ActivityIndicator size="small" color="#3B82F6" />
-                <Text marginTop="$2" color="$gray10" fontSize="$3">
+                <ActivityIndicator size="small" color={theme.blue9?.get()} />
+                <Text marginTop="$2" color="$color10" fontSize="$3">
                   {t("Loading bills...")}
                 </Text>
               </YStack>
@@ -338,7 +341,7 @@ export default function BillsScreen() {
                   circular borderRadius="$2"
                   chromeless
                   onPress={() => router.back()}
-                  icon={<ChevronLeft size={20} />}
+                  icon={<ChevronLeft size={20} color={theme.color?.get()} />}
                   pressStyle={{
                     backgroundColor: "transparent",
                     opacity: 0.5,
@@ -361,14 +364,14 @@ export default function BillsScreen() {
                       alignSelf="flex-start"
                       marginLeft={16}
                       marginBottom={4}
-                      backgroundColor="#DCF2FF"
+                      backgroundColor="$blue2"
                       paddingVertical="$1"
                       paddingHorizontal="$2"
                       borderRadius="$2"
                       alignItems="center"
                       gap="$1"
                     >
-                      <Text fontSize="$3" color="#0070f3">
+                      <Text fontSize="$3" color="$blue9">
                         {t("AI Filter")}
                       </Text>
                     </XStack>
@@ -380,7 +383,7 @@ export default function BillsScreen() {
               {
                 (categoryFilter.length > 0 || aiFilterActive || (startDate || endDate)) && filteredBills.length === 0 && (
                   <YStack flex={1} alignItems="center" justifyContent="center" padding={16}>
-                    <Text fontSize="$6" fontWeight="bold" textAlign="center" mb="$2">
+                    <Text fontSize="$6" fontWeight="bold" textAlign="center" mb="$2" color="$color">
                       {t("No Bills Found")}
                     </Text>
                   </YStack>
@@ -410,10 +413,6 @@ export default function BillsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-  },
   listContainer: {
     paddingVertical: 4,
   },

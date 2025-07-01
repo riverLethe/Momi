@@ -1,6 +1,6 @@
 import React from "react";
 import { Image } from "react-native";
-import { XStack, Text, View, Button } from "tamagui";
+import { XStack, Text, View, Button, useTheme } from "tamagui";
 import { BrushCleaningIcon, PlusIcon } from "lucide-react-native";
 
 interface ChatHeaderProps {
@@ -13,6 +13,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onAddExpense,
   onClearChat,
 }) => {
+  const theme = useTheme();
+
   return (
     <XStack
       alignItems="center"
@@ -20,8 +22,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       paddingHorizontal="$4"
       paddingVertical="$3"
       borderBottomWidth={1}
-      borderBottomColor="$gray4"
-      backgroundColor="$white"
+      borderBottomColor="$borderColor"
+      backgroundColor="$background"
     >
       <XStack alignItems="center" justifyContent="center">
         <View
@@ -36,17 +38,17 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             style={{ width: "100%", height: "100%" }}
           />
         </View>
-        <Text fontSize={18} fontWeight="600" color="$gray800">
+        <Text fontSize={18} fontWeight="600" color="$color">
           MomiQ
         </Text>
       </XStack>
       <XStack alignItems="flex-end" gap="$2">
         <Button size="$3" onPress={onAddExpense} circular borderRadius="$2">
-          <PlusIcon size={22} color="#3B82F6" />
+          <PlusIcon size={22} color={theme.blue9?.get()} />
         </Button>
         {onClearChat && (
           <Button size="$3" onPress={onClearChat} circular borderRadius="$2">
-            <BrushCleaningIcon size={22} color="#EF4444" />
+            <BrushCleaningIcon size={22} color={theme.red9?.get()} />
           </Button>
         )}
       </XStack>

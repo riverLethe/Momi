@@ -5,7 +5,7 @@ import { UserPreferences, User } from "@/types/user.types";
 const DEFAULT_USER_PREFERENCES: UserPreferences = {
   currency: "USD",
   language: "en",
-  theme: "light",
+  theme: "system",
   notificationsEnabled: true,
   defaultAccount: "main",
 };

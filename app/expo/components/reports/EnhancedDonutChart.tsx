@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Dimensions, TouchableOpacity } from "react-native";
 import { useTranslation } from "react-i18next";
-import { View, Text, Card, Button, XStack, YStack } from "tamagui";
+import { View, Text, Card, Button, XStack, YStack, useTheme } from "tamagui";
 import { ArrowDownRight, ArrowUpRight, DollarSignIcon } from "lucide-react-native";
 import Svg, { Circle as SvgCircle, Path } from "react-native-svg";
 import { CategoryData } from "@/types/reports.types";
@@ -18,6 +18,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
   onCategoryPress,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [showAllCategories, setShowAllCategories] = useState(false);
   const totalValue = data.reduce((sum, item) => sum + item.value, 0);
   const screenWidth = Dimensions.get("window").width;
@@ -96,13 +97,13 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
 
   return (
     <Card
-      backgroundColor="white"
+      backgroundColor="$card"
       marginHorizontal="$3"
       paddingVertical="$3"
     >
       <XStack gap="$2" alignItems="center" paddingHorizontal="$3">
-        <DollarSignIcon size={24} color="#6366F1" />
-        <Text fontSize="$4" fontWeight="$8" color="$gray12">
+        <DollarSignIcon size={24} color={theme.blue9?.get()} />
+        <Text fontSize="$4" fontWeight="$8" color="$color">
           {t("Total Expenses")}
         </Text>
       </XStack>
@@ -114,7 +115,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
               cy={center}
               r={radius}
               fill="transparent"
-              stroke="#f1f5f9"
+              stroke={theme.borderColor?.get() || "#f1f5f9"}
               strokeWidth={strokeWidth}
             />
             {segments.map((segment, i) => (
@@ -124,7 +125,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
               cx={center}
               cy={center}
               r={radius - strokeWidth}
-              fill="white"
+              fill={theme.card?.get() || "white"}
             />
           </Svg>
           <View
@@ -138,10 +139,10 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
               alignItems: "center",
             }}
           >
-            <Text fontWeight="$8" fontSize="$6">
+            <Text fontWeight="$8" fontSize="$6" color="$color">
               {formatCurrency(totalValue)}
             </Text>
-            <Text color="$gray10" fontSize="$2" marginTop="$1">
+            <Text color="$color10" fontSize="$2" marginTop="$1">
               {t("Total Expenses")}
             </Text>
           </View>
@@ -174,7 +175,7 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
                         backgroundColor: item.color,
                       }}
                     />
-                    <Text fontWeight="$5" fontSize="$3">
+                    <Text fontWeight="$5" fontSize="$3" color="$color">
                       {t(item.label)}
                     </Text>
 
@@ -182,20 +183,20 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
                       <XStack gap="$1" alignItems="center">
                         {isIncrease ? (
                           <>
-                            <ArrowUpRight size={10} color="#EF4444" />
-                            <Text fontSize="$2" color="#EF4444">
+                            <ArrowUpRight size={10} color={theme.red9?.get()} />
+                            <Text fontSize="$2" color={theme.red9?.get()}>
                               {yearOverYearChange}%
                             </Text>
                           </>
                         ) : isDecrease ? (
                           <>
-                            <ArrowDownRight size={10} color="#10B981" />
-                            <Text fontSize="$2" color="#10B981">
+                            <ArrowDownRight size={10} color={theme.green9?.get()} />
+                            <Text fontSize="$2" color={theme.green9?.get()}>
                               {Math.abs(yearOverYearChange)}%
                             </Text>
                           </>
                         ) : (
-                          <Text fontSize="$2" color="$gray10">
+                          <Text fontSize="$2" color="$color10">
                             -
                           </Text>
                         )}
@@ -203,10 +204,10 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
                     )}
                   </XStack>
                   <XStack alignItems="baseline" gap="$1">
-                    <Text fontWeight="$7" fontSize="$3">
+                    <Text fontWeight="$7" fontSize="$3" color="$color">
                       {formatCurrency(item.value)}
                     </Text>
-                    <Text color="$gray10" fontSize="$2">
+                    <Text color="$color10" fontSize="$2">
                       ({((item.value / totalValue) * 100).toFixed(1)}%)
                     </Text>
                   </XStack>

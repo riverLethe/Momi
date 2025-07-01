@@ -13,6 +13,7 @@ import {
   Wifi,
   WifiOff,
   Clock,
+  PieChart,
 } from "lucide-react-native";
 import {
   Text,
@@ -23,6 +24,7 @@ import {
   Separator,
   Spinner,
   View,
+  useTheme,
 } from "tamagui";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -42,6 +44,7 @@ export default function ProfileScreen() {
     getSyncStatusColor
   } = useDataSync();
   const { t } = useTranslation();
+  const theme = useTheme();
 
   const handleFamilySpacePress = () => {
     if (!isAuthenticated) {
@@ -66,7 +69,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View flex={1} backgroundColor="#eee">
+    <View flex={1} backgroundColor="$background">
       <YStack flex={1}>
         {/* Header */}
         <ProfileHeader
@@ -154,19 +157,17 @@ export default function ProfileScreen() {
             />
           </ProfileSection> */}
 
-
           {/* Settings Section */}
-          <ProfileSection title={t("Settings")}>
+          <ProfileSection title={t('Settings')}>
             <ProfileRow
               icon={
                 <Circle size="$3" backgroundColor="$gray4">
-                  <Settings size={22} color="#6B7280" />
+                  <Settings size={20} color={theme.color8?.get()} />
                 </Circle>
               }
-              label={t("App Settings")}
-              onPress={() => router.push("/settings")}
+              label={t('App Settings')}
+              onPress={() => router.push('/settings')}
             />
-
 
             <ProfileRow
               icon={

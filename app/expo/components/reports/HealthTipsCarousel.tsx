@@ -1,6 +1,6 @@
 import React from "react";
 import { FlatList, View } from "react-native";
-import { XStack, Text } from "tamagui";
+import { XStack, Text, useTheme } from "tamagui";
 
 interface Tip {
     metric: string;
@@ -12,6 +12,8 @@ interface Props {
 }
 
 const HealthTipsCarousel: React.FC<Props> = ({ tips }) => {
+    const theme = useTheme();
+
     if (!tips || tips.length === 0) return null;
 
     return (
@@ -25,14 +27,14 @@ const HealthTipsCarousel: React.FC<Props> = ({ tips }) => {
                     marginRight={12}
                     paddingVertical="$2"
                     paddingHorizontal="$3"
-                    backgroundColor="#EFF6FF"
+                    backgroundColor="$backgroundSoft"
                     borderRadius="$4"
                     maxWidth={260}
                 >
-                    <Text fontWeight="$7" marginRight="$1">
+                    <Text fontWeight="$7" marginRight="$1" color="$color">
                         {item.metric}:
                     </Text>
-                    <Text flexShrink={1}>{item.advice}</Text>
+                    <Text flexShrink={1} color="$color">{item.advice}</Text>
                 </XStack>
             )}
         />

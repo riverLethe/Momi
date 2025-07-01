@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Platform } from "react-native";
-import { Sheet, YStack, XStack, Button, Paragraph } from "tamagui";
+import { Sheet, YStack, XStack, Button, Paragraph, useTheme } from "tamagui";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useTranslation } from "react-i18next";
 
@@ -41,7 +41,7 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
 }) => {
   const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
-
+  const theme = useTheme();
   /**
    * 当弹窗打开时，同步初始日期
    */
@@ -90,6 +90,7 @@ const DatePickerSheet: React.FC<DatePickerSheetProps> = ({
         style={{ alignSelf: "center" }}
         maximumDate={maximumDate || new Date()}
         minimumDate={minimumDate}
+        textColor={theme.color?.val}
       />
     </YStack>
   );

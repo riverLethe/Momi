@@ -1,7 +1,7 @@
 import { Bill } from "@/types/bills.types";
 import { Calendar } from "lucide-react-native";
 import React, { useState } from "react";
-import { Card, Text, XStack, YStack, Separator } from "tamagui";
+import { Card, Text, XStack, YStack, Separator, useTheme } from "tamagui";
 import { BillListItem } from "./BillListItem";
 import { useTranslation } from "react-i18next";
 import { formatCurrency } from "@/utils/format";
@@ -53,6 +53,7 @@ const BillDateGroupComponent: React.FC<BillDateGroupProps> = ({
   setOpenBillId,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [collapsed, setCollapsed] = useState(false);
 
   const toggleCollapsed = () => {
@@ -65,23 +66,23 @@ const BillDateGroupComponent: React.FC<BillDateGroupProps> = ({
       borderRadius="$0"
       overflow="hidden"
       elevation={0.5}
-      backgroundColor="white"
+      backgroundColor="$card"
     >
       <XStack
         justifyContent="space-between"
         paddingHorizontal="$4"
         paddingVertical="$2"
         alignItems="center"
-        backgroundColor="$gray2"
+        backgroundColor="$card"
         onPress={toggleCollapsed}
       >
         <XStack alignItems="center" gap="$2">
-          <Calendar size={12} color="#777777" />
-          <Text fontSize={12} color="$gray10" fontWeight="600">
+          <Calendar size={12} color={theme.color8?.get()} />
+          <Text fontSize={12} color="$color10" fontWeight="600">
             {formatDate(item.date, t)}
           </Text>
         </XStack>
-        <Text fontSize={12} color="$gray10">
+        <Text fontSize={12} color="$color10">
           -{formatCurrency(item.totalAmount)}
         </Text>
       </XStack>
@@ -108,7 +109,7 @@ const BillDateGroupComponent: React.FC<BillDateGroupProps> = ({
                   }}
                 />
                 {index < item.bills.length - 1 && (
-                  <Separator marginVertical="$0" borderColor="$gray3" />
+                  <Separator marginVertical="$0" borderColor="$borderColor" />
                 )}
               </React.Fragment>
             ))}

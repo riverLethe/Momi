@@ -1,7 +1,7 @@
 import React from "react";
-import { XStack, YStack, Text, Circle } from "tamagui";
-import { Image as ImageIcon, Camera, File } from "lucide-react-native";
 import { Pressable } from "react-native";
+import { XStack, YStack, Text, useTheme } from "tamagui";
+import { ImageIcon, Camera, File } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 interface MoreOptionsProps {
@@ -19,11 +19,13 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
   onFileUpload,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
+
   return (
     <XStack
-      backgroundColor="$white"
+      backgroundColor="$background"
       borderTopWidth={1}
-      borderTopColor="$gray4"
+      borderTopColor="$borderColor"
       paddingVertical="$4"
       paddingHorizontal="$6"
       justifyContent="space-around"
@@ -32,17 +34,17 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
         <Pressable onPress={onPickImage}>
           <YStack
             alignItems="center"
-            backgroundColor="$gray4"
+            backgroundColor="$card"
             borderRadius="$2"
             width="$6"
             height="$6"
             justifyContent="center"
           >
-            <ImageIcon size={24} color="#4B5563" />
+            <ImageIcon size={24} color={theme.color?.get()} />
             <Text
               marginTop="$2"
               fontSize={12}
-              color="$gray600"
+              color="$color10"
               textAlign="center"
             >
               {t("Gallery")}
@@ -55,17 +57,17 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
         <Pressable onPress={onTakePhoto}>
           <YStack
             alignItems="center"
-            backgroundColor="$gray4"
+            backgroundColor="$card"
             borderRadius="$2"
             width="$6"
             height="$6"
             justifyContent="center"
           >
-            <Camera size={24} color="#4B5563" />
+            <Camera size={24} color={theme.color?.get()} />
             <Text
               marginTop="$2"
               fontSize={12}
-              color="$gray600"
+              color="$color10"
               textAlign="center"
             >
               {t("Camera")}
@@ -78,17 +80,17 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
         <Pressable onPress={onFileUpload}>
           <YStack
             alignItems="center"
-            backgroundColor="$gray4"
+            backgroundColor="$card"
             borderRadius="$2"
             width="$6"
             height="$6"
             justifyContent="center"
           >
-            <File size={24} color="#4B5563" />
+            <File size={24} color={theme.color?.get()} />
             <Text
               marginTop="$2"
               fontSize={12}
-              color="$gray600"
+              color="$color10"
               textAlign="center"
             >
               {t("File")}

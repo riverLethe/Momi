@@ -2,9 +2,6 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Card, XStack, YStack, Text, Circle } from "tamagui";
 import {
-  TrendingUp,
-  AlertTriangle,
-  TrendingDown,
   Info,
   SirenIcon,
   ThumbsUpIcon,
@@ -44,7 +41,7 @@ const FinancialInsights: React.FC<FinancialInsightsProps> = ({ insights }) => {
       borderRadius="$4"
       overflow="hidden"
       elevation={0.5}
-      backgroundColor="white"
+      backgroundColor="$card"
       padding="$2"
       width="100%"
     >

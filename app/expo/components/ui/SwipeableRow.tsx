@@ -14,6 +14,7 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { Trash2 } from "lucide-react-native";
+import { useTheme } from "tamagui";
 
 interface SwipeableRowProps {
   children: ReactNode;
@@ -48,6 +49,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   onSwipeClose,
   onSwipeStart,
 }) => {
+  const theme = useTheme();
   const translateX = useSharedValue(0);
   const threshold = rightActionWidth;
   const startX = useSharedValue(0);
@@ -132,7 +134,11 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     <View style={styles.container}>
       {/* Right delete action */}
       {!!onDelete && (
-        <Animated.View style={[styles.rightAction, rightActionAnimatedStyle]}>
+        <Animated.View style={[
+          styles.rightAction,
+          rightActionAnimatedStyle,
+          { backgroundColor: theme.red9?.get() }
+        ]}>
           <RectButton
             enabled={!disabled}
             style={
@@ -168,7 +174,6 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: "#EF4444", // Tailwind red-500
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",

@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams, Stack, useFocusEffect } from "expo-router";
-import { Text, Button, YStack } from "tamagui";
+import { Text, Button, YStack, useTheme } from "tamagui";
 import { useTranslation } from "react-i18next";
 
 import { Bill } from "@/types/bills.types";
@@ -41,6 +41,7 @@ export default function BillDetailsScreen() {
   const { id } = params;
   const { t } = useTranslation();
   const { locale } = useLocale();
+  const theme = useTheme();
 
   // 状态管理
   const [activeSheet, setActiveSheet] = useState<
@@ -233,11 +234,11 @@ export default function BillDetailsScreen() {
   if (loading) {
     return (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <Stack.Screen options={{ headerShown: false }} />
-          <YStack flex={1} justifyContent="center" alignItems="center">
-            <ActivityIndicator size="small" color="#3B82F6" />
-            <Text marginTop="$3" color="$gray10" fontSize="$3">
+          <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="$background">
+            <ActivityIndicator size="small" color={theme.blue9?.get()} />
+            <Text marginTop="$3" color="$color10" fontSize="$3">
               {t("Loading bill information...")}
             </Text>
           </YStack>
@@ -249,15 +250,15 @@ export default function BillDetailsScreen() {
   if (!bill) {
     return (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-          <Stack.Screen options={{ headerShown: false }} />
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <YStack
             flex={1}
             justifyContent="center"
             alignItems="center"
             padding="$4"
+            backgroundColor="$background"
           >
-            <Text fontSize="$5" fontWeight="$6" textAlign="center">
+            <Text fontSize="$5" fontWeight="$6" textAlign="center" color="$color">
               {t("Bill does not exist or has been deleted")}
             </Text>
             <Button marginTop="$4" onPress={() => router.back()}>
@@ -271,10 +272,8 @@ export default function BillDetailsScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
-        <Stack.Screen options={{ headerShown: false }} />
-
-        <YStack flex={1}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <YStack flex={1} backgroundColor="$background">
           {/* 标题栏 */}
           <BillDetailHeader
             onBack={() => router.back()}

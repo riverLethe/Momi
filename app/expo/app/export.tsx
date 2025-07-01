@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeftIcon } from "lucide-react-native";
-import { Button, H2, Text, XStack, YStack, View } from "tamagui";
+import { Button, H2, Text, XStack, YStack, View, useTheme } from "tamagui";
 import { exportBillsAsCsv } from "@/utils/export.utils";
 import { getBills } from "@/utils/bills.utils";
 import { Alert, StyleSheet, Platform } from "react-native";
@@ -13,6 +13,7 @@ import DatePickerSheet from "@/components/ui/DatePickerSheet";
 export default function ExportDataScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
 
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(1))); // First day of current month
   const [endDate, setEndDate] = useState<Date>(new Date());
@@ -96,14 +97,14 @@ export default function ExportDataScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <YStack flex={1} padding="$2" gap="$6">
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <YStack flex={1} padding="$2" gap="$6" backgroundColor="$background">
         <XStack alignItems="center">
           <Button size="$3"
             circular borderRadius="$2"
             chromeless
             onPress={() => router.back()}
-            icon={<ChevronLeftIcon size={20} />}
+            icon={<ChevronLeftIcon size={20} color={theme.color?.get()} />}
             pressStyle={{
               backgroundColor: "transparent",
               opacity: 0.5,
@@ -113,10 +114,9 @@ export default function ExportDataScreen() {
         </XStack>
         <YStack flex={1} paddingHorizontal="$4" paddingTop="$4">
 
-
           <YStack alignItems="center" gap="$2" marginTop="$4">
-            <H2>{t("Export Data")}</H2>
-            <Text color="$gray10" textAlign="center">
+            <H2 color="$color">{t("Export Data")}</H2>
+            <Text color="$color10" textAlign="center">
               {t("Select a date range to export your financial data")}
             </Text>
           </YStack>

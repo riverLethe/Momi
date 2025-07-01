@@ -535,5 +535,11 @@ export default {
     Compatibility: "兼容性",
     "Widgets are only supported on iOS 14 and above":
       "小组件仅支持iOS 14及以上版本",
+
+    // Theme settings
+    Theme: "主题",
+    Light: "浅色",
+    Dark: "深色",
+    "Select theme": "选择主题",
   },
 };

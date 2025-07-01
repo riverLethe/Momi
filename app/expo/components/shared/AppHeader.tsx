@@ -77,7 +77,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <Button
               size="$2"
               circular
-              backgroundColor="$backgroundHover"
+              backgroundColor="$card"
               pressStyle={{ scale: 0.92 }}
               onPress={onAddPress || (() => router.push('/bills/add'))}
             >
@@ -102,7 +102,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             size="$2" 
             circular 
             pressStyle={{ scale: 0.92 }} 
-            backgroundColor="$backgroundHover" 
+            backgroundColor="$card" 
             onPress={() => {}}
           >
             <Bell size={18} color={theme?.color?.get()} />
@@ -123,7 +123,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             size="$3"
             borderRadius="$4"
             paddingLeft="$9"
-            backgroundColor="$backgroundHover"
+            backgroundColor="$card"
             value={searchText}
             onChangeText={onSearchChange}
           />

@@ -3,12 +3,13 @@ import {
   Pressable,
   GestureResponderEvent,
 } from "react-native";
-import { XStack, YStack, Text, View, Input } from "tamagui";
+import { XStack, YStack, Text, View, Input, Button, useTheme } from "tamagui";
 import {
   Camera,
   Plus,
   Mic,
-  Send
+  Send,
+  PaperclipIcon
 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { MoreOptions } from "./MoreOptions";
@@ -51,6 +52,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onRemoveAttachment,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [isCancelZone, setIsCancelZone] = useState(false);
 
@@ -106,17 +108,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setShowMoreOptions(false);
   };
 
-  const handlePickImage = () => {
+  const handlePickImageInternal = () => {
     hideMoreOptions();
     onPickImage();
   };
 
-  const handleTakePhoto = () => {
+  const handleTakePhotoInternal = () => {
     hideMoreOptions();
     onTakePhoto();
   };
 
-  const handleFileUpload = () => {
+  const handleFileUploadInternal = () => {
     hideMoreOptions();
     onFileUpload();
   };
@@ -126,170 +128,172 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <YStack>
-      {/* Attachment preview */}
-      <AttachmentPreview
-        attachments={attachments}
-        onRemove={onRemoveAttachment}
-      />
-      <View
-        borderTopWidth={1}
-        borderTopColor="$gray4"
-        backgroundColor="$white"
-        paddingHorizontal="$3"
-        paddingVertical="$2"
-      >
-        <XStack alignItems="center" paddingVertical="$1">
-          {!isTextMode && !isRecording && (
-            <Pressable onPress={onImageUpload}>
-              <View
-                width={40}
-                height={40}
-                borderRadius="$2"
-                justifyContent="center"
-                alignItems="center"
-                backgroundColor="$gray4"
-              >
-                <Camera size={22} color="#4B5563" />
-              </View>
-            </Pressable>
-          )}
-
-          {/* 核心消息输入区域 */}
-          <View
-            flex={1}
-            marginHorizontal="$2"
-          >
-            {/* Voice recording UI */}
-            {isRecording ? (
-              <Pressable
-                style={{
-                  height: 80,
-                  backgroundColor: "transparent",
-                  borderRadius: 4,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  paddingVertical: 10,
-                }}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
-                <Text
-                  color={isCancelZone ? "#FF4D4D" : "$gray9"}
-                  fontSize={11}
-                  marginBottom="$2"
-                  fontWeight={isCancelZone ? "700" : "normal"}
-                >
-                  {isCancelZone
-                    ? t("Release to cancel")
-                    : t("Release to send, slide up to cancel")}
-                </Text>
-
-                {/* 高性能波形动画 */}
-                <VoiceWaveform
-                  isRecording={isRecording}
-                  isCancelZone={isCancelZone}
-                  color="#999"
-                  cancelColor="#FF4D4D"
-                />
-              </Pressable>
-            ) : isTextMode ? (
-              /* Text input UI */
-              <View
-                style={{
-                  height: 44,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "#F3F4F6",
-                  borderRadius: 22,
-                  paddingHorizontal: 16,
-                }}
-              >
-                <Input
-                  autoFocus
-                  placeholder={
-                    attachments.length > 0
-                      ? t("Enter text or send directly...")
-                      : t("Send a message...")
-                  }
-                  value={inputText}
-                  onChangeText={onChangeText}
-                  multiline={false}
-                  maxLength={1000}
-                  borderWidth={0}
-                  backgroundColor="transparent"
-                  padding="$0"
-                  onSubmitEditing={handleSend}
-                  onBlur={() => {
-                    if (!inputText) onToggleInputMode();
-                  }}
-                />
-
-                {inputText.trim().length > 0 && (
-                  <Pressable onPress={handleSend} style={{ marginLeft: 4 }}>
-                    <View
-                      width={30}
-                      height={30}
-                      borderRadius={15}
-                      justifyContent="center"
-                      alignItems="center"
-                      backgroundColor="$blue8"
-                    >
-                      <Send size={16} color="#FFFFFF" />
-                    </View>
-                  </Pressable>
-                )}
-              </View>
-            ) : (
-              /* Voice mode placeholder - 优化长按响应到60ms */
-              <Pressable
-                style={{
-                  height: 44,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "#F3F4F6",
-                  borderRadius: 22,
-                  paddingHorizontal: 16,
-                  justifyContent: "space-between"
-                }}
-                onPress={onToggleInputMode}
-                onLongPress={handleLongPressStart}
-                delayLongPress={100}
-              >
-                <Text fontSize={14} color="$gray9">
-                  {t("Send a message or hold to talk...")}
-                </Text>
-                <Mic size={18} color="#9CA3AF" />
-              </Pressable>
-            )}
-          </View>
-
-          {/* Plus button (not visible during recording) */}
-          {!isRecording && (
-            <Pressable onPress={toggleMoreOptions}>
-              <View
-                width={40}
-                height={40}
-                borderRadius="$2"
-                justifyContent="center"
-                alignItems="center"
-                backgroundColor="$gray4"
-              >
-                <Plus size={22} color="#4B5563" />
-              </View>
-            </Pressable>
-          )}
-        </XStack>
-      </View>
-
-      {/* More options modal */}
-      {showMoreOptions && (
-        <MoreOptions
-          onPickImage={handlePickImage}
-          onTakePhoto={handleTakePhoto}
-          onFileUpload={handleFileUpload}
+    <XStack
+      borderTopWidth={1}
+      borderTopColor="$borderColor"
+      backgroundColor="$card"
+      paddingHorizontal="$4"
+      paddingVertical="$3"
+      gap="$3"
+      alignItems="center"
+    >
+      {/* Attachment preview (always shown at top if any) */}
+      {attachments.length > 0 && (
+        <AttachmentPreview
+          attachments={attachments}
+          onRemove={onRemoveAttachment}
         />
       )}
-    </YStack>
+
+      <XStack flex={1} alignItems="center" gap="$3">
+        {/* Show more options if NOT in text mode */}
+        {!isTextMode && (
+          <Button
+            circular
+            size="$3"
+            onPress={() => setShowMoreOptions(!showMoreOptions)}
+            backgroundColor="$backgroundHover"
+          >
+            <PaperclipIcon size={22} color={theme.color?.get()} />
+          </Button>
+        )}
+
+        {/* Main input area */}
+        <View flex={1}>
+          {isTextMode ? (
+            /* Text input UI */
+            <View
+              style={{
+                height: 44,
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: theme.backgroundHover?.get(),
+                borderRadius: 22,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Input
+                autoFocus
+                placeholder={
+                  attachments.length > 0
+                    ? t("Enter text or send directly...")
+                    : t("Send a message...")
+                }
+                value={inputText}
+                onChangeText={onChangeText}
+                multiline={false}
+                maxLength={1000}
+                borderWidth={0}
+                backgroundColor="transparent"
+                padding="$0"
+                color="$color"
+                onSubmitEditing={handleSend}
+                onBlur={() => {
+                  if (!inputText) onToggleInputMode();
+                }}
+              />
+
+              {inputText.trim().length > 0 && (
+                <Pressable onPress={handleSend} style={{ marginLeft: 4 }}>
+                  <View
+                    width={30}
+                    height={30}
+                    borderRadius={15}
+                    justifyContent="center"
+                    alignItems="center"
+                    backgroundColor="$blue8"
+                  >
+                    <Send size={16} color="#FFFFFF" />
+                  </View>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            /* Voice input UI (the rest remains the same) */
+            <View
+              flex={1}
+              marginHorizontal="$2"
+            >
+              {/* Voice recording UI */}
+              {isRecording ? (
+                <Pressable
+                  style={{
+                    height: 80,
+                    backgroundColor: "transparent",
+                    borderRadius: 4,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    paddingVertical: 10,
+                  }}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <Text
+                    color={isCancelZone ? theme.red9?.get() : "$color9"}
+                    fontSize={11}
+                    marginBottom="$2"
+                    fontWeight={isCancelZone ? "700" : "normal"}
+                  >
+                    {isCancelZone
+                      ? t("Release to cancel")
+                      : t("Release to send, slide up to cancel")}
+                  </Text>
+
+                  {/* 高性能波形动画 */}
+                  <VoiceWaveform
+                    isRecording={isRecording}
+                    isCancelZone={isCancelZone}
+                    color="#999"
+                    cancelColor="#FF4D4D"
+                  />
+                </Pressable>
+              ) : (
+                /* Voice mode placeholder - 优化长按响应到60ms */
+                <Pressable
+                  style={{
+                    height: 44,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: theme.backgroundHover?.get(),
+                    borderRadius: 22,
+                    paddingHorizontal: 16,
+                    justifyContent: "space-between"
+                  }}
+                  onPress={onToggleInputMode}
+                  onLongPress={handleLongPressStart}
+                  delayLongPress={100}
+                >
+                  <Text fontSize={14} color="$color9">
+                    {t("Send a message or hold to talk...")}
+                  </Text>
+                  <Mic size={18} color={theme.color8?.get()} />
+                </Pressable>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Plus button (not visible during recording) */}
+        {!isRecording && (
+          <Button
+            circular
+            size="$3"
+            onPress={toggleMoreOptions}
+            backgroundColor="$backgroundHover"
+          >
+            <Plus size={22} color={theme.color?.get()} />
+          </Button>
+        )}
+      </XStack>
+
+      {/* More options (gallery, camera, file) */}
+      {showMoreOptions && !isTextMode && (
+        <MoreOptions
+          onPickImage={handlePickImageInternal}
+          onTakePhoto={handleTakePhotoInternal}
+          onFileUpload={handleFileUploadInternal}
+        />
+      )}
+    </XStack>
   );
 };

@@ -29,6 +29,7 @@ import {
   Circle,
   Separator,
 } from "tamagui";
+import { useTheme } from "tamagui";
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useViewStore } from "@/stores/viewStore";
@@ -45,6 +46,7 @@ export default function FamilySpacesScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const { currentFamilySpace, setCurrentFamilySpace } = useViewStore();
+  const theme = useTheme();
 
   const [familySpaces, setFamilySpaces] = useState<FamilySpace[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,203 +209,208 @@ export default function FamilySpacesScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }}>
-      <XStack
-        alignItems="center"
-        padding="$4"
-        borderBottomWidth={1}
-        borderBottomColor="$gray4"
-      >
-        <Button
-          chromeless
-          onPress={() => router.back()}
-          marginRight="$4"
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <YStack flex={1} backgroundColor="$background">
+        <XStack
+          alignItems="center"
+          padding="$4"
+          borderBottomWidth={1}
+          borderBottomColor="$borderColor"
         >
-          <ArrowLeft size={24} color="#1F2937" />
-        </Button>
-        <H3>家庭空间</H3>
-      </XStack>
-
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-        {/* 创建/加入按钮 */}
-        <XStack marginBottom="$6">
           <Button
-            flex={1}
-            marginRight="$2"
-            backgroundColor="$blue9"
-            borderRadius="$4"
-            alignItems="center"
-            onPress={() => {
-              setShowCreateForm(true);
-              setShowJoinForm(false);
-            }}
-            disabled={isProcessing}
+            chromeless
+            onPress={() => router.back()}
+            marginRight="$4"
           >
-            <Plus size={24} color="#FFFFFF" />
-            <Text color="white" fontWeight="$6" marginTop="$1">创建</Text>
+            <ArrowLeft size={24} color={theme.color?.get()} />
           </Button>
-
-          <Button
-            flex={1}
-            marginLeft="$2"
-            backgroundColor="$purple9"
-            borderRadius="$4"
-            alignItems="center"
-            onPress={() => {
-              setShowJoinForm(true);
-              setShowCreateForm(false);
-            }}
-            disabled={isProcessing}
-          >
-            <Users size={24} color="#FFFFFF" />
-            <Text color="white" fontWeight="$6" marginTop="$1">加入</Text>
-          </Button>
+          <H3 color="$color">家庭空间</H3>
         </XStack>
 
-        {/* 创建表单 */}
-        {showCreateForm && (
-          <Card padding="$4" marginBottom="$6" elevate>
-            <Text fontWeight="$7" marginBottom="$3">创建家庭空间</Text>
-            <Input
-              backgroundColor="$gray3"
-              padding="$3"
-              borderRadius="$4"
-              marginBottom="$3"
-              placeholder="输入家庭名称"
-              value={newFamilyName}
-              onChangeText={setNewFamilyName}
-              disabled={isProcessing}
-            />
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+          {/* 创建/加入按钮 */}
+          <XStack marginBottom="$6">
             <Button
+              flex={1}
+              marginRight="$2"
               backgroundColor="$blue9"
               borderRadius="$4"
-              onPress={handleCreateFamily}
+              alignItems="center"
+              onPress={() => {
+                setShowCreateForm(true);
+                setShowJoinForm(false);
+              }}
               disabled={isProcessing}
             >
-              {isProcessing ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text color="white" textAlign="center" fontWeight="$6">
-                  创建
-                </Text>
-              )}
+              <Plus size={24} color="#FFFFFF" />
+              <Text color="white" fontWeight="$6" marginTop="$1">创建</Text>
             </Button>
-          </Card>
-        )}
 
-        {/* 加入表单 */}
-        {showJoinForm && (
-          <Card padding="$4" marginBottom="$6" elevate>
-            <Text fontWeight="$7" marginBottom="$3">加入家庭空间</Text>
-            <Input
-              backgroundColor="$gray3"
-              padding="$3"
-              borderRadius="$4"
-              marginBottom="$3"
-              placeholder="输入邀请码"
-              value={inviteCode}
-              onChangeText={setInviteCode}
-              autoCapitalize="characters"
-              disabled={isProcessing}
-            />
             <Button
+              flex={1}
+              marginLeft="$2"
               backgroundColor="$purple9"
               borderRadius="$4"
-              onPress={handleJoinFamily}
+              alignItems="center"
+              onPress={() => {
+                setShowJoinForm(true);
+                setShowCreateForm(false);
+              }}
               disabled={isProcessing}
             >
-              {isProcessing ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text color="white" textAlign="center" fontWeight="$6">加入</Text>
-              )}
+              <Users size={24} color="#FFFFFF" />
+              <Text color="white" fontWeight="$6" marginTop="$1">加入</Text>
             </Button>
-          </Card>
-        )}
+          </XStack>
 
-        {/* 家庭空间列表 */}
-        <Text fontWeight="$7" fontSize="$5" marginBottom="$3">你的家庭空间</Text>
-
-        {loading ? (
-          <YStack alignItems="center" paddingVertical="$8">
-            <ActivityIndicator size="small" color="#3B82F6" />
-            <Text marginTop="$2" color="$gray10">加载家庭空间中...</Text>
-          </YStack>
-        ) : familySpaces.length === 0 ? (
-          <Card padding="$6" alignItems="center">
-            <Text color="$gray10" textAlign="center">
-              你还没有加入任何家庭空间。
-            </Text>
-          </Card>
-        ) : (
-          familySpaces.map((family) => (
-            <Card
-              key={family.id}
-              marginBottom="$3"
-              overflow="hidden"
-              elevate
-            >
+          {/* 创建表单 */}
+          {showCreateForm && (
+            <Card padding="$4" marginBottom="$6" elevate backgroundColor="$card">
+              <Text fontWeight="$7" marginBottom="$3" color="$color">创建家庭空间</Text>
+              <Input
+                backgroundColor="$backgroundSoft"
+                padding="$3"
+                borderRadius="$4"
+                marginBottom="$3"
+                placeholder="输入家庭名称"
+                value={newFamilyName}
+                onChangeText={setNewFamilyName}
+                disabled={isProcessing}
+                color="$color"
+              />
               <Button
-                borderBottomWidth={1}
-                borderBottomColor="$gray3"
-                chromeless
-                justifyContent="flex-start"
-                onPress={() => handleSelectFamily(family)}
+                backgroundColor="$blue9"
+                borderRadius="$4"
+                onPress={handleCreateFamily}
                 disabled={isProcessing}
               >
-                <XStack alignItems="center" justifyContent="space-between" width="100%">
-                  <YStack>
-                    <Text fontWeight="$7" fontSize="$5">{family.name}</Text>
-                    <Text color="$gray10">
-                      {family.members.length} 成员
-                    </Text>
-                  </YStack>
-                  <ChevronRight size={20} color="#9CA3AF" />
-                </XStack>
+                {isProcessing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text color="white" textAlign="center" fontWeight="$6">
+                    创建
+                  </Text>
+                )}
               </Button>
+            </Card>
+          )}
 
-              <YStack padding="$4" backgroundColor="$gray2">
-                <XStack justifyContent="space-between" alignItems="center" marginBottom="$2">
-                  <Text color="$gray10">邀请码:</Text>
-                  <XStack alignItems="center">
-                    <Text fontWeight="$6" marginRight="$2">
-                      {family.inviteCode}
-                    </Text>
-                    <Button
-                      chromeless
-                      onPress={() => copyInviteCode(family.inviteCode)}
-                      disabled={isProcessing}
-                    >
-                      <Copy size={16} color="#3B82F6" />
-                    </Button>
-                  </XStack>
-                </XStack>
+          {/* 加入表单 */}
+          {showJoinForm && (
+            <Card padding="$4" marginBottom="$6" elevate backgroundColor="$card">
+              <Text fontWeight="$7" marginBottom="$3" color="$color">加入家庭空间</Text>
+              <Input
+                backgroundColor="$backgroundSoft"
+                padding="$3"
+                borderRadius="$4"
+                marginBottom="$3"
+                placeholder="输入邀请码"
+                value={inviteCode}
+                onChangeText={setInviteCode}
+                autoCapitalize="characters"
+                disabled={isProcessing}
+                color="$color"
+              />
+              <Button
+                backgroundColor="$purple9"
+                borderRadius="$4"
+                onPress={handleJoinFamily}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text color="white" textAlign="center" fontWeight="$6">加入</Text>
+                )}
+              </Button>
+            </Card>
+          )}
 
-                <XStack justifyContent="space-between" alignItems="center">
-                  <Text color="$gray10">创建者:</Text>
-                  <Text>{family.createdBy === user?.id ? `${family.creatorName} (你)` : family.creatorName}</Text>
-                </XStack>
-              </YStack>
+          {/* 家庭空间列表 */}
+          <Text fontWeight="$7" fontSize="$5" marginBottom="$3" color="$color">你的家庭空间</Text>
 
-              {family.createdBy === user?.id && (
+          {loading ? (
+            <YStack alignItems="center" paddingVertical="$8">
+              <ActivityIndicator size="small" color={theme.blue9?.get()} />
+              <Text marginTop="$2" color="$color10">加载家庭空间中...</Text>
+            </YStack>
+          ) : familySpaces.length === 0 ? (
+            <Card padding="$6" alignItems="center" backgroundColor="$card">
+              <Text color="$color10" textAlign="center">
+                你还没有加入任何家庭空间。
+              </Text>
+            </Card>
+          ) : (
+            familySpaces.map((family) => (
+              <Card
+                key={family.id}
+                marginBottom="$3"
+                overflow="hidden"
+                elevate
+                backgroundColor="$card"
+              >
                 <Button
-                  backgroundColor="$red2"
-                  flexDirection="row"
-                  alignItems="center"
-                  justifyContent="center"
-                  onPress={() => handleDeleteFamily(family)}
+                  borderBottomWidth={1}
+                  borderBottomColor="$borderColor"
+                  chromeless
+                  justifyContent="flex-start"
+                  onPress={() => handleSelectFamily(family)}
                   disabled={isProcessing}
                 >
-                  <Trash size={16} color="#EF4444" />
-                  <Text color="#EF4444" marginLeft="$1">
-                    解散家庭空间
-                  </Text>
+                  <XStack alignItems="center" justifyContent="space-between" width="100%">
+                    <YStack>
+                      <Text fontWeight="$7" fontSize="$5" color="$color">{family.name}</Text>
+                      <Text color="$color10">
+                        {family.members.length} 成员
+                      </Text>
+                    </YStack>
+                    <ChevronRight size={20} color={theme.color8?.get()} />
+                  </XStack>
                 </Button>
-              )}
-            </Card>
-          ))
-        )}
-      </ScrollView>
+
+                <YStack padding="$4" backgroundColor="$backgroundSoft">
+                  <XStack justifyContent="space-between" alignItems="center" marginBottom="$2">
+                    <Text color="$color10">邀请码:</Text>
+                    <XStack alignItems="center">
+                      <Text fontWeight="$6" marginRight="$2" color="$color">
+                        {family.inviteCode}
+                      </Text>
+                      <Button
+                        chromeless
+                        onPress={() => copyInviteCode(family.inviteCode)}
+                        disabled={isProcessing}
+                      >
+                        <Copy size={16} color={theme.blue9?.get()} />
+                      </Button>
+                    </XStack>
+                  </XStack>
+
+                  <XStack justifyContent="space-between" alignItems="center">
+                    <Text color="$color10">创建者:</Text>
+                    <Text color="$color">{family.createdBy === user?.id ? `${family.creatorName} (你)` : family.creatorName}</Text>
+                  </XStack>
+                </YStack>
+
+                {family.createdBy === user?.id && (
+                  <Button
+                    backgroundColor="$red2"
+                    flexDirection="row"
+                    alignItems="center"
+                    justifyContent="center"
+                    onPress={() => handleDeleteFamily(family)}
+                    disabled={isProcessing}
+                  >
+                    <Trash size={16} color={theme.red9?.get()} />
+                    <Text color={theme.red9?.get()} marginLeft="$1">
+                      解散家庭空间
+                    </Text>
+                  </Button>
+                )}
+              </Card>
+            ))
+          )}
+        </ScrollView>
+      </YStack>
     </SafeAreaView>
   );
 }

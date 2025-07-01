@@ -1,6 +1,6 @@
 import React from "react";
 import { ScrollView, Pressable, Image } from "react-native";
-import { View, YStack } from "tamagui";
+import { View, YStack, useTheme } from "tamagui";
 import { File as FileIcon, X as CloseIcon } from "lucide-react-native";
 
 export interface Attachment {
@@ -17,6 +17,8 @@ interface AttachmentPreviewProps {
 
 export const AttachmentPreview: React.FC<AttachmentPreviewProps> = React.memo(
     ({ attachments, onRemove }) => {
+        const theme = useTheme();
+
         if (!attachments || attachments.length === 0) return null;
 
         return (
@@ -37,11 +39,11 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = React.memo(
                                 width={40}
                                 height={40}
                                 borderRadius={5}
-                                backgroundColor="#E5E7EB"
+                                backgroundColor="$card"
                                 alignItems="center"
                                 justifyContent="center"
                             >
-                                <FileIcon size={28} color="#6B7280" />
+                                <FileIcon size={28} color={theme.color8?.get()} />
                             </YStack>
                         )}
 

@@ -392,7 +392,6 @@ export default {
     English: "English",
     中文: "中文",
     Español: "Español",
-    System: "System",
     "Personal Care": "Personal Care",
     "Send a message or hold to talk...": "Send a message or hold to talk...",
     "Enter text or send directly...": "Enter text or send directly...",
@@ -570,5 +569,12 @@ export default {
     Compatibility: "Compatibility",
     "Widgets are only supported on iOS 14 and above":
       "Widgets are only supported on iOS 14 and above",
+
+    // Theme settings
+    Theme: "Theme",
+    Light: "Light",
+    Dark: "Dark",
+    System: "System",
+    "Select theme": "Select theme",
   },
 };

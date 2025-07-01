@@ -19,7 +19,7 @@ export const WelcomeScreen: React.FC = () => {
       <Text
         fontSize={22}
         fontWeight="bold"
-        color="$gray800"
+        color="$color"
         marginBottom="$4"
         textAlign="center"
       >
@@ -27,7 +27,7 @@ export const WelcomeScreen: React.FC = () => {
       </Text>
       <Text
         fontSize={16}
-        color="$gray11"
+        color="$color10"
         textAlign="center"
         marginBottom="$8"
         lineHeight={24}
@@ -36,7 +36,7 @@ export const WelcomeScreen: React.FC = () => {
       </Text>
       <Text
         fontSize={10}
-        color="$gray9"
+        color="$color9"
         textAlign="center"
         fontStyle="italic"
       >

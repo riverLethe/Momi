@@ -1,15 +1,15 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import {
   KeyboardAvoidingView,
-  SafeAreaView,
   StatusBar,
   FlatList,
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
-import { View } from "tamagui";
+import { View, YStack, useTheme } from "tamagui";
 import { chatAPI, Message } from "@/utils/api";
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
@@ -230,6 +230,8 @@ export default function ChatScreen() {
     setTimeout(() => scrollToBottom(), 50);
   }
 
+  const theme = useTheme();
+
   return (
     <TouchableWithoutFeedback
       onPress={() => {
@@ -241,58 +243,59 @@ export default function ChatScreen() {
       disabled={!isTextMode}
       accessible={false}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
-        <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <StatusBar barStyle={theme.background?.get() === 'white' ? "dark-content" : "light-content"} />
         <Stack.Screen
           options={{
             headerShown: false,
           }}
         />
 
-        {/* Custom Header */}
-        <ChatHeader
-          onAddExpense={handleAddExpense}
-          onClearChat={handleClearChat}
-        />
-
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-          {/* Chat Messages */}
-          <View flex={1} backgroundColor="$gray2">
-            {messages.length === 0 ? (
-              <WelcomeScreen />
-            ) : (
-              <ChatMessages
-                messages={messages}
-                currentStreamedMessage={currentStreamedMessage}
-                isThinking={isThinking}
-                scrollViewRef={scrollViewRef}
-                loadMoreMessages={loadMoreMessages}
-                isLoadingMore={isLoadingMore}
-                hasMoreMessages={hasMoreMessages}
-              />
-            )}
-          </View>
-
-          {/* Input area */}
-          <ChatInput
-            isTextMode={isTextMode}
-            inputText={inputText}
-            isRecording={isRecording}
-            onChangeText={setInputText}
-            onSend={handleSend}
-            onToggleInputMode={toggleInputMode}
-            onStartRecording={startVoiceRecording}
-            onStopRecording={stopVoiceRecording}
-            onCancelRecording={cancelVoiceRecording}
-            onImageUpload={handleTakePhoto}
-            attachments={attachments}
-            onRemoveAttachment={removeAttachment}
-            onPickImage={handlePickImage}
-            onTakePhoto={handleTakePhoto}
-            onFileUpload={handleFileUpload}
+        <YStack flex={1} backgroundColor="$background">
+          {/* Custom Header */}
+          <ChatHeader
+            onAddExpense={handleAddExpense}
+            onClearChat={handleClearChat}
           />
 
-        </KeyboardAvoidingView>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+            {/* Chat Messages */}
+            <View flex={1} backgroundColor="$backgroundSoft">
+              {messages.length === 0 ? (
+                <WelcomeScreen />
+              ) : (
+                <ChatMessages
+                  messages={messages}
+                  currentStreamedMessage={currentStreamedMessage}
+                  isThinking={isThinking}
+                  scrollViewRef={scrollViewRef}
+                  loadMoreMessages={loadMoreMessages}
+                  isLoadingMore={isLoadingMore}
+                  hasMoreMessages={hasMoreMessages}
+                />
+              )}
+            </View>
+
+            {/* Input area */}
+            <ChatInput
+              isTextMode={isTextMode}
+              inputText={inputText}
+              isRecording={isRecording}
+              onChangeText={setInputText}
+              onSend={handleSend}
+              onToggleInputMode={toggleInputMode}
+              onStartRecording={startVoiceRecording}
+              onStopRecording={stopVoiceRecording}
+              onCancelRecording={cancelVoiceRecording}
+              onImageUpload={handleTakePhoto}
+              attachments={attachments}
+              onRemoveAttachment={removeAttachment}
+              onPickImage={handlePickImage}
+              onTakePhoto={handleTakePhoto}
+              onFileUpload={handleFileUpload}
+            />
+          </KeyboardAvoidingView>
+        </YStack>
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );

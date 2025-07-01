@@ -1,7 +1,7 @@
 import React from "react";
 // Import translation and UI libs
 import { useTranslation } from "react-i18next";
-import { YStack, XStack, Text } from "tamagui";
+import { YStack, XStack, Text, useTheme } from "tamagui";
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 
 import { formatCurrency } from "@/utils/format";
@@ -61,6 +61,7 @@ const ScoreRing: React.FC<{
         circumference - (Math.min(Math.max(progress, 0), 100) / 100) * circumference;
 
     const ringColor = getSeverityColor(severity);
+    const theme = useTheme();
 
     return (
         <Svg width={size} height={size}>
@@ -69,7 +70,7 @@ const ScoreRing: React.FC<{
                 cx={size / 2}
                 cy={size / 2}
                 r={radius}
-                stroke="#E5E7EB" /* gray3 */
+                stroke={theme.borderColor?.get()}
                 strokeWidth={strokeWidth}
                 fill="none"
             />

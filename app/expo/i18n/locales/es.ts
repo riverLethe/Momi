@@ -226,5 +226,10 @@ export default {
     "Date Range": "Rango de fechas",
     "Customize which notifications you want to receive":
       "Personaliza las notificaciones que quieres recibir",
+    // Theme settings
+    Theme: "Tema",
+    Light: "Claro",
+    Dark: "Oscuro",
+    "Select theme": "Seleccionar tema",
   },
 };

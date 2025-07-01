@@ -16,16 +16,15 @@ import {
 
 import { useViewStore } from "@/stores/viewStore";
 import { useAuth } from "@/providers/AuthProvider";
+import { useTheme as useAppTheme } from "@/providers/ThemeProvider";
 
 interface HomeHeaderProps {
-  onThemeToggle?: () => void;
   onNotificationPress?: () => void;
   onSettingsPress?: () => void;
   onAvatarPress?: () => void;
 }
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
-  onThemeToggle,
   onNotificationPress,
   onSettingsPress,
   onAvatarPress,
@@ -35,6 +34,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   const { isAuthenticated, user } = useAuth();
   const theme = useTheme();
   const themeName = useThemeName();
+  const { toggleTheme } = useAppTheme();
   const { t } = useTranslation();
 
   const isDark = themeName === "dark";
@@ -53,43 +53,45 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   return (
     <YStack backgroundColor="$background">
       <XStack
-        alignItems="center"
-        justifyContent="space-between"
         paddingHorizontal="$4"
         paddingVertical="$3"
+        alignItems="center"
+        justifyContent="space-between"
       >
-        <XStack alignItems="center" space="$2">
-          <Avatar
-            circular
-            size="$4"
-            pressStyle={{ scale: 0.95 }}
-            onPress={onAvatarPress || (() => router.push(isAuthenticated ? "/profile" : "/auth/login"))}
-          >
-            <Avatar.Fallback delayMs={600}>
-              <View
+        <XStack alignItems="center" space="$3">
+          <Avatar circular size="$5" onPress={onAvatarPress}>
+            {isAuthenticated && user?.avatar ? (
+              <Avatar.Image
+                accessibilityLabel={user?.name || 'User avatar'}
+                src={user.avatar}
+              />
+            ) : (
+              <Avatar.Fallback
                 backgroundColor={isAuthenticated ? "$blue5" : "$gray5"}
-                width="100%"
-                height="100%"
                 alignItems="center"
                 justifyContent="center"
               >
-                <Text
-                  color={isAuthenticated ? "$blue11" : "$gray11"}
-                  fontSize="$5"
-                  fontWeight="bold"
-                >
+                <Text color={isAuthenticated ? "$blue11" : "$gray11"} fontSize="$6" fontWeight="bold">
                   {isAuthenticated && user?.name ? user.name.charAt(0).toUpperCase() : "G"}
                 </Text>
-              </View>
-            </Avatar.Fallback>
+              </Avatar.Fallback>
+            )}
           </Avatar>
+
           <YStack>
-            <Text fontSize="$2" color="$gray10">
-              {t("Hello")}
+            <Text fontSize="$5" fontWeight="$7" color="$color">
+              {isAuthenticated ? user?.name : t('Guest')}
             </Text>
-            <Text fontSize="$4" fontWeight="$6" color="$color">
-              {isAuthenticated ? user?.name : t("Guest")}
-            </Text>
+            <Button
+              size="$2"
+              chromeless
+              onPress={toggleViewMode}
+              backgroundColor="transparent"
+            >
+              <Text fontSize="$2" color="$color10">
+                {viewMode === "personal" ? t("Personal") : t("Family")} {t("View")}
+              </Text>
+            </Button>
           </YStack>
         </XStack>
 
@@ -98,8 +100,8 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
             size="$2"
             circular
             pressStyle={{ scale: 0.92 }}
-            backgroundColor="$backgroundHover"
-            onPress={onThemeToggle}
+            backgroundColor="$card"
+            onPress={toggleTheme}
           >
             {isDark ? (
               <Sun size={18} color={theme?.color?.get()} />
@@ -112,7 +114,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
             size="$2"
             circular
             pressStyle={{ scale: 0.92 }}
-            backgroundColor="$backgroundHover"
+            backgroundColor="$card"
             onPress={onNotificationPress || (() => router.push("/notifications"))}
           >
             <Bell size={18} color={theme?.color?.get()} />
@@ -122,7 +124,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
             size="$2"
             circular
             pressStyle={{ scale: 0.92 }}
-            backgroundColor="$backgroundHover"
+            backgroundColor="$card"
             onPress={onSettingsPress || (() => router.push("/settings"))}
           >
             <Settings size={18} color={theme?.color?.get()} />

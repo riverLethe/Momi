@@ -7,7 +7,7 @@ import {
 import { useRouter } from "expo-router";
 import React, { useMemo, useCallback } from "react";
 import { TouchableOpacity } from "react-native";
-import { Avatar, Text, XStack, YStack } from "tamagui";
+import { Avatar, Text, XStack, YStack, useTheme } from "tamagui";
 import { useLocale } from "@/i18n/useLocale";
 import { SwipeableRow } from "../ui/SwipeableRow";
 import { formatCurrency } from "@/utils/format";
@@ -43,6 +43,7 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
 }) => {
   const router = useRouter();
   const { locale } = useLocale();
+  const theme = useTheme();
 
   // 使用useMemo缓存计算结果
   const categoryInfo = useMemo(() => {
@@ -103,7 +104,7 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
           paddingVertical: 8,
           paddingHorizontal: 16,
           opacity: disabled ? 0.4 : 1,
-          backgroundColor: "white",
+          backgroundColor: theme.card?.get(),
         }}
       >
         <XStack alignItems="center" justifyContent="space-between" width="100%">
@@ -113,10 +114,10 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
             </Avatar>
 
             <YStack>
-              <Text fontSize="$3" fontWeight="500" lineHeight={22}>
+              <Text fontSize="$3" fontWeight="500" lineHeight={22} color="$color">
                 {categoryName}
               </Text>
-              <Text fontSize="$2" color="$gray9" lineHeight={16}>
+              <Text fontSize="$2" color="$color9" lineHeight={16}>
                 {formattedDateTime}
                 {item.merchant && ` | ${item.merchant}`}
               </Text>
@@ -127,7 +128,7 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
             <Text
               fontSize="$3"
               fontWeight="500"
-              color={disabled ? "$gray9" : "$red10"}
+              color={disabled ? "$color9" : "$red10"}
             >
               -{formattedAmount}
             </Text>

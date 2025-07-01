@@ -1,6 +1,6 @@
 import React from "react";
 import { Calendar, ChevronDown, CreditCard, ReceiptTextIcon } from "lucide-react-native";
-import { Button, XStack, Text, ScrollView, Sheet, YStack, View } from "tamagui";
+import { Button, XStack, Text, ScrollView, Sheet, YStack, View, useTheme } from "tamagui";
 import { useTranslation } from "react-i18next";
 import { DatePeriodEnum, PeriodSelectorData } from "@/types/reports.types";
 
@@ -22,6 +22,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   onBillsPress,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [periodSheetOpen, setPeriodSheetOpen] = React.useState(false);
 
   // Get current selected period selector
@@ -39,7 +40,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               <Button
                 key={period}
                 backgroundColor={
-                  selectedPeriod === period ? "$blue9" : "$gray1"
+                  selectedPeriod === period ? "$blue9" : "$card"
                 }
                 paddingHorizontal="$2"
                 paddingVertical="$2"
@@ -51,10 +52,10 @@ export const DateFilter: React.FC<DateFilterProps> = ({
                 <XStack alignItems="center" gap="$1.5">
                   <Calendar
                     size={14}
-                    color={selectedPeriod === period ? "white" : "#6B7280"}
+                    color={selectedPeriod === period ? "white" : theme.color8?.get()}
                   />
                   <Text
-                    color={selectedPeriod === period ? "white" : "$gray10"}
+                    color={selectedPeriod === period ? "white" : "$color10"}
                     fontWeight="$6"
                     fontSize="$3"
                   >

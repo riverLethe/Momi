@@ -8,6 +8,7 @@ import {
   Text,
   Button,
   Separator,
+  useTheme,
 } from "tamagui";
 import {
   BotIcon,
@@ -22,6 +23,7 @@ import {
   DatePeriodEnum,
   HealthScore,
 } from "@/types/reports.types";
+import { useRouter } from "expo-router";
 
 // 预算状态类型
 export type BudgetStatusType = "good" | "warning" | "danger" | "none";
@@ -105,6 +107,8 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   healthScore,
 }) => {
   const { t } = useTranslation();
+  const router = useRouter();
+  const theme = useTheme();
 
   // 计算类别状态
   const getCategoryStatus = (current: number, previous: number = 0, budget?: number): CategoryStatusType => {
@@ -258,7 +262,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
   return (
     <>
       <Card
-        backgroundColor="white"
+        backgroundColor="$card"
         marginHorizontal="$3"
         padding="$3"
         borderRadius="$4"
@@ -267,8 +271,8 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
           {/* Header with status */}
           <XStack justifyContent="space-between" alignItems="center">
             <XStack gap="$2" alignItems="center">
-              <WalletIcon size={24} color="#6366F1" />
-              <Text fontSize="$4" fontWeight="$8" color="$gray12">
+              <WalletIcon size={24} color={theme.blue9?.get()} />
+              <Text fontSize="$4" fontWeight="$8" color="$color">
                 {t("Budget")}
               </Text>
             </XStack>
@@ -283,7 +287,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                     pressStyle={{ opacity: 0.8 }}
                     onPress={onChatPress}
                   >
-                    <BotIcon size={20} color="#6366F1" />
+                    <BotIcon size={20} color={theme.blue9?.get()} />
                   </Button>
                 )
               }
@@ -295,7 +299,7 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 pressStyle={{ opacity: 0.8 }}
                 onPress={onEditBudgetPress}
               >
-                <EditIcon size={16} />
+                <EditIcon size={16} color={theme.color?.get()} />
               </Button>
             </XStack>
           </XStack>

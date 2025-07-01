@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from "react";
-import { useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, ActivityIndicator, Text } from "react-native";
+import { useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, ActivityIndicator } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -8,7 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { View, YStack } from "tamagui";
+import { View, YStack, Text, useTheme } from "tamagui";
 
 // Data & Welcome -----------------------------------------------------------
 import { useData } from "@/providers/DataProvider";
@@ -145,11 +145,15 @@ export default function HomeScreenPager() {
     }
   }, [saveBudgetForPeriod]);
 
+  const theme = useTheme();
+
   // Decide UI -------------------------------------------------------------
   if (initialLoading) {
-    return <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="#f8fafc">
-      <ActivityIndicator size="small" color="#3B82F6" />
-      <Text style={{ marginTop: 8, color: "#64748B" }}>{t("Loading...")}</Text>
+    return <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="$background">
+      <ActivityIndicator size="large" color={theme.blue9?.get()} />
+      <Text mt="$3" color="$color10">
+        {t("Synchronizing data...")}
+      </Text>
     </YStack>;
   }
 
@@ -159,7 +163,7 @@ export default function HomeScreenPager() {
 
   return (
     <>
-      <View flex={1} backgroundColor="#eee" paddingTop={insets.top}>
+      <View flex={1} backgroundColor="$background" paddingTop={insets.top}>
         {/* Fixed Header */}
         <View paddingHorizontal={8} paddingVertical={4} >
           <DateFilter
