@@ -110,17 +110,33 @@ const EnhancedDonutChart: React.FC<EnhancedDonutChartProps> = ({
       <YStack alignItems="center" justifyContent="center" paddingVertical="$3">
         <View style={{ width: size, height: size, position: "relative" }}>
           <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-            <SvgCircle
-              cx={center}
-              cy={center}
-              r={radius}
-              fill="transparent"
-              stroke={theme.borderColor?.get() || "#f1f5f9"}
-              strokeWidth={strokeWidth}
-            />
-            {segments.map((segment, i) => (
-              <Path key={i} d={segment.path} fill={segment.color} />
-            ))}
+            {/* Render background ring only when there are multiple segments */}
+            {segments.length > 1 && (
+              <SvgCircle
+                cx={center}
+                cy={center}
+                r={radius}
+                fill="transparent"
+                stroke={theme.borderColor?.get() || "#f1f5f9"}
+                strokeWidth={strokeWidth}
+              />
+            )}
+
+            {/* Render segments. If only one segment, use a filled circle */}
+            {segments.length === 1 ? (
+              <SvgCircle
+                cx={center}
+                cy={center}
+                r={radius}
+                fill={segments[0].color}
+              />
+            ) : (
+              segments.map((segment, i) => (
+                <Path key={i} d={segment.path} fill={segment.color} />
+              ))
+            )}
+
+            {/* Inner mask to create the donut hole */}
             <SvgCircle
               cx={center}
               cy={center}
