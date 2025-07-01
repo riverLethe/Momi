@@ -7,7 +7,6 @@ import {
   BudgetReportData,
   TopSpendingCategory,
   TrendData,
-  PeriodSelectorData,
 } from "@/types/reports.types";
 import { generatePeriodSelectors } from "./date.utils";
 import { getBills } from "./bills.utils";
@@ -63,10 +62,12 @@ const getCategoryColor = (categoryId: string): string => {
   return category?.color || "#94A3B8"; // 默认使用灰色
 };
 
-// 根据实际账单数据生成类别支出数据
+// 根据实际账单数据生成类别支出数据（已弃用，保留兼容性）
+// 注意：若需要 period change，请使用 generateCategoryDataFromRawData
 export const generateCategoryData = async (
   startDate: Date,
   endDate: Date,
+  periodType: DatePeriodEnum,
   viewMode: "personal" | "family"
 ): Promise<CategoryData[]> => {
   // 获取账单数据
@@ -121,6 +122,7 @@ export const generateCategoryData = async (
         color: getCategoryColor(categoryId),
         yearOverYearChange: calculateYearOverYearChange(
           categoryId,
+          periodType,
           startDate,
           endDate,
           viewMode,
@@ -134,9 +136,10 @@ export const generateCategoryData = async (
   return categoryData;
 };
 
-// 计算同比变化
+// 计算环比变化（根据 periodType 动态比较上一周期）
 const calculateYearOverYearChange = (
   categoryId: string,
+  periodType: DatePeriodEnum,
   currentStartDate: Date,
   currentEndDate: Date,
   viewMode: "personal" | "family",
@@ -144,20 +147,25 @@ const calculateYearOverYearChange = (
   transactions: Transaction[]
 ): number => {
   try {
-    // 计算同期的上一年日期范围
+    // 计算上一周期的日期范围
     let previousStartDate: Date;
     let previousEndDate: Date;
 
-    const startYear = currentStartDate.getFullYear();
-    const startMonth = currentStartDate.getMonth();
-    const startDay = currentStartDate.getDate();
-
-    const endYear = currentEndDate.getFullYear();
-    const endMonth = currentEndDate.getMonth();
-    const endDay = currentEndDate.getDate();
-
-    previousStartDate = new Date(startYear - 1, startMonth, startDay);
-    previousEndDate = new Date(endYear - 1, endMonth, endDay);
+    switch (periodType) {
+      case DatePeriodEnum.WEEK:
+        previousStartDate = subWeeks(currentStartDate, 1);
+        previousEndDate = subWeeks(currentEndDate, 1);
+        break;
+      case DatePeriodEnum.MONTH:
+        previousStartDate = subMonths(currentStartDate, 1);
+        previousEndDate = subMonths(currentEndDate, 1);
+        break;
+      case DatePeriodEnum.YEAR:
+      default:
+        previousStartDate = subYears(currentStartDate, 1);
+        previousEndDate = subYears(currentEndDate, 1);
+        break;
+    }
 
     // 获取当前时期的支出
     const currentPeriodExpense = calculateCategoryExpense(
@@ -189,7 +197,7 @@ const calculateYearOverYearChange = (
       100;
     return Math.round(changePercentage);
   } catch (error) {
-    console.error("Failed to calculate year-over-year change:", error);
+    console.error("Failed to calculate period change:", error);
     return 0;
   }
 };
@@ -905,6 +913,7 @@ export async function fetchReportData(
         transactions,
         startDate,
         endDate,
+        periodType,
         viewMode
       );
 
@@ -1230,6 +1239,7 @@ async function generateCategoryDataFromRawData(
   transactions: Transaction[],
   startDate: Date,
   endDate: Date,
+  periodType: DatePeriodEnum,
   viewMode: "personal" | "family"
 ): Promise<CategoryData[]> {
   // 根据视图模式过滤账单
@@ -1286,6 +1296,7 @@ async function generateCategoryDataFromRawData(
       color,
       yearOverYearChange: calculateYearOverYearChange(
         categoryId,
+        periodType,
         startDate,
         endDate,
         viewMode,
@@ -1440,6 +1451,7 @@ export async function fetchBudgetReportData(
       [], // 暂时不考虑交易数据，简化计算
       startDate,
       endDate,
+      periodType,
       viewMode
     );
 

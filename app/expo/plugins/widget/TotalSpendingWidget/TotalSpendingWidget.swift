@@ -222,49 +222,81 @@ struct SpendingWidgetEntryView : View {
             // SM – ring with amount & label inside, minimal outer padding
             chart
         case .systemMedium:
-            // MD – chart with internal label and wider spacing to category list
-            HStack(alignment: .top, spacing: 20) {
-                chart
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(entry.categories.prefix(6)) { cat in
-                        HStack(alignment: .center) {
-                            Circle()
-                                .fill(Color(hex: cat.color))
-                                .frame(width: 10, height: 10)
-                            Text(cat.name)
-                                .font(.caption2)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(cat.amountText)
-                                .font(.caption2)
+            if entry.categories.isEmpty {
+                // Placeholder – chart with centered message
+                HStack(alignment: .center, spacing: 20) {
+                    chart
+                    VStack {
+                        Spacer().frame(height: 5)
+                        Text(localizedString("No spending data available", comment: "Placeholder when no spending data"))
+                            .font(.caption2)
+                            .foregroundColor(Color(hex: "#CBD5E1"))
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
+                .padding(8)
+            } else {
+                // MD – chart with internal label and wider spacing to category list
+                HStack(alignment: .top, spacing: 20) {
+                    chart
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(entry.categories.prefix(6)) { cat in
+                            HStack(alignment: .center) {
+                                Circle()
+                                    .fill(Color(hex: cat.color))
+                                    .frame(width: 10, height: 10)
+                                Text(cat.name)
+                                    .font(.caption2)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(cat.amountText)
+                                    .font(.caption2)
+                            }
                         }
                     }
                 }
+                .padding(8)
             }
-            .padding(8)
         case .systemLarge:
-            // LG – top-aligned: chart with internal label, then list
-            VStack(alignment: .leading, spacing: 20) {
-                chart
-                    .frame(maxWidth: .infinity, alignment: .center)
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(entry.categories.prefix(8)) { cat in
-                        HStack(alignment: .center) {
-                            Circle()
-                                .fill(Color(hex: cat.color))
-                                .frame(width: 10, height: 10)
-                            Text(cat.name)
-                                .font(.caption2)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(cat.amountText)
-                                .font(.caption2)
+            if entry.categories.isEmpty {
+                VStack(alignment: .center, spacing: 20) {
+                    chart
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    VStack {
+                        Spacer().frame(height: 30)
+                        Text(localizedString("No spending data available", comment: "Placeholder when no spending data"))
+                            .font(.caption)
+                            .foregroundColor(Color(hex: "#CBD5E1"))
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(10)
+            } else {
+                // LG – top-aligned: chart with internal label, then list
+                VStack(alignment: .leading, spacing: 20) {
+                    chart
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(entry.categories.prefix(8)) { cat in
+                            HStack(alignment: .center) {
+                                Circle()
+                                    .fill(Color(hex: cat.color))
+                                    .frame(width: 10, height: 10)
+                                Text(cat.name)
+                                    .font(.caption2)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(cat.amountText)
+                                    .font(.caption2)
+                            }
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(10)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(10)
         default:
             Text("Unsupported size")
         }

@@ -167,7 +167,6 @@ export default function BillDetailsScreen() {
         setUpdating(false);
         Alert.alert(t("Error"), t("Failed to delete bill"));
       },
-      ignoreRefresh: true,
     });
   }, [bill, confirmDeleteBill, id, router, t]);
 

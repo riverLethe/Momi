@@ -53,7 +53,10 @@ export const useBillActions = () => {
             try {
               const success = await deleteBillUtil(bill.id);
               if (success) {
-                if (!ignoreRefresh) await refreshData();
+                if (!ignoreRefresh) {
+                  // Fire-and-forget refresh so UI actions are not blocked
+                  refreshData().catch(() => {});
+                }
                 onSuccess?.();
               } else {
                 throw new Error("Bill not found");

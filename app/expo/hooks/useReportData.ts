@@ -37,9 +37,16 @@ export const useReportData = (
   // 用于防止老旧请求覆盖新数据的递增 ID
   const requestIdRef = useRef<number>(0);
 
-  // 初始化周期选择器
+  // 初始化并在 periodType 或 selectedPeriodId 变化时同步 selectors；
+  // 若当前 selectedPeriodId 已失效（例如跨周/月/年），自动切换到最新
+  // selector，避免在其他地方重复判断。
   useEffect(() => {
-    setPeriodSelectors(generatePeriodSelectors(periodType));
+    const selectors = generatePeriodSelectors(periodType);
+    const isCurrentValid = selectors.some((s) => s.id === selectedPeriodId);
+    if (!isCurrentValid && selectors.length > 0) {
+      setPeriodSelectors(selectors);
+      setSelectedPeriodId(selectors[0].id);
+    }
   }, [periodType]);
 
   // 加载报表数据，带loading状态

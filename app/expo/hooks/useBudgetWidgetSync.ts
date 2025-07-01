@@ -25,5 +25,5 @@ export const useBudgetWidgetSync = (
       isDarkMode,
       budgetVersion: Date.now(),
     }).catch(() => {});
-  }, [budgetData, periodType, viewMode, isDarkMode, disabled]);
+  }, [budgetData, periodType, viewMode, disabled]);
 };

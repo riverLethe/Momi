@@ -231,5 +231,6 @@ export default {
     Light: "Claro",
     Dark: "Oscuro",
     "Select theme": "Seleccionar tema",
+    "No spending data available": "No hay datos de gastos disponibles",
   },
 };

@@ -284,14 +284,12 @@ export default function BillsScreen() {
     setEndDate(end);
   }, []);
 
-  const handleDeleteBill = useCallback((bill: Bill) => {
-    confirmDeleteBill(bill, {
-      ignoreRefresh: true,
-      onSuccess: () => {
-        // This is a placeholder implementation. You might want to update this to actually remove the bill from the bills array
-      },
-    });
-  }, [confirmDeleteBill]);
+  const handleDeleteBill = useCallback(
+    (bill: Bill) => {
+      confirmDeleteBill(bill);
+    },
+    [confirmDeleteBill]
+  );
 
   const renderDateGroup = useCallback(({ item }: { item: (typeof billGroups)[0] }) => (
     <BillDateGroup

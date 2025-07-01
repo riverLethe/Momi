@@ -79,6 +79,17 @@ export function summariseBills(
   cashBalance = 0,
   totalIncome?: number
 ): BillSummaryInput {
+  // Clamp end date to today to avoid including future dates within the current
+  // in-progress period (e.g. today is Tuesday in a weekly view). This prevents
+  // zeros for upcoming days skewing metrics such as volatilityPct and the
+  // overall health score.
+
+  const today = new Date();
+  let effectiveEnd = end > today && start <= today ? today : end;
+  if (effectiveEnd < start) {
+    effectiveEnd = end; // fallback to original end to avoid invalid interval
+  }
+
   // Step 1: pre-filter by date range
   let filtered = bills.filter((b) => {
     const dateObj = b.date instanceof Date ? b.date : new Date(b.date as any);
@@ -86,7 +97,7 @@ export function summariseBills(
     // (non-enumerable to avoid mutating state observed elsewhere)
     // @ts-ignore – runtime safety only
     b.date = dateObj;
-    return dateObj >= start && dateObj <= end;
+    return dateObj >= start && dateObj <= effectiveEnd;
   });
 
   // Step 2: apply category filters defined in the budget (if any)
@@ -135,7 +146,7 @@ export function summariseBills(
     .slice(0, 15);
 
   // daily expenses array
-  const days = eachDayOfInterval({ start, end });
+  const days = eachDayOfInterval({ start, end: effectiveEnd });
   const dailyMap: Record<string, number> = {};
   filtered.forEach((b) => {
     const dateObj = b.date as Date;
@@ -179,7 +190,7 @@ export function summariseBills(
   return {
     period: budgetDetailKey,
     startDate: format(start, "yyyy-MM-dd"),
-    endDate: format(end, "yyyy-MM-dd"),
+    endDate: format(effectiveEnd, "yyyy-MM-dd"),
 
     coreTotals: {
       totalExpense,
