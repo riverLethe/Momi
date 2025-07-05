@@ -279,10 +279,20 @@ export const smartSync = async (
       break;
 
     case "background":
-      // 后台同步，所有数据类型但不阻塞
-      syncMultipleDataTypes(["bills", "transactions", "reports"], userId).catch(
-        () => {}
-      );
+      // 后台同步，低优先级
+      await syncMultipleDataTypes(["bills", "transactions"], userId);
       break;
+
+    default:
+      await syncRemoteData("bills", userId);
+      break;
+  }
+  
+  // 更新同步时间到本地存储
+  try {
+    const newSyncTime = new Date();
+    await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+  } catch (error) {
+    console.error('Failed to update sync time:', error);
   }
 };

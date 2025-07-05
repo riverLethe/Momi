@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Alert, ActionSheetIOS, Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
@@ -11,8 +11,9 @@ import {
   removeAuthToken,
   storeAuthToken,
   isAuthenticated as checkAuthentication,
-  getMockUser
 } from '@/utils/userPreferences.utils';
+import { storage, STORAGE_KEYS } from '@/utils/storage.utils';
+import { clearQueue } from '@/utils/offlineQueue.utils';
 import { apiClient } from '@/utils/api';
 import { smartSync } from '@/utils/sync.utils';
 
@@ -134,11 +135,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             } catch (error) {
               console.error('Failed to fetch user profile:', error);
               // Fallback to mock user for development
-              const mockUser = getMockUser();
               setAuthState({
-                isAuthenticated: true,
+                isAuthenticated: false,
                 isLoading: false,
-                user: mockUser,
+                user: null,
                 error: null,
               });
             }
@@ -177,12 +177,120 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // 使用智能同步策略，非阻塞
       await smartSync(authState.user.id, "app_start");
-      setLastSyncTime(new Date());
+      
+      // 更新本地存储的同步时间，确保与useDataSync保持一致
+      const newSyncTime = new Date();
+      await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+      setLastSyncTime(newSyncTime);
     } catch (error) {
       console.error('Data sync error:', error);
       // 不阻塞用户流程，静默处理错误
     }
   }, [authState.isAuthenticated, authState.user]);
+
+  /**
+   * After successful login prompt user how to handle existing local bills.
+   */
+  const handlePostLoginSync = useCallback(
+    async (token: string) => {
+      try {
+        const localBills = (await storage.getItem<any[]>(STORAGE_KEYS.BILLS)) || [];
+
+        // If no local bills, just run normal sync
+        if (localBills.length === 0) {
+          syncData();
+          return;
+        }
+
+        if (Platform.OS === 'ios') {
+          const options = ['Merge (keep both)', 'Clear & Download Remote', 'Push & Override Remote', 'Sign Out'];
+          const destructiveIndex = 1;
+          const signOutIndex = 3;
+
+          ActionSheetIOS.showActionSheetWithOptions(
+            {
+              options,
+              destructiveButtonIndex: destructiveIndex,
+              cancelButtonIndex: signOutIndex,
+            },
+            async (buttonIndex) => {
+              switch (buttonIndex) {
+                case 0: // Merge
+                  syncData();
+                  break;
+                case 1: // Clear & Download
+                  await storage.setItem(STORAGE_KEYS.BILLS, []);
+                  await clearQueue();
+                  syncData();
+                  break;
+                case 2: // Push & Override
+                  try {
+                    await apiClient.sync.uploadBills(token, localBills.map((b) => ({ action: 'create', bill: b })));
+                    await clearQueue();
+                    syncData();
+                  } catch (err) {
+                    console.error('Upload bills failed', err);
+                    syncData();
+                  }
+                  break;
+                case signOutIndex: // sign out
+                  await removeAuthToken();
+                  setAuthState({ ...initialAuthState, isLoading: false });
+                  break;
+                default:
+                  break;
+              }
+            }
+          );
+        } else {
+          Alert.alert(
+            'Sync Options',
+            'Local bills detected. How would you like to sync with your cloud data?',
+            [
+              {
+                text: 'Merge',
+                onPress: () => syncData(),
+              },
+              {
+                text: 'Clear & Download Remote',
+                onPress: async () => {
+                  await storage.setItem(STORAGE_KEYS.BILLS, []);
+                  await clearQueue();
+                  syncData();
+                },
+                style: 'destructive',
+              },
+              {
+                text: 'Push & Override Remote',
+                onPress: async () => {
+                  try {
+                    await apiClient.sync.uploadBills(token, localBills.map((b) => ({ action: 'create', bill: b })));
+                    await clearQueue();
+                    syncData();
+                  } catch (err) {
+                    console.error('Upload bills failed', err);
+                    syncData();
+                  }
+                },
+              },
+              {
+                text: 'Sign Out',
+                style: 'destructive',
+                onPress: async () => {
+                  await removeAuthToken();
+                  setAuthState({ ...initialAuthState, isLoading: false });
+                },
+              },
+            ]
+          );
+        }
+      } catch (err) {
+        console.error('Post-login sync prompt error:', err);
+        syncData();
+      }
+    },
+    [syncData]
+  );
 
   /**
    * Email/Password login function
@@ -204,8 +312,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           error: null,
         });
 
-        // Trigger initial data sync
-        syncData();
+        // Prompt user for sync strategy
+        handlePostLoginSync(response.token);
 
         return true;
       }
@@ -220,7 +328,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }));
       return false;
     }
-  }, [syncData]);
+  }, [syncData, handlePostLoginSync]);
 
   /**
    * Google Sign In
@@ -253,8 +361,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             error: null,
           });
 
-          // Trigger initial data sync
-          syncData();
+          handlePostLoginSync(response.token);
 
           return true;
         }
@@ -276,7 +383,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }));
       return false;
     }
-  }, [syncData]);
+  }, [syncData, handlePostLoginSync]);
 
   /**
    * Apple Sign In
@@ -316,8 +423,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             error: null,
           });
 
-          // 触发初始数据同步
-          syncData();
+          handlePostLoginSync(appleResponse.token);
 
           return true;
         }
@@ -340,7 +446,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }));
       return false;
     }
-  }, [syncData]);
+  }, [syncData, handlePostLoginSync]);
 
   /**
    * WeChat Sign In

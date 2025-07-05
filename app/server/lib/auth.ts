@@ -735,4 +735,20 @@ export class AuthService {
     const token = authHeader.substring(7);
     return await SessionManager.getValidSession(token);
   }
+
+  /**
+   * Extract bearer token from NextRequest headers
+   */
+  static extractTokenFromRequest(request: NextRequest): string | null {
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) return null;
+    return authHeader.substring(7);
+  }
+
+  /**
+   * Validate a JWT/session token and return the associated user if valid.
+   */
+  static async validateSession(token: string): Promise<AuthUser | null> {
+    return await SessionManager.getValidSession(token);
+  }
 }

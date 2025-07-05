@@ -97,16 +97,14 @@ export const useSyncSettings = () => {
   const getLastSyncText = useCallback(() => {
     if (!lastSyncTime) return "Never synced";
 
-    const now = new Date();
-    const timeDiff = now.getTime() - lastSyncTime.getTime();
-    const minutes = Math.floor(timeDiff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+    const year = lastSyncTime.getFullYear();
+    const month = String(lastSyncTime.getMonth() + 1).padStart(2, '0');
+    const day = String(lastSyncTime.getDate()).padStart(2, '0');
+    const hours = String(lastSyncTime.getHours()).padStart(2, '0');
+    const minutes = String(lastSyncTime.getMinutes()).padStart(2, '0');
+    const seconds = String(lastSyncTime.getSeconds()).padStart(2, '0');
 
-    if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
-    if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-    if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-    return "Just now";
+    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
   }, [lastSyncTime]);
 
   return {

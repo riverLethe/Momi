@@ -1,7 +1,7 @@
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Moon, Sun, Globe, ChevronDown, Clock, ChevronLeftIcon, RefreshCwOff } from "lucide-react-native";
+import { Moon, Sun, Globe, ChevronDown, Clock, ChevronLeftIcon, RefreshCwOff, RefreshCw, Download } from "lucide-react-native";
 import {
   Button,
   H2,
@@ -21,20 +21,8 @@ import { useLanguage } from "@/providers/I18nProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSyncSettings } from "@/hooks/useSyncSettings";
-
-// 内联格式化函数
-const formatLastSync = (date: Date): string => {
-  const now = new Date();
-  const timeDiff = now.getTime() - date.getTime();
-  const minutes = Math.floor(timeDiff / 60000);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 0) return `${days} ${days > 1 ? 'days' : 'day'} ago`;
-  if (hours > 0) return `${hours} ${hours > 1 ? 'hours' : 'hour'} ago`;
-  if (minutes > 0) return `${minutes} ${minutes > 1 ? 'minutes' : 'minute'} ago`;
-  return "Just now";
-};
+import { apiClient } from "@/utils/api";
+import { getAuthToken } from "@/utils/userPreferences.utils";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -44,7 +32,7 @@ export default function SettingsScreen() {
   const { isAuthenticated } = useAuth();
   const {
     performManualSync,
-    lastSyncTime,
+    getLastSyncText,
   } = useSyncSettings();
   const tamaguiTheme = useTamaguiTheme();
 
@@ -59,6 +47,36 @@ export default function SettingsScreen() {
       await performManualSync();
     } catch (error) {
       console.error('Manual sync failed:', error);
+    }
+  };
+
+  const handleFetchRemoteBills = async () => {
+    try {
+      console.log('开始获取远程账单信息...');
+      
+      // 检查用户是否已登录
+      if (!isAuthenticated) {
+        alert('请先登录后再获取远程账单');
+        return;
+      }
+
+      // 获取认证token
+      const token = await getAuthToken();
+      if (!token) {
+        alert('认证失败，请重新登录');
+        return;
+      }
+
+      // 调用API获取远程账单数据
+      const bills = await apiClient.sync.downloadBills(token);
+      
+      console.log('成功获取远程账单:', bills);
+      alert(`成功获取 ${bills.length} 条远程账单数据！\n\n数据已在控制台输出，可查看详细信息。`);
+      
+    } catch (error) {
+      console.error('获取远程账单失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      alert(`获取远程账单失败: ${errorMessage}`);
     }
   };
 
@@ -91,7 +109,7 @@ export default function SettingsScreen() {
               isAuthenticated && (<XStack gap="$1" alignItems="center" justifyContent="center" backgroundColor="transparent">
                 <Clock size={10} color={tamaguiTheme.color11?.get()} />
                 <Text fontSize="$2" color="$color11" opacity={0.7} textAlign="center">
-                  {t("Last Sync")}: {lastSyncTime ? formatLastSync(lastSyncTime) : t("Never synced")}
+                  {t("Last Sync")}: {getLastSyncText()}
                 </Text>
               </XStack>)
             }
@@ -172,6 +190,51 @@ export default function SettingsScreen() {
                 </Select>
               </XStack>
 
+              {/* <Separator />
+              
+              <XStack paddingHorizontal="$4" paddingVertical="$3" alignItems="center" justifyContent="space-between">
+                <XStack alignItems="center" gap="$2">
+                  <Download size={20} color={tamaguiTheme.color?.get()} />
+                  <Text fontSize="$4" color="$color">{t("获取远程账单")}</Text>
+                </XStack>
+                <Button
+                  size="$3"
+                  onPress={handleFetchRemoteBills}
+                  backgroundColor="$blue9"
+                  color="white"
+                  borderRadius="$3"
+                  paddingHorizontal="$3"
+                  pressStyle={{
+                    backgroundColor: "$blue10",
+                    scale: 0.95,
+                  }}
+                >
+                  <Text color="white" fontSize="$3">{t("获取")}</Text>
+                </Button>
+              </XStack> */}
+
+              {/* {isAuthenticated && (
+                <>
+                  <Separator />
+                  <XStack paddingHorizontal="$4" paddingVertical="$3" alignItems="center" justifyContent="space-between">
+                    <XStack alignItems="center" gap="$2">
+                      <RefreshCwOff size={20} />
+                      <Text fontSize="$4" color="$color">{t("Manual Sync")}</Text>
+                    </XStack>
+                    <Button
+                      size="$2"
+                      onPress={handleManualSync}
+                      chromeless
+                      backgroundColor="$gray3"
+                      height="$3"
+                      width="$3"
+                      icon={<RefreshCw size={20} />}
+                    >
+                    </Button>
+                  </XStack>
+                </>
+              )} */}
+
 
             </Card>
           </YStack>
@@ -191,4 +254,4 @@ export default function SettingsScreen() {
       </YStack>
     </SafeAreaView>
   );
-} 
+}

@@ -2,6 +2,7 @@ import { storage, STORAGE_KEYS } from "./storage.utils";
 import { Bill, BillInput, BillStats } from "@/types/bills.types";
 import { User } from "@/types/user.types";
 import { format, subDays, isWithinInterval } from "date-fns";
+import { addOperation as queueBillOperation } from "./offlineQueue.utils";
 
 /**
  * Generate a unique ID for bills
@@ -50,6 +51,14 @@ export const saveBill = async (
     };
 
     await storage.setItem(STORAGE_KEYS.BILLS, [...bills, newBill]);
+
+    // Queue operation for offline sync
+    try {
+      await queueBillOperation("create", newBill);
+    } catch (e) {
+      console.warn("Failed to queue create operation", e);
+    }
+
     return newBill;
   } catch (error) {
     console.error("Failed to save bill:", error);
@@ -82,6 +91,13 @@ export const updateBill = async (
     bills[index] = updatedBill;
     await storage.setItem(STORAGE_KEYS.BILLS, bills);
 
+    // Queue operation for offline sync
+    try {
+      await queueBillOperation("update", updatedBill as any);
+    } catch (e) {
+      console.warn("Failed to queue update operation", e);
+    }
+
     return updatedBill;
   } catch (error) {
     console.error("Failed to update bill:", error);
@@ -102,6 +118,14 @@ export const deleteBill = async (id: string): Promise<boolean> => {
     }
 
     await storage.setItem(STORAGE_KEYS.BILLS, filteredBills);
+
+    // Queue delete operation for offline sync
+    try {
+      await queueBillOperation("delete", { id } as any);
+    } catch (e) {
+      console.warn("Failed to queue delete operation", e);
+    }
+
     return true;
   } catch (error) {
     console.error("Failed to delete bill:", error);
