@@ -57,6 +57,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     // 设置主题模式并保存到本地存储
     const setThemeMode = async (mode: ThemeMode) => {
         try {
+            setActualTheme(mode === 'dark' ? 'dark' : 'light');
             setThemeModeState(mode);
             await updateUserPreferences({ theme: mode });
         } catch (error) {

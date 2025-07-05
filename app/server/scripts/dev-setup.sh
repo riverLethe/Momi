@@ -1,42 +1,73 @@
 #!/bin/bash
 
-echo "🚀 Setting up MomiQ development environment..."
+# MomiQ Backend Development Setup Script
+# This script sets up the development environment for the MomiQ backend
 
-# 创建数据目录
-mkdir -p data
+set -e
 
-# 检查 .env 文件
-if [ ! -f .env ]; then
-  echo "📝 Creating .env file..."
-  cat > .env << EOF
-DATABASE_URL="file:./data/momiq.db"
-JWT_SECRET="$(openssl rand -base64 32)"
-NODE_ENV="development"
-PORT=3000
-EOF
-  echo "✅ .env file created"
+echo "🚀 Setting up MomiQ Backend Development Environment..."
+
+# Check if we're in the right directory
+if [ ! -f "package.json" ]; then
+    echo "❌ Error: Please run this script from the app/server directory"
+    exit 1
 fi
 
-# 安装依赖
+# Create data directory for SQLite database
+echo "📁 Creating data directory..."
+mkdir -p data
+
+# Initialize environment file if it doesn't exist
+if [ ! -f ".env" ]; then
+    echo "📝 Creating .env file..."
+    cat > .env << EOF
+# Database Configuration
+DATABASE_URL="file:./data/momiq.db"
+
+# JWT Configuration  
+JWT_SECRET="your-super-secret-jwt-key-change-in-production"
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+
+# Apple Sign In (optional)
+APPLE_CLIENT_ID=""
+APPLE_PRIVATE_KEY=""
+APPLE_KEY_ID=""
+APPLE_TEAM_ID=""
+
+# WeChat (optional)
+WECHAT_APP_ID=""
+WECHAT_APP_SECRET=""
+
+# API Configuration
+API_BASE_URL="http://localhost:3000"
+
+# Development settings
+NODE_ENV="development"
+EOF
+    echo "✅ .env file created with default values"
+    echo "⚠️  Please update the values in .env file as needed"
+else
+    echo "✅ .env file already exists"
+fi
+
+# Install dependencies
 echo "📦 Installing dependencies..."
 npm install
 
-# 生成 Prisma 客户端
-echo "🔧 Generating Prisma client..."
-npm run db:generate
+# Initialize database schema
+echo "🗄️ Setting up database schema..."
+npm run db:setup
 
-# 运行迁移
-echo "🗃️ Running database migrations..."
-npm run db:migrate --name init
-
-# 种子数据
-echo "🌱 Seeding database..."
-npm run db:seed
-
-echo "✅ Development setup completed!"
 echo ""
-echo "📧 Demo user: demo@momiq.com"
-echo "🔐 Password: password123"
+echo "🎉 Development environment setup complete!"
 echo ""
-echo "🚀 Start development server:"
-echo "   npm run dev" 
+echo "📖 Next steps:"
+echo "1. Update the .env file with your configuration"
+echo "2. Run 'npm run dev' to start the development server"
+echo "3. Visit http://localhost:3000 to see your app"
+echo ""
+echo "💡 For production deployment with Turso:"
+echo "   Run './scripts/setup-turso.sh' to configure Turso database" 

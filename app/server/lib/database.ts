@@ -1,22 +1,31 @@
-import { PrismaClient } from "@prisma/client";
+import { createClient, Client } from "@libsql/client";
 import { environmentUtils, tursoConfig } from "./turso";
 
-// 全局 Prisma 客户端实例
+// Global database client instance
 declare global {
-  var prisma: PrismaClient | undefined;
+  var dbClient: Client | undefined;
 }
 
-// 创建 Prisma 客户端实例
-export const prisma =
-  global.prisma ||
-  new PrismaClient({
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
-        : ["error"],
-  });
+// Create database client based on environment
+function createDatabaseClient(): Client {
+  if (environmentUtils.isTursoEnvironment()) {
+    // Production: Turso
+    return createClient({
+      url: process.env.TURSO_DATABASE_URL!,
+      authToken: process.env.TURSO_AUTH_TOKEN!,
+    });
+  } else {
+    // Development: Local SQLite
+    return createClient({
+      url: process.env.DATABASE_URL || "file:./data/momiq.db",
+    });
+  }
+}
 
-// 初始化时显示数据库信息
+// Initialize client
+export const db = global.dbClient || createDatabaseClient();
+
+// Initialize database and show info
 if (process.env.NODE_ENV === "development") {
   const dbInfo = environmentUtils.getDatabaseInfo();
   console.log("📊 Database Configuration:");
@@ -30,22 +39,21 @@ if (process.env.NODE_ENV === "development") {
   }
 }
 
-// 在开发环境中避免热重载时创建多个实例
+// Prevent multiple instances in development
 if (process.env.NODE_ENV !== "production") {
-  global.prisma = prisma;
+  global.dbClient = db;
 }
 
-// 数据库工具函数
+// Database service class with utility methods
 export class DatabaseService {
   /**
-   * 测试数据库连接
+   * Test database connection
    */
   static async testConnection(): Promise<boolean> {
     try {
-      await prisma.$connect();
-      await prisma.$queryRaw`SELECT 1`;
+      await db.execute("SELECT 1");
 
-      // 如果是 Turso 环境，也测试直接连接
+      // If Turso environment, test direct connection too
       if (environmentUtils.isTursoEnvironment()) {
         await tursoConfig.testConnection();
       }
@@ -58,71 +66,171 @@ export class DatabaseService {
   }
 
   /**
-   * 优雅关闭数据库连接
+   * Close database connection gracefully
    */
   static async disconnect(): Promise<void> {
-    await prisma.$disconnect();
+    await db.close();
   }
 
   /**
-   * 执行数据库事务
+   * Execute a batch of statements as a transaction
    */
-  static async transaction<T>(
-    fn: (tx: PrismaClient) => Promise<T>
-  ): Promise<T> {
-    return await prisma.$transaction(fn);
+  static async batch(
+    statements: { sql: string; args: any[] }[]
+  ): Promise<void> {
+    await db.batch(
+      statements.map((stmt) => ({
+        sql: stmt.sql,
+        args: stmt.args || [],
+      }))
+    );
   }
 
   /**
-   * 获取用户统计信息
+   * Initialize database schema
+   */
+  static async initializeSchema(): Promise<void> {
+    // Create tables if they don't exist
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        avatar TEXT,
+        provider TEXT NOT NULL,
+        provider_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_sync DATETIME,
+        is_deleted BOOLEAN DEFAULT 0
+      )
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS bills (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        amount REAL NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT,
+        bill_date DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        sync_version INTEGER DEFAULT 1,
+        is_deleted BOOLEAN DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS budgets (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        category TEXT NOT NULL,
+        amount REAL NOT NULL,
+        period TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        sync_version INTEGER DEFAULT 1,
+        is_deleted BOOLEAN DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS sync_logs (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        status TEXT NOT NULL,
+        details TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS data_conflicts (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        resource_type TEXT NOT NULL,
+        resource_id TEXT NOT NULL,
+        local_data TEXT NOT NULL,
+        remote_data TEXT NOT NULL,
+        is_resolved BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // Create indexes for better performance
+    await db.execute(
+      `CREATE INDEX IF NOT EXISTS idx_bills_user_date ON bills (user_id, bill_date)`
+    );
+    await db.execute(
+      `CREATE INDEX IF NOT EXISTS idx_budgets_user_category ON budgets (user_id, category)`
+    );
+    await db.execute(
+      `CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions (token)`
+    );
+  }
+
+  /**
+   * Get user statistics
    */
   static async getUserStats(userId: string) {
-    const [billCount, budgetCount, lastSyncLog] = await Promise.all([
-      prisma.bill.count({
-        where: { userId, isDeleted: false },
-      }),
-      prisma.budget.count({
-        where: { userId, isDeleted: false },
-      }),
-      prisma.syncLog.findFirst({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
+    const billResult = await db.execute({
+      sql: "SELECT COUNT(*) as count FROM bills WHERE user_id = ? AND is_deleted = 0",
+      args: [userId],
+    });
+
+    const budgetResult = await db.execute({
+      sql: "SELECT COUNT(*) as count FROM budgets WHERE user_id = ? AND is_deleted = 0",
+      args: [userId],
+    });
+
+    const lastSyncResult = await db.execute({
+      sql: "SELECT created_at FROM sync_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+      args: [userId],
+    });
 
     return {
-      billCount,
-      budgetCount,
-      lastSync: lastSyncLog?.createdAt || null,
+      billCount: (billResult.rows[0]?.count as number) || 0,
+      budgetCount: (budgetResult.rows[0]?.count as number) || 0,
+      lastSync: lastSyncResult.rows[0]?.created_at || null,
     };
   }
 
   /**
-   * 清理过期的用户会话
+   * Clean up expired sessions
    */
   static async cleanupExpiredSessions(): Promise<number> {
-    const result = await prisma.userSession.deleteMany({
-      where: {
-        expiresAt: {
-          lt: new Date(),
-        },
-      },
+    const result = await db.execute({
+      sql: "DELETE FROM user_sessions WHERE expires_at < ?",
+      args: [new Date().toISOString()],
     });
-    return result.count;
+    return result.rowsAffected;
   }
 
   /**
-   * 获取同步冲突
+   * Get pending conflicts
    */
   static async getPendingConflicts(userId: string) {
-    return await prisma.dataConflict.findMany({
-      where: {
-        userId,
-        isResolved: false,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+    const result = await db.execute({
+      sql: "SELECT * FROM data_conflicts WHERE user_id = ? AND is_resolved = 0 ORDER BY created_at DESC",
+      args: [userId],
     });
+    return result.rows;
   }
 }

@@ -1,247 +1,303 @@
-# MomiQ Server
+# MomiQ Backend Server
 
-这是 MomiQ 应用的后端服务器，使用 Next.js API Routes 和 PostgreSQL 数据库。
+MomiQ 记账应用的后端服务，基于 Next.js 构建，使用 SQLite + Turso 作为数据库解决方案。
 
 ## 🚀 快速开始
 
-### 1. 环境准备
-
-确保已安装：
+### 环境要求
 
 - Node.js 18+
-- PostgreSQL 14+
-- npm 或 yarn
+- npm 或 pnpm
+- Turso CLI (生产环境)
 
-### 2. 数据库设置
+### 本地开发
 
-#### 本地 PostgreSQL
+1. **克隆项目并进入目录**
 
-```bash
-# macOS
-brew install postgresql@14
-brew services start postgresql@14
+   ```bash
+   cd app/server
+   ```
 
-# 创建数据库
-createdb momiq_db
+2. **一键设置开发环境**
+
+   ```bash
+   npm run setup:dev
+   ```
+
+3. **启动开发服务器**
+
+   ```bash
+   npm run dev
+   ```
+
+4. **访问应用**
+   - API: http://localhost:3000/api
+   - 健康检查: http://localhost:3000/api/health
+
+## 📁 项目结构
+
+```
+app/server/
+├── src/app/                 # Next.js App Router
+│   ├── api/                # API 路由
+│   │   ├── auth/          # 认证相关 API
+│   │   ├── sync/          # 数据同步 API
+│   │   └── chat/          # 聊天相关 API
+│   ├── layout.tsx         # 根布局
+│   └── page.tsx           # 首页
+├── lib/                    # 核心库文件
+│   ├── database.ts        # 数据库连接和工具
+│   ├── auth.ts           # 认证服务
+│   ├── sync.ts           # 数据同步服务
+│   └── turso.ts          # Turso 配置
+├── scripts/               # 部署和设置脚本
+│   ├── dev-setup.sh      # 开发环境设置
+│   └── setup-turso.sh    # Turso 生产环境设置
+├── data/                  # SQLite 数据库文件目录
+└── package.json          # 项目配置
 ```
 
-#### 或使用云数据库
+## 🗄️ 数据库
 
-- [Railway](https://railway.app/) (推荐)
-- [Supabase](https://supabase.com/)
-- [Vercel Postgres](https://vercel.com/storage/postgres)
+### 本地开发 (SQLite)
 
-### 3. 环境配置
-
-复制并配置环境变量：
+开发环境使用本地 SQLite 文件数据库：
 
 ```bash
-cp .env.example .env
-```
+# 数据库文件位置
+./data/momiq.db
 
-编辑 `.env` 文件：
-
-```env
-DATABASE_URL="postgresql://username:password@localhost:5432/momiq_db"
-JWT_SECRET="your-super-secret-key-at-least-32-characters"
-GOOGLE_CLIENT_ID="your-google-oauth-client-id"
-```
-
-### 4. 安装和初始化
-
-```bash
-# 安装依赖
-npm install
-
-# 设置数据库（一键完成）
+# 初始化数据库
 npm run db:setup
 ```
 
-### 5. 启动开发服务器
+### 生产环境 (Turso)
+
+生产环境使用 Turso 托管的 libSQL 数据库：
 
 ```bash
-npm run dev
+# 设置 Turso
+npm run setup:turso
+
+# 获取连接信息
+turso db show momiq-prod
 ```
 
-服务器将在 http://localhost:3000 启动。
+## 🔧 可用命令
 
-## 🔧 可用脚本
+### 开发命令
 
 ```bash
-# 开发
-npm run dev              # 启动开发服务器
-npm run build           # 构建生产版本
-npm run start           # 启动生产服务器
+npm run dev          # 启动开发服务器
+npm run build        # 构建应用
+npm run start        # 启动生产服务器
+npm run lint         # 代码检查
+npm run type-check   # TypeScript 类型检查
+```
 
-# 数据库
-npm run db:generate     # 生成 Prisma 客户端
-npm run db:migrate      # 运行数据库迁移
-npm run db:seed         # 运行种子脚本
-npm run db:studio       # 启动 Prisma Studio
-npm run db:reset        # 重置数据库
-npm run db:setup        # 完整数据库设置
+### 数据库命令
+
+```bash
+npm run db:setup     # 初始化数据库
+npm run setup:turso  # 设置 Turso 生产数据库
+npm run setup:dev    # 设置开发环境
+```
+
+## 🔐 环境变量
+
+在 `.env` 文件中配置以下变量：
+
+```bash
+# 数据库配置
+DATABASE_URL="file:./data/momiq.db"           # 开发环境
+# DATABASE_URL="libsql://your-db.turso.io"    # 生产环境
+# TURSO_AUTH_TOKEN="your-turso-token"         # 生产环境
+
+# JWT 配置
+JWT_SECRET="your-super-secret-jwt-key"
+
+# OAuth 提供商 (可选)
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+APPLE_CLIENT_ID=""
+APPLE_PRIVATE_KEY=""
+WECHAT_APP_ID=""
+WECHAT_APP_SECRET=""
+
+# API 配置
+API_BASE_URL="http://localhost:3000"
+NODE_ENV="development"
 ```
 
 ## 📡 API 端点
 
-### 认证
+### 认证 API
 
 - `POST /api/auth/login` - 邮箱密码登录
 - `POST /api/auth/google` - Google OAuth 登录
 - `POST /api/auth/apple` - Apple Sign In 登录
+- `POST /api/auth/wechat` - 微信登录
 
-### 数据同步
+### 数据同步 API
 
-- `GET /api/sync` - 获取同步统计
-- `POST /api/sync` - 执行数据同步
+- `POST /api/sync` - 同步用户数据
+- `GET /api/sync/stats` - 获取同步统计
 
-## 🗃️ 数据库架构
+### 聊天 API
 
-### 核心表
-
-- `users` - 用户信息
-- `user_sessions` - 会话管理
-- `bills` - 账单数据
-- `budgets` - 预算数据
-- `categories` - 分类系统
-- `sync_logs` - 同步日志
-
-### 演示账户
-
-```
-邮箱: demo@momiq.com
-密码: password123
-```
-
-## 🔐 认证机制
-
-- **JWT Token**: 7天有效期
-- **Session Management**: 数据库存储会话
-- **OAuth Support**: Google 和 Apple 登录
-- **Password Hashing**: bcrypt 加密
-
-## 📊 数据同步
-
-### 同步策略
-
-- **增量同步**: 基于时间戳
-- **冲突解决**: Last-Write-Wins
-- **批量处理**: 提高性能
-- **事务保证**: 数据一致性
-
-### 同步流程
-
-1. 客户端发送本地更改
-2. 服务器检测冲突
-3. 应用合并策略
-4. 返回最新数据
-5. 记录同步日志
-
-## 🛠️ 开发工具
-
-### Prisma Studio
-
-可视化数据库管理界面：
-
-```bash
-npm run db:studio
-```
-
-访问 http://localhost:5555
-
-### 日志查看
-
-```bash
-# 查看服务器日志
-npm run dev
-
-# 查看数据库查询
-# 在 .env 中设置 DATABASE_URL 包含 logging=true
-```
+- `POST /api/chat` - AI 聊天和账单分析
 
 ## 🚀 部署
 
-### Vercel 部署
+### 使用 Turso 部署
+
+1. **安装 Turso CLI**
+
+   ```bash
+   npm install -g @turso/cli
+   ```
+
+2. **注册并创建数据库**
+
+   ```bash
+   turso auth signup
+   turso db create momiq-prod
+   ```
+
+3. **获取连接信息**
+
+   ```bash
+   turso db show momiq-prod
+   ```
+
+4. **更新环境变量**
+
+   ```bash
+   DATABASE_URL="libsql://momiq-prod.turso.io"
+   TURSO_AUTH_TOKEN="your-token-here"
+   ```
+
+5. **初始化生产数据库**
+   ```bash
+   npm run setup:turso
+   ```
+
+### 其他平台部署
+
+该应用可以部署到任何支持 Node.js 的平台：
+
+- **Vercel**: 零配置部署
+- **Railway**: 一键部署
+- **Heroku**: 支持 SQLite + Turso
+- **Docker**: 容器化部署
+
+## 🔍 数据库查询
+
+### 使用 Turso CLI 查询
 
 ```bash
-# 安装 Vercel CLI
-npm install -g vercel
+# 连接到数据库
+turso db shell momiq-prod
 
-# 部署
-vercel
+# 查看表结构
+.schema
 
-# 添加环境变量
-vercel env add DATABASE_URL
-vercel env add JWT_SECRET
+# 查询数据
+SELECT * FROM users LIMIT 10;
+SELECT * FROM bills ORDER BY created_at DESC LIMIT 5;
 ```
 
-### Railway 部署
+### 应用内查询
+
+```typescript
+import { db } from "./lib/database";
+
+// 查询示例
+const users = await db.execute("SELECT * FROM users");
+const bills = await db.execute({
+  sql: "SELECT * FROM bills WHERE user_id = ?",
+  args: [userId],
+});
+```
+
+## 🛠️ 开发工具
+
+### 数据库工具
+
+- **Turso CLI**: 官方命令行工具
+- **SQLite Browser**: 可视化数据库工具
+- **TablePlus**: 数据库客户端 (支持 SQLite)
+
+### API 测试
+
+- **Thunder Client**: VS Code 插件
+- **Postman**: API 测试工具
+- **curl**: 命令行测试
+
+## 📊 监控和日志
+
+### 数据库监控
 
 ```bash
-# 安装 Railway CLI
-npm install -g @railway/cli
+# 查看数据库状态
+turso db show momiq-prod
 
-# 部署
-railway up
+# 查看使用统计
+turso db usage momiq-prod
 
-# 添加 PostgreSQL
-railway add postgresql
+# 实时监控
+turso db shell momiq-prod --dump
 ```
 
-## 📝 环境变量
-
-必需的环境变量：
-
-```env
-# 数据库
-DATABASE_URL="postgresql://..."
-
-# JWT
-JWT_SECRET="your-secret-key"
-
-# OAuth (可选)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-APPLE_CLIENT_ID="com.your-app.bundle-id"
-```
-
-## 🔧 故障排除
-
-### 数据库连接问题
+### 应用日志
 
 ```bash
-# 测试数据库连接
-npm run db:generate
+# 开发环境日志
+npm run dev
 
-# 重置数据库
-npm run db:reset
+# 生产环境日志
+npm run start
 ```
 
-### 权限错误
+## 🚨 故障排除
 
-```sql
--- 检查数据库权限
-\du your_username
+### 常见问题
 
--- 重新授权
-GRANT ALL PRIVILEGES ON DATABASE momiq_db TO your_username;
-```
+1. **数据库连接失败**
 
-### 迁移失败
+   ```bash
+   # 检查环境变量
+   echo $DATABASE_URL
+
+   # 测试连接
+   turso db shell momiq-prod
+   ```
+
+2. **认证问题**
+
+   ```bash
+   # 检查 JWT 密钥
+   echo $JWT_SECRET
+
+   # 重新生成密钥
+   openssl rand -base64 32
+   ```
+
+3. **同步错误**
+   ```bash
+   # 查看同步日志
+   SELECT * FROM sync_logs ORDER BY created_at DESC LIMIT 10;
+   ```
+
+### 数据备份
 
 ```bash
-# 查看迁移状态
-npx prisma migrate status
+# 备份数据库
+turso db dump momiq-prod > backup.sql
 
-# 强制重置
-npx prisma migrate reset --force
+# 恢复数据库
+turso db restore momiq-prod < backup.sql
 ```
-
-## 📚 文档
-
-- [生产环境数据库设置](../../docs/PRODUCTION_DATABASE_SETUP.md)
-- [用户系统实现文档](../../docs/USER_SYSTEM_IMPLEMENTATION.md)
-- [API 文档](./docs/api.md)
 
 ## 🤝 贡献
 
@@ -253,7 +309,7 @@ npx prisma migrate reset --force
 
 ## 📄 许可证
 
-此项目使用 MIT 许可证。
+本项目采用 MIT 许可证。
 
 ---
 

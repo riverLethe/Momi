@@ -1,539 +1,394 @@
-import { prisma } from "./database";
-import type { PrismaClient } from "@prisma/client";
+import { db } from "./database";
 
-export interface SyncRequest {
-  bills?: any[];
-  budgets?: any[];
-  lastSyncTime?: string;
-  deviceId?: string;
-  deviceType?: "ios" | "android" | "web";
-  appVersion?: string;
-}
-
-export interface SyncResponse {
+// Types
+export interface SyncData {
   bills: any[];
   budgets: any[];
-  conflicts: any[];
-  lastSyncTime: string;
-  stats: {
-    billsUploaded: number;
-    billsDownloaded: number;
-    budgetsUploaded: number;
-    budgetsDownloaded: number;
-    conflictsDetected: number;
+  lastSyncTimestamp: string;
+}
+
+export interface SyncResult {
+  success: boolean;
+  message: string;
+  data?: {
+    bills: any[];
+    budgets: any[];
+    conflicts: any[];
   };
 }
 
-export interface ConflictData {
-  entityType: "bill" | "budget";
-  entityId: string;
-  conflictType: "update_conflict" | "delete_conflict";
-  localData: any;
-  serverData: any;
+export interface SyncLog {
+  id: string;
+  userId: string;
+  operation: string;
+  status: string;
+  details?: string;
+  createdAt: string;
 }
 
+// Sync Service
 export class SyncService {
   /**
-   * 执行完整的数据同步
+   * Sync user data from client to server
    */
   static async syncUserData(
     userId: string,
-    syncRequest: SyncRequest
-  ): Promise<SyncResponse> {
-    const startTime = new Date();
-    let stats = {
-      billsUploaded: 0,
-      billsDownloaded: 0,
-      budgetsUploaded: 0,
-      budgetsDownloaded: 0,
-      conflictsDetected: 0,
-    };
-
+    clientData: SyncData,
+    deviceInfo?: string
+  ): Promise<SyncResult> {
     try {
-      // 在事务中执行同步操作
-      const result = await prisma.$transaction(async (tx) => {
-        const conflicts: ConflictData[] = [];
+      // Start transaction-like operations
+      const conflicts: any[] = [];
+      const syncedBills: any[] = [];
+      const syncedBudgets: any[] = [];
 
-        // 1. 同步账单数据
-        const {
-          uploaded: billsUploaded,
-          downloaded: billsDownloaded,
-          conflicts: billConflicts,
-        } = await this.syncBills(
-          tx,
-          userId,
-          syncRequest.bills || [],
-          syncRequest.lastSyncTime
-        );
+      // Process bills
+      for (const bill of clientData.bills) {
+        const result = await this.processBillSync(userId, bill);
+        if (result.conflict) {
+          conflicts.push(result.conflict);
+        } else if (result.bill) {
+          syncedBills.push(result.bill);
+        }
+      }
 
-        stats.billsUploaded = billsUploaded;
-        stats.billsDownloaded = billsDownloaded;
-        conflicts.push(...billConflicts);
+      // Process budgets
+      for (const budget of clientData.budgets) {
+        const result = await this.processBudgetSync(userId, budget);
+        if (result.conflict) {
+          conflicts.push(result.conflict);
+        } else if (result.budget) {
+          syncedBudgets.push(result.budget);
+        }
+      }
 
-        // 2. 同步预算数据
-        const {
-          uploaded: budgetsUploaded,
-          downloaded: budgetsDownloaded,
-          conflicts: budgetConflicts,
-        } = await this.syncBudgets(
-          tx,
-          userId,
-          syncRequest.budgets || [],
-          syncRequest.lastSyncTime
-        );
-
-        stats.budgetsUploaded = budgetsUploaded;
-        stats.budgetsDownloaded = budgetsDownloaded;
-        conflicts.push(...budgetConflicts);
-
-        // 3. 获取最新数据
-        const [bills, budgets] = await Promise.all([
-          this.getUserBills(tx, userId, syncRequest.lastSyncTime),
-          this.getUserBudgets(tx, userId, syncRequest.lastSyncTime),
-        ]);
-
-        stats.conflictsDetected = conflicts.length;
-
-        return { bills, budgets, conflicts };
+      // Update user's last sync time
+      await db.execute({
+        sql: `UPDATE users SET last_sync = ?, updated_at = ? WHERE id = ?`,
+        args: [new Date().toISOString(), new Date().toISOString(), userId],
       });
 
-      // 4. 记录同步日志
-      await this.createSyncLog(userId, "full", "success", stats, syncRequest);
-
-      // 5. 更新用户最后同步时间
-      await prisma.user.update({
-        where: { id: userId },
-        data: { lastSyncAt: new Date() },
+      // Log sync operation
+      await this.createSyncLog(userId, "sync", "success", {
+        billsCount: syncedBills.length,
+        budgetsCount: syncedBudgets.length,
+        conflictsCount: conflicts.length,
+        deviceInfo,
       });
 
       return {
-        ...result,
-        lastSyncTime: new Date().toISOString(),
-        stats,
+        success: true,
+        message: "Sync completed successfully",
+        data: {
+          bills: syncedBills,
+          budgets: syncedBudgets,
+          conflicts,
+        },
       };
     } catch (error) {
-      console.error("Sync failed for user:", userId, error);
-
-      // 记录失败日志
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      await this.createSyncLog(
-        userId,
-        "full",
-        "error",
-        stats,
-        syncRequest,
-        errorMessage
-      );
-
-      throw new Error("Sync operation failed");
-    }
-  }
-
-  /**
-   * 同步账单数据
-   */
-  private static async syncBills(
-    tx: PrismaClient,
-    userId: string,
-    localBills: any[],
-    lastSyncTime?: string
-  ) {
-    let uploaded = 0;
-    let downloaded = 0;
-    const conflicts: ConflictData[] = [];
-
-    // 处理本地账单上传
-    for (const localBill of localBills) {
-      try {
-        const existingBill = await tx.bill.findUnique({
-          where: { id: localBill.id },
-        });
-
-        if (!existingBill) {
-          // 创建新账单
-          await tx.bill.create({
-            data: {
-              id: localBill.id,
-              userId,
-              amount: localBill.amount,
-              category: localBill.category,
-              categoryName: localBill.categoryName,
-              merchant: localBill.merchant,
-              note: localBill.note,
-              paymentMethod: localBill.paymentMethod,
-              billDate: new Date(localBill.date || localBill.billDate),
-              receiptUrl: localBill.receiptUrl,
-              location: localBill.location,
-              tags: localBill.tags || [],
-              lastModified: new Date(localBill.updatedAt || Date.now()),
-              syncVersion: 1,
-              isDeleted: localBill.isDeleted || false,
-            },
-          });
-          uploaded++;
-        } else {
-          // 检查冲突
-          const serverModified = existingBill.lastModified;
-          const localModified = new Date(localBill.updatedAt || Date.now());
-
-          if (serverModified > localModified) {
-            // 服务器数据更新，存在冲突
-            conflicts.push({
-              entityType: "bill",
-              entityId: localBill.id,
-              conflictType: "update_conflict",
-              localData: localBill,
-              serverData: existingBill,
-            });
-          } else if (localModified > serverModified) {
-            // 本地数据更新，上传到服务器
-            await tx.bill.update({
-              where: { id: localBill.id },
-              data: {
-                amount: localBill.amount,
-                category: localBill.category,
-                categoryName: localBill.categoryName,
-                merchant: localBill.merchant,
-                note: localBill.note,
-                paymentMethod: localBill.paymentMethod,
-                billDate: new Date(localBill.date || localBill.billDate),
-                receiptUrl: localBill.receiptUrl,
-                location: localBill.location,
-                tags: localBill.tags || [],
-                lastModified: localModified,
-                syncVersion: existingBill.syncVersion + 1,
-                isDeleted: localBill.isDeleted || false,
-              },
-            });
-            uploaded++;
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to sync bill ${localBill.id}:`, error);
-      }
-    }
-
-    // 统计下载数量（服务器上有但本地同步时间后更新的数据）
-    if (lastSyncTime) {
-      const serverUpdates = await tx.bill.count({
-        where: {
-          userId,
-          lastModified: {
-            gt: new Date(lastSyncTime),
-          },
-          isDeleted: false,
-        },
+      // Log sync error
+      await this.createSyncLog(userId, "sync", "error", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        deviceInfo,
       });
-      downloaded = serverUpdates;
-    }
 
-    return { uploaded, downloaded, conflicts };
-  }
-
-  /**
-   * 同步预算数据
-   */
-  private static async syncBudgets(
-    tx: PrismaClient,
-    userId: string,
-    localBudgets: any[],
-    lastSyncTime?: string
-  ) {
-    let uploaded = 0;
-    let downloaded = 0;
-    const conflicts: ConflictData[] = [];
-
-    // 处理本地预算上传
-    for (const localBudget of localBudgets) {
-      try {
-        const existingBudget = await tx.budget.findUnique({
-          where: { id: localBudget.id },
-        });
-
-        if (!existingBudget) {
-          // 创建新预算
-          await tx.budget.create({
-            data: {
-              id: localBudget.id,
-              userId,
-              name: localBudget.name,
-              amount: localBudget.amount,
-              period: localBudget.period,
-              category: localBudget.category,
-              startDate: new Date(localBudget.startDate),
-              endDate: new Date(localBudget.endDate),
-              isActive: localBudget.isActive !== false,
-              alertThreshold: localBudget.alertThreshold,
-              lastModified: new Date(localBudget.updatedAt || Date.now()),
-              syncVersion: 1,
-              isDeleted: localBudget.isDeleted || false,
-            },
-          });
-          uploaded++;
-        } else {
-          // 检查冲突
-          const serverModified = existingBudget.lastModified;
-          const localModified = new Date(localBudget.updatedAt || Date.now());
-
-          if (serverModified > localModified) {
-            // 服务器数据更新，存在冲突
-            conflicts.push({
-              entityType: "budget",
-              entityId: localBudget.id,
-              conflictType: "update_conflict",
-              localData: localBudget,
-              serverData: existingBudget,
-            });
-          } else if (localModified > serverModified) {
-            // 本地数据更新，上传到服务器
-            await tx.budget.update({
-              where: { id: localBudget.id },
-              data: {
-                name: localBudget.name,
-                amount: localBudget.amount,
-                period: localBudget.period,
-                category: localBudget.category,
-                startDate: new Date(localBudget.startDate),
-                endDate: new Date(localBudget.endDate),
-                isActive: localBudget.isActive !== false,
-                alertThreshold: localBudget.alertThreshold,
-                lastModified: localModified,
-                syncVersion: existingBudget.syncVersion + 1,
-                isDeleted: localBudget.isDeleted || false,
-              },
-            });
-            uploaded++;
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to sync budget ${localBudget.id}:`, error);
-      }
-    }
-
-    // 统计下载数量
-    if (lastSyncTime) {
-      const serverUpdates = await tx.budget.count({
-        where: {
-          userId,
-          lastModified: {
-            gt: new Date(lastSyncTime),
-          },
-          isDeleted: false,
-        },
-      });
-      downloaded = serverUpdates;
-    }
-
-    return { uploaded, downloaded, conflicts };
-  }
-
-  /**
-   * 获取用户账单数据
-   */
-  private static async getUserBills(
-    tx: PrismaClient,
-    userId: string,
-    lastSyncTime?: string
-  ) {
-    const where: any = {
-      userId,
-      isDeleted: false,
-    };
-
-    if (lastSyncTime) {
-      where.lastModified = {
-        gt: new Date(lastSyncTime),
+      return {
+        success: false,
+        message: "Sync failed",
       };
     }
-
-    return await tx.bill.findMany({
-      where,
-      orderBy: {
-        lastModified: "desc",
-      },
-    });
   }
 
   /**
-   * 获取用户预算数据
+   * Process bill synchronization
    */
-  private static async getUserBudgets(
-    tx: any,
+  private static async processBillSync(
     userId: string,
-    lastSyncTime?: string
-  ) {
-    const where: any = {
-      userId,
-      isDeleted: false,
-    };
+    bill: any
+  ): Promise<{ bill?: any; conflict?: any }> {
+    // Check if bill exists
+    const existingResult = await db.execute({
+      sql: "SELECT * FROM bills WHERE id = ? AND user_id = ?",
+      args: [bill.id, userId],
+    });
 
-    if (lastSyncTime) {
-      where.lastModified = {
-        gt: new Date(lastSyncTime),
-      };
+    if (existingResult.rows.length === 0) {
+      // Insert new bill
+      await db.execute({
+        sql: `INSERT INTO bills (id, user_id, amount, category, description, bill_date, created_at, updated_at, sync_version)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          bill.id,
+          userId,
+          bill.amount,
+          bill.category,
+          bill.description || null,
+          bill.billDate,
+          bill.createdAt || new Date().toISOString(),
+          new Date().toISOString(),
+          bill.syncVersion || 1,
+        ],
+      });
+      return { bill };
+    } else {
+      // Check for conflicts
+      const existing = existingResult.rows[0];
+      if (existing.sync_version !== bill.syncVersion) {
+        // Conflict detected
+        return {
+          conflict: {
+            id: bill.id,
+            type: "bill",
+            localData: existing,
+            remoteData: bill,
+          },
+        };
+      }
+
+      // Update existing bill
+      await db.execute({
+        sql: `UPDATE bills SET amount = ?, category = ?, description = ?, bill_date = ?, updated_at = ?, sync_version = ?
+              WHERE id = ? AND user_id = ?`,
+        args: [
+          bill.amount,
+          bill.category,
+          bill.description || null,
+          bill.billDate,
+          new Date().toISOString(),
+          (bill.syncVersion || 1) + 1,
+          bill.id,
+          userId,
+        ],
+      });
+      return { bill };
     }
-
-    return await tx.budget.findMany({
-      where,
-      orderBy: {
-        lastModified: "desc",
-      },
-    });
   }
 
   /**
-   * 创建同步日志
+   * Process budget synchronization
    */
-  private static async createSyncLog(
+  private static async processBudgetSync(
     userId: string,
-    syncType: string,
+    budget: any
+  ): Promise<{ budget?: any; conflict?: any }> {
+    // Check if budget exists
+    const existingResult = await db.execute({
+      sql: "SELECT * FROM budgets WHERE id = ? AND user_id = ?",
+      args: [budget.id, userId],
+    });
+
+    if (existingResult.rows.length === 0) {
+      // Insert new budget
+      await db.execute({
+        sql: `INSERT INTO budgets (id, user_id, category, amount, period, created_at, updated_at, sync_version)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          budget.id,
+          userId,
+          budget.category,
+          budget.amount,
+          budget.period,
+          budget.createdAt || new Date().toISOString(),
+          new Date().toISOString(),
+          budget.syncVersion || 1,
+        ],
+      });
+      return { budget };
+    } else {
+      // Check for conflicts
+      const existing = existingResult.rows[0];
+      if (existing.sync_version !== budget.syncVersion) {
+        // Conflict detected
+        return {
+          conflict: {
+            id: budget.id,
+            type: "budget",
+            localData: existing,
+            remoteData: budget,
+          },
+        };
+      }
+
+      // Update existing budget
+      await db.execute({
+        sql: `UPDATE budgets SET category = ?, amount = ?, period = ?, updated_at = ?, sync_version = ?
+              WHERE id = ? AND user_id = ?`,
+        args: [
+          budget.category,
+          budget.amount,
+          budget.period,
+          new Date().toISOString(),
+          (budget.syncVersion || 1) + 1,
+          budget.id,
+          userId,
+        ],
+      });
+      return { budget };
+    }
+  }
+
+  /**
+   * Create sync log
+   */
+  static async createSyncLog(
+    userId: string,
+    operation: string,
     status: string,
-    stats: any,
-    syncRequest: SyncRequest,
-    message?: string
-  ) {
-    return await prisma.syncLog.create({
-      data: {
+    details?: any
+  ): Promise<void> {
+    const id =
+      "log_" +
+      Math.random().toString(36).substr(2, 9) +
+      Date.now().toString(36);
+
+    await db.execute({
+      sql: `INSERT INTO sync_logs (id, user_id, operation, status, details, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [
+        id,
         userId,
-        syncType,
+        operation,
         status,
-        message,
-        billsUploaded: stats.billsUploaded,
-        billsDownloaded: stats.billsDownloaded,
-        budgetsUploaded: stats.budgetsUploaded,
-        budgetsDownloaded: stats.budgetsDownloaded,
-        conflictsResolved: stats.conflictsDetected,
-        deviceId: syncRequest.deviceId,
-        deviceType: syncRequest.deviceType,
-        appVersion: syncRequest.appVersion,
-      },
+        details ? JSON.stringify(details) : null,
+        new Date().toISOString(),
+      ],
     });
   }
 
   /**
-   * 解决数据冲突
+   * Get user data for sync
+   */
+  static async getUserSyncData(
+    userId: string,
+    lastSyncTimestamp?: string
+  ): Promise<SyncData> {
+    const whereClause = lastSyncTimestamp
+      ? "user_id = ? AND updated_at > ? AND is_deleted = 0"
+      : "user_id = ? AND is_deleted = 0";
+
+    const args = lastSyncTimestamp ? [userId, lastSyncTimestamp] : [userId];
+
+    const [billsResult, budgetsResult] = await Promise.all([
+      db.execute({
+        sql: `SELECT * FROM bills WHERE ${whereClause} ORDER BY updated_at DESC`,
+        args,
+      }),
+      db.execute({
+        sql: `SELECT * FROM budgets WHERE ${whereClause} ORDER BY updated_at DESC`,
+        args,
+      }),
+    ]);
+
+    return {
+      bills: billsResult.rows,
+      budgets: budgetsResult.rows,
+      lastSyncTimestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Get sync statistics
+   */
+  static async getSyncStats(userId: string) {
+    const [billCount, budgetCount, conflictCount] = await Promise.all([
+      db.execute({
+        sql: "SELECT COUNT(*) as count FROM bills WHERE user_id = ? AND is_deleted = 0",
+        args: [userId],
+      }),
+      db.execute({
+        sql: "SELECT COUNT(*) as count FROM budgets WHERE user_id = ? AND is_deleted = 0",
+        args: [userId],
+      }),
+      db.execute({
+        sql: "SELECT COUNT(*) as count FROM data_conflicts WHERE user_id = ? AND is_resolved = 0",
+        args: [userId],
+      }),
+    ]);
+
+    return {
+      billCount: billCount.rows[0]?.count || 0,
+      budgetCount: budgetCount.rows[0]?.count || 0,
+      conflictCount: conflictCount.rows[0]?.count || 0,
+    };
+  }
+
+  /**
+   * Clean up old sync logs
+   */
+  static async cleanupOldLogs(
+    userId: string,
+    daysToKeep: number = 30
+  ): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+    const result = await db.execute({
+      sql: "DELETE FROM sync_logs WHERE user_id = ? AND created_at < ?",
+      args: [userId, cutoffDate.toISOString()],
+    });
+
+    return result.rowsAffected;
+  }
+
+  /**
+   * Resolve conflict
    */
   static async resolveConflict(
     userId: string,
     conflictId: string,
-    resolution: "local" | "server" | "merge",
-    mergedData?: any
-  ) {
-    const conflict = await prisma.dataConflict.findUnique({
-      where: { id: conflictId },
+    resolution: "local" | "remote"
+  ): Promise<boolean> {
+    const conflictResult = await db.execute({
+      sql: "SELECT * FROM data_conflicts WHERE id = ? AND user_id = ?",
+      args: [conflictId, userId],
     });
 
-    if (!conflict || conflict.userId !== userId) {
-      throw new Error("Conflict not found");
+    if (conflictResult.rows.length === 0) {
+      return false;
     }
 
-    let resolvedData: any;
+    const conflict = conflictResult.rows[0];
+    const data =
+      resolution === "local"
+        ? JSON.parse(String(conflict.local_data))
+        : JSON.parse(String(conflict.remote_data));
 
-    switch (resolution) {
-      case "local":
-        resolvedData = conflict.localData;
-        break;
-      case "server":
-        resolvedData = conflict.serverData;
-        break;
-      case "merge":
-        resolvedData = mergedData || conflict.localData;
-        break;
-    }
-
-    // 更新实际数据
-    if (conflict.entityType === "bill") {
-      await prisma.bill.update({
-        where: { id: conflict.entityId },
-        data: {
-          ...resolvedData,
-          lastModified: new Date(),
-          syncVersion: { increment: 1 },
-        },
+    // Apply resolution based on resource type
+    if (conflict.resource_type === "bill") {
+      await db.execute({
+        sql: `UPDATE bills SET amount = ?, category = ?, description = ?, bill_date = ?, updated_at = ?
+              WHERE id = ? AND user_id = ?`,
+        args: [
+          data.amount,
+          data.category,
+          data.description,
+          data.billDate,
+          new Date().toISOString(),
+          conflict.resource_id,
+          userId,
+        ],
       });
-    } else if (conflict.entityType === "budget") {
-      await prisma.budget.update({
-        where: { id: conflict.entityId },
-        data: {
-          ...resolvedData,
-          lastModified: new Date(),
-          syncVersion: { increment: 1 },
-        },
+    } else if (conflict.resource_type === "budget") {
+      await db.execute({
+        sql: `UPDATE budgets SET category = ?, amount = ?, period = ?, updated_at = ?
+              WHERE id = ? AND user_id = ?`,
+        args: [
+          data.category,
+          data.amount,
+          data.period,
+          new Date().toISOString(),
+          conflict.resource_id,
+          userId,
+        ],
       });
     }
 
-    // 标记冲突已解决
-    await prisma.dataConflict.update({
-      where: { id: conflictId },
-      data: {
-        isResolved: true,
-        resolvedData,
-        resolvedBy: "user",
-        resolvedAt: new Date(),
-      },
+    // Mark conflict as resolved
+    await db.execute({
+      sql: "UPDATE data_conflicts SET is_resolved = 1 WHERE id = ?",
+      args: [conflictId],
     });
 
-    return resolvedData;
-  }
-
-  /**
-   * 获取用户同步统计
-   */
-  static async getSyncStats(userId: string) {
-    const [recentSyncs, totalBills, totalBudgets, pendingConflicts] =
-      await Promise.all([
-        prisma.syncLog.findMany({
-          where: { userId },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        }),
-        prisma.bill.count({
-          where: { userId, isDeleted: false },
-        }),
-        prisma.budget.count({
-          where: { userId, isDeleted: false },
-        }),
-        prisma.dataConflict.count({
-          where: { userId, isResolved: false },
-        }),
-      ]);
-
-    return {
-      recentSyncs,
-      totalBills,
-      totalBudgets,
-      pendingConflicts,
-      lastSync: recentSyncs[0]?.createdAt || null,
-    };
-  }
-
-  /**
-   * 清理旧的同步数据
-   */
-  static async cleanupOldData(userId: string, daysToKeep = 30) {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-
-    // 清理旧的同步日志
-    await prisma.syncLog.deleteMany({
-      where: {
-        userId,
-        createdAt: {
-          lt: cutoffDate,
-        },
-      },
-    });
-
-    // 清理已解决的冲突
-    await prisma.dataConflict.deleteMany({
-      where: {
-        userId,
-        isResolved: true,
-        resolvedAt: {
-          lt: cutoffDate,
-        },
-      },
-    });
+    return true;
   }
 }

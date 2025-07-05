@@ -3,6 +3,7 @@ import { Platform, Alert } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { User, AuthState } from '@/types/user.types';
 import {
@@ -35,7 +36,7 @@ if (googleWebClientId && googleIosClientId) {
 // Complete the sign-in with web browser for OAuth flows
 WebBrowser.maybeCompleteAuthSession();
 
-// Use Expo Auth Request for Apple Sign In
+// Use Expo Auth Request for WeChat Sign In
 const redirectUri = AuthSession.makeRedirectUri({
   scheme: process.env.EXPO_PUBLIC_SCHEME || 'momiq'
 });
@@ -74,31 +75,6 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>(initialAuthState);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-
-  // Memoise the auth request configuration so that the object reference stays
-  // stable across renders, avoiding the "Maximum update depth exceeded" loop
-  // inside expo-auth-session hooks (which internally compare configs and call
-  // setState when they change).
-
-  const appleRequestConfig = React.useMemo(() => ({
-    clientId: process.env.EXPO_PUBLIC_APPLE_CLIENT_ID || 'com.momiq.app',
-    scopes: ['name', 'email'] as string[],
-    redirectUri,
-    responseType: AuthSession.ResponseType.Code,
-    // Generate once per component lifecycle
-    state: Crypto.randomUUID(),
-  }), [redirectUri]);
-
-  const appleServiceConfig = React.useMemo(() => ({
-    authorizationEndpoint: 'https://appleid.apple.com/auth/authorize',
-    tokenEndpoint: 'https://appleid.apple.com/auth/token',
-    revocationEndpoint: 'https://appleid.apple.com/auth/revoke',
-  }), []);
-
-  const [appleRequest, appleResponse, applePromptAsync] = AuthSession.useAuthRequest(
-    appleRequestConfig,
-    appleServiceConfig
-  );
 
   // WeChat Auth Request Setup (only if APP_ID exists)
   const wechatRequestConfig = React.useMemo(() => {
@@ -184,13 +160,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     checkAuth();
   }, []);
-
-  // Handle Apple Sign In response
-  useEffect(() => {
-    if (appleResponse?.type === 'success') {
-      handleAppleSignInResponse(appleResponse);
-    }
-  }, [appleResponse]);
 
   // Handle WeChat response
   useEffect(() => {
@@ -322,35 +291,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
 
-      const result = await applePromptAsync();
+      // 使用 expo-apple-authentication 进行苹果登录
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
 
-      if (result.type === 'success') {
-        return await handleAppleSignInResponse(result);
-      }
-
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-      return false;
-    } catch (error) {
-      console.error('Apple sign-in error:', error);
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Apple sign-in failed',
-      }));
-      return false;
-    }
-  }, [applePromptAsync]);
-
-  /**
-   * Handle Apple Sign In response
-   */
-  const handleAppleSignInResponse = useCallback(async (response: AuthSession.AuthSessionResult): Promise<boolean> => {
-    try {
-      if (response.type === 'success' && response.params.code) {
-        // Send Apple authorization code to backend
+      if (credential && credential.identityToken) {
+        // 发送 identity token 到后端进行验证
         const appleResponse = await apiClient.auth.appleLogin({
-          authorizationCode: response.params.code,
-          state: response.params.state
+          identityToken: credential.identityToken,
+          user: credential.user
         });
 
         if (appleResponse.token) {
@@ -363,7 +316,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             error: null,
           });
 
-          // Trigger initial data sync
+          // 触发初始数据同步
           syncData();
 
           return true;
@@ -372,7 +325,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       throw new Error('Apple sign-in failed');
     } catch (error) {
-      console.error('Apple sign-in response error:', error);
+      console.error('Apple sign-in error:', error);
+
+      // 用户取消登录
+      if ((error as any)?.code === 'ERR_CANCELED') {
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return false;
+      }
+
       setAuthState(prev => ({
         ...prev,
         isLoading: false,

@@ -164,6 +164,8 @@ export default {
     "No spending data available": "No spending data available",
     Hello: "Hello",
     Guest: "Guest",
+    User: "User",
+    "Sign in to sync your data": "Sign in to sync your data",
     Budget: "Budget",
     Chat: "Chat",
     Accounts: "Accounts",
@@ -576,5 +578,14 @@ export default {
     Dark: "Dark",
     System: "System",
     "Select theme": "Select theme",
+
+    // Data Sync settings
+    "Auto Sync": "Auto Sync",
+    "Automatically sync when online": "Automatically sync when online",
+    "Manual sync only": "Manual sync only",
+    "Manual Sync": "Manual Sync",
+    "Sync now": "Sync now",
+    "Sync your data now": "Sync your data now",
+    "Network Status": "Network Status",
   },
 };

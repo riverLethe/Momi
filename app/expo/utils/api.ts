@@ -61,8 +61,8 @@ export interface GoogleLoginRequest {
 }
 
 export interface AppleLoginRequest {
-  authorizationCode: string;
-  state: string;
+  identityToken: string;
+  user: string; // user identifier from Apple authentication
 }
 
 export interface WeChatLoginRequest {

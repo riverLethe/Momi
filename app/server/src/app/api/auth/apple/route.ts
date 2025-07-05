@@ -3,11 +3,11 @@ import { AuthService } from "../../../../../lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { authorizationCode, state } = await request.json();
+    const { identityToken, user } = await request.json();
 
-    if (!authorizationCode) {
+    if (!identityToken) {
       return NextResponse.json(
-        { error: "Authorization code is required" },
+        { error: "Identity token is required" },
         { status: 400 }
       );
     }
@@ -18,9 +18,8 @@ export async function POST(request: NextRequest) {
     const ipAddress = xForwardedFor ? xForwardedFor.split(",")[0] : "unknown";
 
     // Use real authentication service
-    const result = await AuthService.loginWithApple(
-      authorizationCode,
-      state,
+    const result = await AuthService.authenticateWithApple(
+      user || identityToken,
       userAgent,
       ipAddress,
       userAgent

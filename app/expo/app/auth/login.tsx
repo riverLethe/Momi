@@ -129,6 +129,25 @@ export default function LoginScreen() {
                   </Text>
                 </Button>
 
+                {Platform.OS === "ios" && (
+                  <Button
+                    size="$5"
+                    width="100%"
+                    backgroundColor="#000"
+                    borderRadius="$4"
+                    marginBottom="$4"
+                    onPress={handleAppleLogin}
+                    disabled={isLoading}
+                    icon={<Apple size={24} color="white" />}
+                    pressStyle={{ backgroundColor: "$black8" }}
+                    hoverStyle={{ backgroundColor: "$black6" }}
+                  >
+                    <Text color="white" fontWeight="$6" fontSize="$4">
+                      {isLoading ? t("Signing in...") : t("Continue with Apple")}
+                    </Text>
+                  </Button>
+                )}
+
                 <Button
                   size="$5"
                   width="100%"

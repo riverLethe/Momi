@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
     const result = await AuthService.loginWithEmail(
       email,
       password,
-      userAgent,
       ipAddress,
       userAgent
     );

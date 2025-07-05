@@ -67,7 +67,7 @@ export const CategorySelectSheet: React.FC<CategorySelectSheetProps> = ({
             return (
               <Button
                 key={cat.id}
-                backgroundColor={selected ? `${cat.lightColor}20` : "$card"}
+                backgroundColor={selected ? `${cat.color}20` : "$card"}
                 paddingHorizontal="$2"
                 justifyContent="flex-start"
                 onPress={() => {

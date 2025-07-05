@@ -1,488 +1,432 @@
-# MomiQ 生产环境数据库设置指南
+# 生产环境数据库设置指南
 
 ## 概述
 
-本文档提供了为 MomiQ 应用设置真实的 PostgreSQL 数据库的完整指南，包括本地开发和生产环境的配置。
+本指南详细说明如何为 MomiQ 应用设置生产环境数据库。我们使用 **SQLite + Turso** 方案，提供轻量级、高性能的数据库解决方案。
 
-## 技术栈
+### 技术栈
 
-- **数据库**: PostgreSQL 14+
-- **ORM**: Prisma 6.x
+- **数据库**: SQLite (开发) + Turso (生产)
+- **数据库客户端**: @libsql/client
 - **认证**: JWT + bcrypt
 - **同步**: 增量同步 + 冲突解决
 
-## 数据库架构
+## 🚀 快速部署
 
-### 核心表结构
-
-1. **users** - 用户信息
-2. **user_sessions** - 用户会话管理
-3. **bills** - 账单数据
-4. **budgets** - 预算数据
-5. **categories** - 分类系统
-6. **sync_logs** - 同步日志
-7. **data_conflicts** - 数据冲突记录
-8. **system_configs** - 系统配置
-
-### 关系图
-
-```
-users (1:N) user_sessions
-users (1:N) bills
-users (1:N) budgets
-users (1:N) sync_logs
-categories (1:N) categories (自引用父子关系)
-```
-
-## 环境配置
-
-### 1. 本地开发环境
-
-#### 安装 PostgreSQL
-
-**macOS (使用 Homebrew):**
+### 1. 安装 Turso CLI
 
 ```bash
-brew install postgresql@14
-brew services start postgresql@14
+# 安装 Turso CLI
+npm install -g @turso/cli
+
+# 或使用 Homebrew (macOS)
+brew install tursodatabase/tap/turso
 ```
 
-**Ubuntu/Debian:**
+### 2. 创建 Turso 数据库
 
 ```bash
-sudo apt update
-sudo apt install postgresql-14 postgresql-contrib
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+# 注册 Turso 账户
+turso auth signup
+
+# 创建生产数据库
+turso db create momiq-production
+
+# 查看数据库信息
+turso db show momiq-production
 ```
 
-**Windows:**
-下载并安装 PostgreSQL from https://www.postgresql.org/download/windows/
-
-#### 创建数据库
+### 3. 获取连接信息
 
 ```bash
-# 连接到 PostgreSQL
-sudo -u postgres psql
-
-# 创建数据库和用户
-CREATE DATABASE momiq_db;
-CREATE USER momiq_user WITH PASSWORD 'your_secure_password';
-GRANT ALL PRIVILEGES ON DATABASE momiq_db TO momiq_user;
-
-# 退出
-\q
-```
-
-#### 环境变量配置
-
-在 `app/server/.env` 文件中配置：
-
-```env
-# Database Configuration
-DATABASE_URL="postgresql://momiq_user:your_secure_password@localhost:5432/momiq_db?schema=public"
-
-# JWT Configuration
-JWT_SECRET="your-super-secret-jwt-key-at-least-32-characters"
-JWT_EXPIRES_IN="7d"
-
-# Google OAuth (可选)
-GOOGLE_CLIENT_ID="your-google-client-id.googleusercontent.com"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-
-# Apple Sign In (可选)
-APPLE_TEAM_ID="your-apple-team-id"
-APPLE_CLIENT_ID="com.momiq.app"
-APPLE_KEY_ID="your-apple-key-id"
-APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour-apple-private-key\n-----END PRIVATE KEY-----"
-
-# App Configuration
-NODE_ENV="development"
-PORT=3000
-
-# Sync Configuration
-SYNC_BATCH_SIZE=100
-SYNC_TIMEOUT=30000
-```
-
-### 2. 生产环境配置
-
-#### 云数据库选项
-
-**选项 1: Railway**
-
-```bash
-# 安装 Railway CLI
-npm install -g @railway/cli
-
-# 登录并创建项目
-railway login
-railway init
-railway add postgresql
-
 # 获取数据库 URL
-railway variables
+turso db show momiq-production --url
+
+# 生成认证令牌
+turso db tokens create momiq-production
 ```
 
-**选项 2: Vercel Postgres**
+### 4. 配置环境变量
+
+在生产环境中设置以下环境变量：
 
 ```bash
-# 安装 Vercel CLI
-npm install -g vercel
+# Turso 数据库配置
+DATABASE_URL="libsql://momiq-production-[your-org].turso.io"
+TURSO_AUTH_TOKEN="your-auth-token-here"
 
-# 连接项目
-vercel link
+# JWT 配置
+JWT_SECRET="your-production-jwt-secret-key"
 
-# 添加 Postgres 存储
-vercel storage add postgres
+# 其他配置
+NODE_ENV="production"
+API_BASE_URL="https://your-domain.com"
 ```
 
-**选项 3: Supabase**
+### 5. 初始化数据库结构
 
 ```bash
-# 创建 Supabase 项目
-# 访问 https://supabase.com/dashboard
-# 获取数据库连接字符串
-```
-
-**选项 4: Amazon RDS**
-
-```bash
-# 使用 AWS Console 或 CLI 创建 RDS PostgreSQL 实例
-# 配置安全组允许应用服务器访问
-```
-
-## 数据库初始化
-
-### 1. 安装依赖
-
-```bash
-cd app/server
-npm install
-```
-
-### 2. 生成 Prisma 客户端
-
-```bash
-npm run db:generate
-```
-
-### 3. 运行数据库迁移
-
-```bash
-# 开发环境
-npm run db:migrate
-
-# 生产环境
-npm run db:deploy
-```
-
-### 4. 运行种子脚本
-
-```bash
-npm run db:seed
-```
-
-### 5. 完整设置（一键命令）
-
-```bash
+# 在生产环境运行
 npm run db:setup
 ```
 
-## 数据库管理
+## 📊 数据库架构
 
-### Prisma Studio
-
-启动可视化数据库管理界面：
-
-```bash
-npm run db:studio
-```
-
-访问 http://localhost:5555 查看和编辑数据。
-
-### 备份和恢复
-
-**备份数据库：**
-
-```bash
-pg_dump -h localhost -U momiq_user -d momiq_db > backup_$(date +%Y%m%d_%H%M%S).sql
-```
-
-**恢复数据库：**
-
-```bash
-psql -h localhost -U momiq_user -d momiq_db < backup_file.sql
-```
-
-### 数据库迁移
-
-**创建新迁移：**
-
-```bash
-npx prisma migrate dev --name add_new_feature
-```
-
-**应用迁移到生产：**
-
-```bash
-npx prisma migrate deploy
-```
-
-## 性能优化
-
-### 1. 数据库索引
-
-已在 schema.prisma 中定义的关键索引：
-
-```prisma
-// 账单表索引
-@@index([userId, billDate])
-@@index([userId, category])
-@@index([userId, lastModified])
-
-// 预算表索引
-@@index([userId, period])
-@@index([userId, isActive])
-
-// 同步日志索引
-@@index([userId, createdAt])
-```
-
-### 2. 连接池配置
-
-在生产环境的 DATABASE_URL 中添加连接池参数：
-
-```env
-DATABASE_URL="postgresql://user:password@host:5432/db?schema=public&connection_limit=10&pool_timeout=20"
-```
-
-### 3. 查询优化
-
-- 使用 `select` 指定需要的字段
-- 合理使用 `include` 和 `select`
-- 避免 N+1 查询问题
-
-## 安全配置
-
-### 1. 数据库用户权限
+### 核心表结构
 
 ```sql
--- 创建只读用户用于报表
-CREATE USER momiq_readonly WITH PASSWORD 'readonly_password';
-GRANT CONNECT ON DATABASE momiq_db TO momiq_readonly;
-GRANT USAGE ON SCHEMA public TO momiq_readonly;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO momiq_readonly;
+-- 用户表
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  avatar TEXT,
+  provider TEXT NOT NULL,
+  provider_id TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_sync DATETIME,
+  is_deleted BOOLEAN DEFAULT 0
+);
+
+-- 用户会话表
+CREATE TABLE user_sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  token TEXT UNIQUE NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+-- 账单表
+CREATE TABLE bills (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  amount REAL NOT NULL,
+  category TEXT NOT NULL,
+  description TEXT,
+  bill_date DATETIME NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  sync_version INTEGER DEFAULT 1,
+  is_deleted BOOLEAN DEFAULT 0,
+  FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+-- 预算表
+CREATE TABLE budgets (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  category TEXT NOT NULL,
+  amount REAL NOT NULL,
+  period TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  sync_version INTEGER DEFAULT 1,
+  is_deleted BOOLEAN DEFAULT 0,
+  FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+-- 同步日志表
+CREATE TABLE sync_logs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  operation TEXT NOT NULL,
+  status TEXT NOT NULL,
+  details TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+-- 数据冲突表
+CREATE TABLE data_conflicts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  resource_type TEXT NOT NULL,
+  resource_id TEXT NOT NULL,
+  local_data TEXT NOT NULL,
+  remote_data TEXT NOT NULL,
+  is_resolved BOOLEAN DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id)
+);
 ```
 
-### 2. SSL 连接
-
-生产环境强制使用 SSL：
-
-```env
-DATABASE_URL="postgresql://user:password@host:5432/db?sslmode=require"
-```
-
-### 3. JWT 安全
-
-- 使用至少 32 字符的随机密钥
-- 设置合理的过期时间
-- 实现 token 刷新机制
-
-## 监控和日志
-
-### 1. 数据库监控
-
-**查询慢查询：**
+### 性能优化索引
 
 ```sql
-SELECT query, mean_time, calls
-FROM pg_stat_statements
-ORDER BY mean_time DESC
-LIMIT 10;
+-- 创建关键索引
+CREATE INDEX idx_bills_user_date ON bills (user_id, bill_date);
+CREATE INDEX idx_budgets_user_category ON budgets (user_id, category);
+CREATE INDEX idx_sessions_token ON user_sessions (token);
+CREATE INDEX idx_bills_category ON bills (category);
+CREATE INDEX idx_bills_date ON bills (bill_date);
+CREATE INDEX idx_sync_logs_user ON sync_logs (user_id);
 ```
 
-**检查连接数：**
+## 🔧 数据库管理
 
-```sql
-SELECT count(*) as active_connections
-FROM pg_stat_activity
-WHERE state = 'active';
+### 使用 Turso CLI 查询
+
+```bash
+# 连接到数据库
+turso db shell momiq-production
+
+# 查看表结构
+.schema
+
+# 查询用户数据
+SELECT COUNT(*) FROM users;
+
+# 查看最近的账单
+SELECT * FROM bills ORDER BY created_at DESC LIMIT 10;
+
+# 查看同步统计
+SELECT
+  COUNT(*) as total_bills,
+  SUM(amount) as total_amount,
+  COUNT(DISTINCT user_id) as active_users
+FROM bills
+WHERE created_at > date('now', '-30 days');
 ```
 
-### 2. 应用日志
+### 数据备份
 
-已在代码中实现的日志记录：
+```bash
+# 导出数据库
+turso db dump momiq-production > backup-$(date +%Y%m%d).sql
 
-- 用户认证日志
-- 同步操作日志
-- 错误日志
+# 恢复数据库 (如果需要)
+cat backup-20240101.sql | turso db shell momiq-production
+```
 
-### 3. 性能监控
+### 监控和统计
 
-使用 Prisma 的内置日志功能：
+```bash
+# 查看数据库使用情况
+turso db usage momiq-production
+
+# 查看连接信息
+turso db show momiq-production
+
+# 列出所有数据库
+turso db list
+```
+
+## 📈 性能优化
+
+### 查询优化
+
+使用 libSQL 客户端进行高效查询：
 
 ```typescript
-const prisma = new PrismaClient({
-  log: ["query", "info", "warn", "error"],
+import { db } from "./lib/database";
+
+// 高效的用户账单查询
+const userBills = await db.execute({
+  sql: `
+    SELECT b.*, u.name as user_name 
+    FROM bills b 
+    JOIN users u ON b.user_id = u.id 
+    WHERE b.user_id = ? 
+    AND b.bill_date >= ? 
+    ORDER BY b.bill_date DESC 
+    LIMIT ?
+  `,
+  args: [userId, startDate, limit],
+});
+
+// 批量插入账单
+const bills = [
+  { id: "1", user_id: userId, amount: 100, category: "food" },
+  { id: "2", user_id: userId, amount: 50, category: "transport" },
+];
+
+await db.batch(
+  bills.map((bill) => ({
+    sql: "INSERT INTO bills (id, user_id, amount, category) VALUES (?, ?, ?, ?)",
+    args: [bill.id, bill.user_id, bill.amount, bill.category],
+  }))
+);
+```
+
+### 连接池配置
+
+```typescript
+// lib/database.ts
+import { createClient } from "@libsql/client";
+
+export const db = createClient({
+  url: process.env.DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+  // 生产环境优化配置
+  sync: {
+    interval: 60000, // 60秒同步间隔
+  },
 });
 ```
 
-## 数据同步机制
+## 🔐 安全配置
 
-### 1. 冲突解决策略
+### 访问控制
 
-- **Last-Write-Wins**: 以最新时间戳为准
-- **Manual Resolution**: 用户手动选择
-- **Merge Strategy**: 智能合并数据
+```bash
+# 创建只读访问令牌 (用于分析)
+turso db tokens create momiq-production --read-only
 
-### 2. 同步状态跟踪
-
-- `lastModified` 字段跟踪更新时间
-- `syncVersion` 字段跟踪同步版本
-- `isDeleted` 软删除标记
-
-### 3. 批量同步优化
-
-- 按批次处理同步数据
-- 事务保证数据一致性
-- 错误恢复机制
-
-## 测试数据
-
-### 演示账户
-
-```
-邮箱: demo@momiq.com
-密码: password123
+# 创建临时访问令牌
+turso db tokens create momiq-production --expiration 1h
 ```
 
-### 测试数据包含
+### 数据加密
 
-- 8个主要分类和11个子分类
-- 2个示例预算（总预算和餐饮预算）
-- 5条示例账单记录
-- 系统配置数据
+```typescript
+// 敏感数据加密示例
+import bcrypt from "bcryptjs";
 
-## 故障排除
+// 密码加密
+const hashedPassword = await bcrypt.hash(password, 12);
+
+// JWT 令牌
+const token = jwt.sign(payload, process.env.JWT_SECRET!, {
+  expiresIn: "7d",
+  algorithm: "HS256",
+});
+```
+
+## 🚨 故障排除
 
 ### 常见问题
 
-**1. 连接超时**
+1. **连接失败**
+
+   ```bash
+   # 检查网络连接
+   turso db show momiq-production
+
+   # 验证认证令牌
+   turso auth show
+   ```
+
+2. **性能问题**
+
+   ```sql
+   -- 检查慢查询
+   EXPLAIN QUERY PLAN SELECT * FROM bills WHERE user_id = ?;
+
+   -- 检查索引使用
+   .index
+   ```
+
+3. **同步错误**
+   ```sql
+   -- 查看同步日志
+   SELECT * FROM sync_logs
+   WHERE status = 'error'
+   ORDER BY created_at DESC
+   LIMIT 10;
+   ```
+
+### 数据恢复
 
 ```bash
-# 检查数据库状态
-pg_isready -h localhost -p 5432
+# 从备份恢复
+turso db restore momiq-production backup-20240101.sql
 
-# 检查防火墙设置
-sudo ufw status
+# 检查数据完整性
+turso db shell momiq-production < integrity-check.sql
 ```
 
-**2. 权限错误**
+## 📊 监控和告警
+
+### 基础监控
+
+```typescript
+// 健康检查端点
+export async function GET() {
+  try {
+    await db.execute("SELECT 1");
+    return Response.json({ status: "healthy" });
+  } catch (error) {
+    return Response.json(
+      { status: "unhealthy", error: error.message },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### 指标收集
 
 ```sql
--- 检查用户权限
-\du momiq_user
+-- 用户增长指标
+SELECT
+  DATE(created_at) as date,
+  COUNT(*) as new_users
+FROM users
+WHERE created_at >= date('now', '-30 days')
+GROUP BY DATE(created_at);
 
--- 重新授权
-GRANT ALL PRIVILEGES ON DATABASE momiq_db TO momiq_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO momiq_user;
+-- 账单统计
+SELECT
+  category,
+  COUNT(*) as count,
+  AVG(amount) as avg_amount,
+  SUM(amount) as total_amount
+FROM bills
+WHERE created_at >= date('now', '-7 days')
+GROUP BY category;
 ```
 
-**3. 迁移失败**
+## 🚀 扩展策略
+
+### 水平扩展
+
+当应用增长时，Turso 支持多地域部署：
 
 ```bash
-# 重置数据库
-npm run db:reset
-
-# 重新运行迁移
-npm run db:migrate
+# 创建多地域数据库
+turso db create momiq-us --location ord
+turso db create momiq-eu --location fra
+turso db create momiq-asia --location sin
 ```
 
-### 日志查看
+### 读写分离
 
-**PostgreSQL 日志：**
+```typescript
+// 配置读写分离
+const writeDB = createClient({
+  url: process.env.WRITE_DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN!,
+});
 
-```bash
-# Ubuntu/Debian
-sudo tail -f /var/log/postgresql/postgresql-14-main.log
+const readDB = createClient({
+  url: process.env.READ_DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN!,
+});
 
-# macOS Homebrew
-tail -f /opt/homebrew/var/log/postgresql@14.log
+// 写操作使用主库
+export const writeOperation = async (data) => {
+  return await writeDB.execute(sql, args);
+};
+
+// 读操作使用从库
+export const readOperation = async (query) => {
+  return await readDB.execute(sql, args);
+};
 ```
 
-**应用日志：**
+## 💡 最佳实践
 
-```bash
-# 开发环境
-npm run dev
+1. **定期备份**: 设置自动备份计划
+2. **监控指标**: 跟踪关键性能指标
+3. **索引优化**: 根据查询模式优化索引
+4. **数据清理**: 定期清理过期数据
+5. **版本控制**: 跟踪数据库结构变更
 
-# 生产环境
-pm2 logs server
-```
+## 📚 相关资源
 
-## 部署清单
-
-### 部署前检查
-
-- [ ] 数据库连接测试
-- [ ] 环境变量配置
-- [ ] SSL证书配置
-- [ ] 备份策略设置
-- [ ] 监控告警配置
-
-### 部署步骤
-
-1. 创建生产数据库
-2. 配置环境变量
-3. 运行数据库迁移
-4. 执行种子脚本（可选）
-5. 启动应用服务
-6. 验证功能正常
-
-### 回滚计划
-
-1. 保留数据库备份
-2. 记录迁移版本
-3. 准备回滚脚本
-4. 测试回滚流程
-
-## 扩展和维护
-
-### 1. 数据库扩展
-
-- 读写分离配置
-- 分片策略（按用户ID）
-- 缓存层集成（Redis）
-
-### 2. 定期维护
-
-```bash
-# 清理过期数据
-npm run db:cleanup
-
-# 重建索引
-REINDEX DATABASE momiq_db;
-
-# 更新统计信息
-ANALYZE;
-```
-
-### 3. 版本升级
-
-- PostgreSQL 版本升级策略
-- Prisma 版本兼容性检查
-- 数据迁移验证
-
-## 联系支持
-
-如果遇到数据库相关问题，请提供：
-
-1. 错误日志
-2. 数据库版本
-3. 环境配置
-4. 重现步骤
-
----
-
-_此文档将随着系统的发展持续更新。最后更新：2024年12月_
+- [Turso 官方文档](https://docs.turso.tech/)
+- [libSQL 文档](https://github.com/libsql/libsql)
+- [SQLite 性能优化](https://www.sqlite.org/optoverview.html)

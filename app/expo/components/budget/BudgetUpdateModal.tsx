@@ -16,7 +16,6 @@ import { Budgets, BudgetPeriod, BudgetDetail, _BudgetPeriodMap } from "@/utils/b
 import { formatCurrency } from "@/utils/format";
 import CategorySelectSheet from "../ui/CategorySelectSheet";
 import { DatePeriodEnum } from "@/types/reports.types";
-import { KeyboardAvoidingView, Platform } from "react-native";
 
 // Category filter mode
 type FilterMode = "all" | "include" | "exclude";

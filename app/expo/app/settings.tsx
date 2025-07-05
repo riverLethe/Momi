@@ -1,7 +1,7 @@
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ChevronLeftIcon, Moon, Sun, Globe } from "lucide-react-native";
+import { Moon, Sun, Globe, ChevronDown, Clock, ChevronLeftIcon, RefreshCwOff } from "lucide-react-native";
 import {
   Button,
   H2,
@@ -14,34 +14,51 @@ import {
   Adapt,
   Sheet,
   useTheme as useTamaguiTheme,
+  Separator,
 } from "tamagui";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/providers/I18nProvider";
 import { useTheme } from "@/providers/ThemeProvider";
+import { useAuth } from "@/providers/AuthProvider";
+import { useSyncSettings } from "@/hooks/useSyncSettings";
+
+// 内联格式化函数
+const formatLastSync = (date: Date): string => {
+  const now = new Date();
+  const timeDiff = now.getTime() - date.getTime();
+  const minutes = Math.floor(timeDiff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days} ${days > 1 ? 'days' : 'day'} ago`;
+  if (hours > 0) return `${hours} ${hours > 1 ? 'hours' : 'hour'} ago`;
+  if (minutes > 0) return `${minutes} ${minutes > 1 ? 'minutes' : 'minute'} ago`;
+  return "Just now";
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
-  const { themeMode, actualTheme, setThemeMode } = useTheme();
+  const { actualTheme, setThemeMode } = useTheme();
+  const { isAuthenticated } = useAuth();
+  const {
+    performManualSync,
+    lastSyncTime,
+  } = useSyncSettings();
   const tamaguiTheme = useTamaguiTheme();
 
   const getThemeIcon = () => {
-    // Show moon or sun icon based on the actual rendered theme.
     return actualTheme === 'dark'
       ? <Moon size={24} color={tamaguiTheme.color?.get()} />
       : <Sun size={24} color={tamaguiTheme.color?.get()} />;
   };
 
-  const getThemeDisplayText = () => {
-    switch (themeMode) {
-      case 'dark':
-        return t("Dark");
-      case 'light':
-        return t("Light");
-      case 'system':
-      default:
-        return t("System");
+  const handleManualSync = async () => {
+    try {
+      await performManualSync();
+    } catch (error) {
+      console.error('Manual sync failed:', error);
     }
   };
 
@@ -67,11 +84,22 @@ export default function SettingsScreen() {
         <YStack flex={1} paddingHorizontal="$4" paddingTop="$4">
           <YStack alignItems="center" gap="$2" marginTop="$4">
             <H2 color="$color">{t("App Settings")}</H2>
+
+
+            {/* Last sync info in footer style */}
+            {
+              isAuthenticated && (<XStack gap="$1" alignItems="center" justifyContent="center" backgroundColor="transparent">
+                <Clock size={10} color={tamaguiTheme.color11?.get()} />
+                <Text fontSize="$2" color="$color11" opacity={0.7} textAlign="center">
+                  {t("Last Sync")}: {lastSyncTime ? formatLastSync(lastSyncTime) : t("Never synced")}
+                </Text>
+              </XStack>)
+            }
           </YStack>
 
           <YStack gap="$5" marginTop="$6" flex={1}>
-            <Card padding="$4" borderRadius="$4" backgroundColor="$card">
-              <XStack alignItems="center" justifyContent="space-between" height={50}>
+            <Card borderRadius="$4" backgroundColor="$card">
+              <XStack padding="$4" alignItems="center" justifyContent="space-between">
                 <XStack alignItems="center" gap="$2">
                   {getThemeIcon()}
                   <Text fontSize="$4" color="$color">{t("Theme")}</Text>
@@ -80,22 +108,23 @@ export default function SettingsScreen() {
                 <Switch
                   size="$3"
                   checked={actualTheme === 'dark'}
-                  onCheckedChange={(val) => setThemeMode(val ? 'dark' : 'light')}
+                  onCheckedChange={(val) => {
+                    setThemeMode(val ? 'dark' : 'light');
+                  }}
                   backgroundColor={actualTheme === 'dark' ? "$blue9" : "$gray5"}
                 >
                   <Switch.Thumb
-                    animation="bouncy"
                     backgroundColor="white"
                     scale={actualTheme === 'dark' ? 0.9 : 0.8}
                   />
                 </Switch>
               </XStack>
-            </Card>
 
-            <Card padding="$4" borderRadius="$4" backgroundColor="$card">
-              <XStack alignItems="center" justifyContent="space-between">
+              <Separator />
+
+              <XStack paddingHorizontal="$4" paddingVertical="$2" alignItems="center" justifyContent="space-between">
                 <XStack alignItems="center" gap="$2">
-                  <Globe size={20} color="$blue9" />
+                  <Globe size={20} />
                   <Text fontSize="$4" color="$color">{t("Language")}</Text>
                 </XStack>
 
@@ -106,6 +135,9 @@ export default function SettingsScreen() {
                         language === "zh" ? t("中文") :
                           language === "es" ? t("Español") : t("System")}
                     </Select.Value>
+                    <Select.Icon>
+                      <ChevronDown size={20} />
+                    </Select.Icon>
                   </Select.Trigger>
                   <Adapt platform="touch">
                     <Sheet modal snapPoints={[30]}>
@@ -139,18 +171,21 @@ export default function SettingsScreen() {
                   </Select.Content>
                 </Select>
               </XStack>
+
+
             </Card>
+          </YStack>
 
-            <YStack flex={1} />
+          <YStack flex={1} />
 
-            <YStack alignItems="center" marginBottom="$6">
-              <Text color="$color11">
-                MomiQ v1.0.0
-              </Text>
-              <Text fontSize="$2" color="$color9" marginTop="$2">
-                © 2023 MomiQ Finance Inc.
-              </Text>
-            </YStack>
+          <YStack alignItems="center" marginBottom="$6" gap="$2">
+            {/* App version information */}
+            <Text color="$color11">
+              MomiQ v1.0.0
+            </Text>
+            <Text fontSize="$2" color="$color9" >
+              © 2025 MomiQ Finance Inc.
+            </Text>
           </YStack>
         </YStack>
       </YStack>

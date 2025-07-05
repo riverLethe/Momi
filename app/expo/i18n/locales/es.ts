@@ -203,6 +203,11 @@ export default {
     "Your weekly report is ready": "Tu informe semanal está listo",
     Or: "O",
     "Release to cancel": "Suelta para cancelar",
+    Guest: "Invitado",
+    Login: "Iniciar Sesión",
+    User: "Usuario",
+    "Sign in to sync your data": "Inicia sesión para sincronizar tus datos",
+    Logout: "Cerrar Sesión",
     "{{count}} Categories": "{{count}} Categorías",
     "Don't forget to log today's expenses":
       "No olvides registrar tus gastos de hoy",
@@ -232,5 +237,23 @@ export default {
     Dark: "Oscuro",
     "Select theme": "Seleccionar tema",
     "No spending data available": "No hay datos de gastos disponibles",
+
+    // Data Sync settings
+    "Data Sync": "Sincronización de Datos",
+    "Auto Sync": "Sincronización Automática",
+    "Automatically sync data when online":
+      "Sincronizar datos automáticamente cuando esté en línea",
+    "Automatically sync when online":
+      "Sincronizar automáticamente cuando esté en línea",
+    "Manual sync only": "Solo sincronización manual",
+    "Manual Sync": "Sincronización Manual",
+    "Sync now": "Sincronizar",
+    "Sync your data now": "Sincronizar datos ahora",
+    "Network Status": "Estado de la Red",
+    "Last Sync": "Última Sincronización",
+    "Never synced": "Nunca sincronizado",
+    Status: "Estado",
+    Online: "En Línea",
+    Offline: "Desconectado",
   },
 };

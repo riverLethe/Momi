@@ -4,7 +4,13 @@ import {
   HarmBlockThreshold,
   Content,
 } from "@google/genai";
-import { v4 as uuidv4 } from "uuid";
+
+// Helper function to generate UUID
+function generateId(): string {
+  return (
+    "msg_" + Math.random().toString(36).substr(2, 9) + Date.now().toString(36)
+  );
+}
 const { setGlobalDispatcher, ProxyAgent } = require("undici");
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore – no types available for jsonrepair, but runtime import is fine
@@ -250,7 +256,7 @@ export async function POST(req: Request) {
     });
 
     // 处理流式响应
-    const idString = `id:${uuidv4()}\ndata:`;
+    const idString = `id:${generateId()}\ndata:`;
     const stream = new ReadableStream({
       async start(controller) {
         // Heartbeat every 15 seconds to keep connection alive

@@ -139,7 +139,7 @@ FROM sqlite_master WHERE type = 'table';
 
 ```typescript
 // lib/database.ts 中已自动配置
-export const prisma = new PrismaClient({
+export const db = createClient({
   log:
     process.env.NODE_ENV === "development"
       ? ["query", "error", "warn"]
