@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "@/providers/AuthProvider";
 import { GoogleIcon } from "@/components/ui/GoogleIcon";
+import { WeChatIcon } from "@/components/ui/WeChatIcon";
 import { useGoogleConfig } from "@/hooks/useGoogleConfig";
 import { useLocale } from "@/i18n/useLocale";
 
@@ -157,6 +158,7 @@ export default function LoginScreen() {
                   hoverStyle={{ backgroundColor: "$green10" }}
                   pressStyle={{ backgroundColor: "$green11" }}
                   disabled={isLoading}
+                  icon={<WeChatIcon size={24} color="white" />}
                 >
                   <Text color="white" fontWeight="$6" fontSize="$4">
                     {t("Continue with WeChat")}

@@ -274,6 +274,62 @@ export class UserManager {
 // Authentication Methods
 export class AuthService {
   /**
+   * Get WeChat user info from authorization code
+   */
+  static async getWeChatUserInfo(code: string): Promise<WeChatUserData> {
+    try {
+      const appId = process.env.WECHAT_APP_ID;
+      const appSecret = process.env.WECHAT_APP_SECRET;
+
+      if (!appId || !appSecret) {
+        throw new Error("WeChat configuration missing");
+      }
+
+      // 1. 获取access_token
+      const tokenResponse = await fetch(
+        `https://api.weixin.qq.com/sns/oauth2/access_token?` +
+          querystring.stringify({
+            appid: appId,
+            secret: appSecret,
+            code: code,
+            grant_type: "authorization_code",
+          })
+      );
+
+      const tokenData = await tokenResponse.json();
+
+      if (tokenData.errcode) {
+        throw new Error(`WeChat token error: ${tokenData.errmsg}`);
+      }
+
+      // 2. 获取用户信息
+      const userResponse = await fetch(
+        `https://api.weixin.qq.com/sns/userinfo?` +
+          querystring.stringify({
+            access_token: tokenData.access_token,
+            openid: tokenData.openid,
+            lang: "zh_CN",
+          })
+      );
+
+      const userData = await userResponse.json();
+
+      if (userData.errcode) {
+        throw new Error(`WeChat user info error: ${userData.errmsg}`);
+      }
+
+      return {
+        openid: userData.openid,
+        nickname: userData.nickname,
+        headimgurl: userData.headimgurl,
+      };
+    } catch (error) {
+      console.error("WeChat API error:", error);
+      throw new Error("Failed to get WeChat user info");
+    }
+  }
+
+  /**
    * Hash password
    */
   static async hashPassword(password: string): Promise<string> {
@@ -348,6 +404,52 @@ export class AuthService {
       };
     } catch (error) {
       console.error("Login error:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Google Login with ID Token verification
+   */
+  static async loginWithGoogle(
+    idToken: string,
+    deviceInfo?: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<{
+    user: AuthUser;
+    token: string;
+    session: { id: string; expiresAt: Date };
+  } | null> {
+    try {
+      // Verify the Google ID token
+      const ticket = await googleClient.verifyIdToken({
+        idToken: idToken,
+        audience: GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) {
+        throw new Error("Invalid Google ID token");
+      }
+
+      const { email, name, picture, sub } = payload;
+      if (!email) {
+        throw new Error("Email not provided by Google");
+      }
+
+      // Use authenticateWithGoogle to handle user creation/update
+      return await this.authenticateWithGoogle(
+        name || "Google User",
+        email,
+        picture,
+        sub,
+        deviceInfo,
+        ipAddress,
+        userAgent
+      );
+    } catch (error) {
+      console.error("Google login error:", error);
       return null;
     }
   }

@@ -24,6 +24,12 @@
         "NSMicrophoneUsageDescription": "We use the microphone to record your voice for speech recognition features.",
         "NSUserNotificationUsageDescription": "Allow MomiQ to send you notifications for reminders and budget alerts.",
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "googleSignIn": {
+          "reservedClientId": "com.googleusercontent.apps.619678265114-vd7b8li2p33mp9fffec541dhqt3ue9n5"
+        },
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -55,6 +61,7 @@
       "expo-secure-store",
       "expo-asset",
       "expo-apple-authentication",
+      "@react-native-google-signin/google-signin",
       "./plugins/with-app-intents-quick-bill",
       [
         "expo-speech-recognition",

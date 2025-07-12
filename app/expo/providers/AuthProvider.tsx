@@ -4,7 +4,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import * as Google from 'expo-auth-session/providers/google';
 import { User, AuthState } from '@/types/user.types';
 import {
   getAuthToken,
@@ -20,19 +20,7 @@ import { smartSync } from '@/utils/sync.utils';
 // Configure Google Sign-In
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-
-// Only configure Google Sign-In if proper client IDs are provided
-if (googleWebClientId && googleIosClientId) {
-  GoogleSignin.configure({
-    webClientId: googleWebClientId,
-    iosClientId: googleIosClientId,
-    offlineAccess: true,
-    hostedDomain: '',
-    forceCodeForRefreshToken: true,
-  });
-} else {
-  console.warn('Google Sign-In not configured: Missing EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID or EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID');
-}
+const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
 // Complete the sign-in with web browser for OAuth flows
 WebBrowser.maybeCompleteAuthSession();
@@ -76,6 +64,15 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>(initialAuthState);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+
+  // Google Auth Request Setup
+  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    clientId: googleWebClientId,
+    iosClientId: googleIosClientId,
+    androidClientId: googleAndroidClientId,
+    scopes: ['openid', 'profile', 'email'],
+    selectAccount: true,
+  });
 
   // WeChat Auth Request Setup (only if APP_ID exists)
   const wechatRequestConfig = React.useMemo(() => {
@@ -161,6 +158,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
+  // Handle Google response
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      handleGoogleSignInResponse(googleResponse);
+    }
+  }, [googleResponse]);
+
   // Handle WeChat response
   useEffect(() => {
     if (wechatResponse?.type === 'success') {
@@ -177,7 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // 使用智能同步策略，非阻塞
       await smartSync(authState.user.id, "app_start");
-      
+
       // 更新本地存储的同步时间，确保与useDataSync保持一致
       const newSyncTime = new Date();
       await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
@@ -331,59 +335,99 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [syncData, handlePostLoginSync]);
 
   /**
-   * Google Sign In
+   * Handle Google Sign In response
    */
-  const loginWithGoogle = useCallback(async (): Promise<boolean> => {
+  const handleGoogleSignInResponse = useCallback(async (response: AuthSession.AuthSessionResult): Promise<boolean> => {
     try {
-      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+      console.log('Google sign-in response:', response);
 
-      // Check if Google Sign-in is properly configured
-      if (!googleWebClientId || !googleIosClientId) {
-        throw new Error('Google Sign-In is not properly configured. Please set up EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID and EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID environment variables.');
-      }
+      if (response.type === 'success') {
+        // expo-auth-session/providers/google returns access_token and id_token in params
+        const { access_token, id_token } = response.params;
 
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
+        console.log('Google tokens:', { access_token: !!access_token, id_token: !!id_token });
 
-      if (userInfo.data?.user) {
-        // Send Google token to backend for verification
-        const idToken = userInfo.data.idToken;
-        if (!idToken) throw new Error('No ID token received from Google');
-        const response = await apiClient.auth.googleLogin({ idToken });
+        if (id_token) {
+          const apiResponse = await apiClient.auth.googleLogin({ idToken: id_token });
 
-        if (response.token) {
-          await storeAuthToken(response.token);
+          if (apiResponse.token) {
+            await storeAuthToken(apiResponse.token);
 
-          setAuthState({
-            isAuthenticated: true,
-            isLoading: false,
-            user: response.user,
-            error: null,
-          });
+            setAuthState({
+              isAuthenticated: true,
+              isLoading: false,
+              user: apiResponse.user,
+              error: null,
+            });
 
-          handlePostLoginSync(response.token);
+            handlePostLoginSync(apiResponse.token);
 
-          return true;
+            return true;
+          }
+        } else {
+          console.error('No id_token received from Google');
+          throw new Error('No id_token received from Google');
+        }
+      } else {
+        console.error('Google sign-in response type:', response.type);
+        if (response.type === 'error') {
+          console.error('Google sign-in error details:', response.error);
         }
       }
 
       throw new Error('Google sign-in failed');
-    } catch (error: any) {
-      console.error('Google sign-in error:', error);
+    } catch (error) {
+      console.error('Google sign-in response error:', error);
+      setAuthState(prev => ({ ...prev, isLoading: false, error: 'Google sign-in failed' }));
+      return false;
+    }
+  }, [handlePostLoginSync]);
 
-      if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
-        setAuthState(prev => ({ ...prev, isLoading: false }));
+  /**
+   * Google Sign In
+   */
+  const loginWithGoogle = useCallback(async (): Promise<boolean> => {
+    try {
+      // Check if Google configuration is complete
+      if (!googleWebClientId || !googleIosClientId || !googleAndroidClientId) {
+        console.error('Google OAuth configuration incomplete:', {
+          webClientId: !!googleWebClientId,
+          iosClientId: !!googleIosClientId,
+          androidClientId: !!googleAndroidClientId
+        });
+        Alert.alert('Error', 'Google login is not properly configured. Please check environment variables.');
         return false;
       }
 
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Google sign-in failed',
-      }));
+      if (!googlePromptAsync || typeof googlePromptAsync !== 'function') {
+        console.error('Google promptAsync not available');
+        Alert.alert('Error', 'Google login is not configured');
+        return false;
+      }
+
+      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+
+      console.log('Starting Google sign-in...');
+      const result = await googlePromptAsync();
+      console.log('Google sign-in result type:', result.type);
+
+      if (result.type === 'success') {
+        return await handleGoogleSignInResponse(result);
+      } else if (result.type === 'cancel') {
+        console.log('Google sign-in cancelled by user');
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return false;
+      } else {
+        console.error('Google sign-in failed with type:', result.type);
+        setAuthState(prev => ({ ...prev, isLoading: false, error: 'Google sign-in failed' }));
+        return false;
+      }
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      setAuthState(prev => ({ ...prev, isLoading: false, error: 'Google sign-in failed' }));
       return false;
     }
-  }, [syncData, handlePostLoginSync]);
+  }, [googlePromptAsync, handleGoogleSignInResponse, googleWebClientId, googleIosClientId, googleAndroidClientId]);
 
   /**
    * Apple Sign In
@@ -514,13 +558,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = useCallback(async (): Promise<void> => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
-
-      // Sign out from Google if user was logged in with Google
-      try {
-        await GoogleSignin.signOut();
-      } catch (error) {
-        // Ignore Google sign out errors
-      }
 
       // Remove token from storage
       await removeAuthToken();

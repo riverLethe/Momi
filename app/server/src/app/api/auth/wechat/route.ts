@@ -17,8 +17,11 @@ export async function POST(request: NextRequest) {
     const xForwardedFor = request.headers.get("x-forwarded-for");
     const ipAddress = xForwardedFor ? xForwardedFor.split(",")[0] : "unknown";
 
-    const result = await AuthService.loginWithWeChat(
-      code,
+    // 获取微信用户信息
+    const wechatUserData = await AuthService.getWeChatUserInfo(code);
+
+    const result = await AuthService.authenticateWithWeChat(
+      wechatUserData,
       userAgent,
       ipAddress,
       userAgent

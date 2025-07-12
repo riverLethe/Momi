@@ -255,5 +255,25 @@ export default {
     Status: "Estado",
     Online: "En Línea",
     Offline: "Desconectado",
+
+    // Login / Auth
+    "Welcome back": "Bienvenido de vuelta",
+    "Sign in to continue and sync your data":
+      "Inicia sesión para continuar y sincronizar tus datos",
+    "Continue with Apple": "Continuar con Apple",
+    "Continue with Google": "Continuar con Google",
+    "Continue with WeChat": "Continuar con WeChat",
+    "Login Failed": "Error de inicio de sesión",
+    "Google login failed. Please try again.":
+      "Error de inicio de sesión con Google. Por favor, inténtelo de nuevo.",
+    "Apple login failed. Please try again.":
+      "Error de inicio de sesión con Apple. Por favor, inténtelo de nuevo.",
+    "WeChat login failed. Please try again.":
+      "Error de inicio de sesión con WeChat. Por favor, inténtelo de nuevo.",
+    "Signing in...": "Iniciando sesión...",
+    "By signing in, you agree to our": "Al iniciar sesión, aceptas nuestros",
+    "Terms of Service": "Términos de Servicio",
+    and: "y",
+    "Privacy Policy": "Política de Privacidad",
   },
 };
