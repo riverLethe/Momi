@@ -1,7 +1,5 @@
 import React from 'react';
-import { LinearGradient } from 'tamagui/linear-gradient';
-import { Button, Text, XStack, YStack, Avatar } from 'tamagui';
-import { UserCircle, LogOut } from 'lucide-react-native';
+import { Button, Text, XStack, YStack, Card, Avatar, Circle } from 'tamagui';
 import { User } from '@/types/user.types';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,98 +12,94 @@ interface ProfileHeaderProps {
 }
 
 /**
- * Display user avatar, name (or guest) and login/logout action.
+ * Modern and professional profile header focused on functionality rather than account prominence.
  */
 export const ProfileHeader: React.FC<ProfileHeaderProps> = React.memo(
-  ({ user, isAuthenticated, onLoginPress, onLogoutPress }) => {
+  ({ user, isAuthenticated, onLoginPress }) => {
     const { t } = useTranslation();
     const insets = useSafeAreaInsets();
 
     return (
-      <LinearGradient
-        colors={["$blue9", "$blue8"]}
-        start={[0, 0]}
-        end={[1, 0]}
-        padding="$6"
-        borderRadius="$0"
-        marginBottom="$4"
-        paddingTop={insets.top + 20}
-        paddingBottom="$8"
-        position="relative"
+      <Card
+        margin="$4"
+        marginTop={insets.top + 16}
+        padding="$5"
+        backgroundColor="$background"
+        borderWidth={1}
+        borderColor="$borderColor"
+        elevate
+        shadowColor="$shadowColor"
+        shadowOffset={{ width: 0, height: 2 }}
+        shadowOpacity={0.1}
       >
-        {/* Logout Button - positioned in top right corner */}
-        {isAuthenticated && onLogoutPress && (
-          <XStack position="absolute" top={insets.top + 10} right="$4" zIndex={10}>
-            <Button
-              size="$2"
-              circular
-              backgroundColor="transparent"
-              borderWidth={0}
-              hoverStyle={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-              pressStyle={{ backgroundColor: "rgba(255,255,255,0.2)" }}
-              onPress={onLogoutPress}
-            >
-              <LogOut size={20} color="rgba(255,255,255,0.7)" />
-            </Button>
-          </XStack>
-        )}
+        <YStack gap="$4">
+          {/* Header Row */}
+          <XStack gap="$3" alignItems="center">
 
-        <YStack alignItems="center" gap="$4">
-          {/* Avatar */}
-          <Avatar circular size="$12" overflow="hidden" borderWidth={4} borderColor="rgba(255,255,255,0.3)">
-            {isAuthenticated && user?.avatar ? (
-              <Avatar.Image
-                accessibilityLabel={user?.name || 'User avatar'}
-                src={user.avatar}
-              />
-            ) : (
-              <Avatar.Fallback
-                backgroundColor="rgba(255,255,255,0.2)"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <UserCircle size={64} color="white" />
-              </Avatar.Fallback>
-            )}
-          </Avatar>
-
-          {/* User Info */}
-          <YStack alignItems="center" gap="$2">
-            <Text fontSize="$6" fontWeight="$8" color="white" textAlign="center">
-              {isAuthenticated ? user?.name || t('User') : t('Guest')}
-            </Text>
 
             {isAuthenticated ? (
-              <Text color="rgba(255,255,255,0.7)" fontSize="$3" textAlign="center">
-                {user?.email || 'user@example.com'}
-              </Text>
-            ) : (
-              <Text color="rgba(255,255,255,0.8)" fontSize="$3" textAlign="center">
-                {t('Sign in to sync your data')}
-              </Text>
-            )}
-          </YStack>
+              <>
+                <XStack alignItems="center" gap="$3">
+                  {user?.avatar ? (
+                    <Avatar circular size="$4" borderWidth={1} borderColor="$borderColor">
+                      <Avatar.Image src={user.avatar} />
+                      <Avatar.Fallback backgroundColor="$blue5">
+                        <Text fontSize="$3" fontWeight="$6" color="$blue11">
+                          {user.name?.substring(0, 2).toUpperCase() || 'U'}
+                        </Text>
+                      </Avatar.Fallback>
+                    </Avatar>
+                  ) : (
+                    <Circle borderRadius="$4" size="$4" backgroundColor="$blue5">
+                      <Text fontSize="$3" fontWeight="$6" color="$blue11">
+                        {user?.name?.substring(0, 2).toUpperCase() || 'U'}
+                      </Text>
+                    </Circle>
+                  )}
+                </XStack>
+                <XStack justifyContent="space-between" alignItems="center">
+                  <YStack gap="$1">
+                    <Text fontSize="$4" fontWeight="$7" color="$color">
+                      {user?.name || t('User')}
+                    </Text>
+                    <Text fontSize="$2" color="$color10">
+                      {user?.email}
+                    </Text>
+                  </YStack>
 
-          {/* Login Button - only show for non-authenticated users */}
-          {!isAuthenticated && (
-            <Button
-              size="$4"
-              backgroundColor="white"
-              borderRadius="$8"
-              paddingHorizontal="$6"
-              hoverStyle={{ backgroundColor: "$gray2" }}
-              pressStyle={{ backgroundColor: "$gray3" }}
-              onPress={onLoginPress}
-            >
-              <Text color="$blue9" fontSize="$4" fontWeight="$7">
-                {t('Login')}
-              </Text>
-            </Button>
-          )}
+                </XStack>
+              </>
+
+            ) : (
+              <>
+                <YStack flex={1}>
+                  <Text fontSize="$5" fontWeight="$8" color="$color">
+                    {t('Settings')}
+                  </Text>
+                  <Text fontSize="$3" color="$color10" marginTop="$2">
+                    {isAuthenticated
+                      ? t('Manage your preferences and data')
+                      : t('Sign in to access all features')
+                    }
+                  </Text>
+                </YStack>
+                <Button
+                  size="$3"
+                  theme="blue"
+                  onPress={onLoginPress}
+                >
+                  <Text >
+                    {t('Sign In')}
+                  </Text>
+                </Button></>
+
+            )}
+          </XStack>
+
         </YStack>
-      </LinearGradient>
+      </Card>
     );
   }
 );
 
-ProfileHeader.displayName = 'ProfileHeader'; 
+ProfileHeader.displayName = 'ProfileHeader';

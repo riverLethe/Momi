@@ -1,7 +1,7 @@
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Moon, Sun, Globe, ChevronDown, Clock, ChevronLeftIcon, RefreshCwOff, RefreshCw, Download } from "lucide-react-native";
+import { Moon, Sun, Globe, ChevronDown, Clock, ChevronLeftIcon } from "lucide-react-native";
 import {
   Button,
   H2,
@@ -21,8 +21,6 @@ import { useLanguage } from "@/providers/I18nProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSyncSettings } from "@/hooks/useSyncSettings";
-import { apiClient } from "@/utils/api";
-import { getAuthToken } from "@/utils/userPreferences.utils";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -31,57 +29,18 @@ export default function SettingsScreen() {
   const { actualTheme, setThemeMode } = useTheme();
   const { isAuthenticated } = useAuth();
   const {
-    performManualSync,
     getLastSyncText,
   } = useSyncSettings();
   const tamaguiTheme = useTamaguiTheme();
-
   const getThemeIcon = () => {
     return actualTheme === 'dark'
       ? <Moon size={24} color={tamaguiTheme.color?.get()} />
       : <Sun size={24} color={tamaguiTheme.color?.get()} />;
   };
 
-  const handleManualSync = async () => {
-    try {
-      await performManualSync();
-    } catch (error) {
-      console.error('Manual sync failed:', error);
-    }
-  };
-
-  const handleFetchRemoteBills = async () => {
-    try {
-      console.log('开始获取远程账单信息...');
-      
-      // 检查用户是否已登录
-      if (!isAuthenticated) {
-        alert('请先登录后再获取远程账单');
-        return;
-      }
-
-      // 获取认证token
-      const token = await getAuthToken();
-      if (!token) {
-        alert('认证失败，请重新登录');
-        return;
-      }
-
-      // 调用API获取远程账单数据
-      const bills = await apiClient.sync.downloadBills(token);
-      
-      console.log('成功获取远程账单:', bills);
-      alert(`成功获取 ${bills.length} 条远程账单数据！\n\n数据已在控制台输出，可查看详细信息。`);
-      
-    } catch (error) {
-      console.error('获取远程账单失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      alert(`获取远程账单失败: ${errorMessage}`);
-    }
-  };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: tamaguiTheme.background?.get() }} edges={['top']}>
       <YStack flex={1} padding="$2" gap="$6" backgroundColor="$background">
         <XStack alignItems="center">
           <Button

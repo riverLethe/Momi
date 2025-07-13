@@ -243,7 +243,7 @@ export default function ChatScreen() {
       disabled={!isTextMode}
       accessible={false}
     >
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.get() }} edges={['top']}>
         <StatusBar barStyle={theme.background?.get() === 'white' ? "dark-content" : "light-content"} />
         <Stack.Screen
           options={{

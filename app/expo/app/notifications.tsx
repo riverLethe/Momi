@@ -30,7 +30,7 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.get() }} edges={['top']}>
       <YStack flex={1} padding="$2" gap="$6" backgroundColor="$background">
         <XStack alignItems="center">
           <Button

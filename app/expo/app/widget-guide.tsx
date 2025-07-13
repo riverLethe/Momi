@@ -12,7 +12,7 @@ export default function WidgetGuideScreen() {
     const theme = useTheme();
 
     return (
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.get() }} edges={['top']}>
             <YStack flex={1} paddingVertical="$2" gap="$2" backgroundColor="$background">
                 <XStack paddingHorizontal="$2" alignItems="center" gap="$2">
                     <Button

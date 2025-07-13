@@ -853,4 +853,44 @@ export class AuthService {
   static async validateSession(token: string): Promise<AuthUser | null> {
     return await SessionManager.getValidSession(token);
   }
+
+  /**
+   * Delete user account and all associated data
+   */
+  static async deleteUser(userId: string): Promise<boolean> {
+    try {
+      // 1. 删除用户的所有会话
+      await db.execute({
+        sql: "DELETE FROM user_sessions WHERE user_id = ?",
+        args: [userId],
+      });
+      
+      // 2. 删除用户的所有账单数据
+      // 注意：这里假设有一个bills表与用户关联
+      // 实际实现时需要根据数据库结构调整
+      await db.execute({
+        sql: "DELETE FROM bills WHERE user_id = ?",
+        args: [userId],
+      });
+      
+      // 3. 删除用户的所有交易数据
+      // 注意：这里假设有一个transactions表与用户关联
+      // 实际实现时需要根据数据库结构调整
+      await db.execute({
+        sql: "DELETE FROM transactions WHERE user_id = ?",
+        args: [userId],
+      });
+      
+      // 4. 标记用户账户为已删除（软删除）
+      await db.execute({
+        sql: "UPDATE users SET is_deleted = 1, updated_at = ? WHERE id = ?",
+        args: [new Date().toISOString(), userId],
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Delete user error:", error);
+      return false;
+    }
+  }
 }

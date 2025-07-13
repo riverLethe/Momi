@@ -275,5 +275,24 @@ export default {
     "Terms of Service": "Términos de Servicio",
     and: "y",
     "Privacy Policy": "Política de Privacidad",
+
+    // Profile and Account
+    Settings: "Configuración",
+    "Manage your preferences and data": "Gestiona tus preferencias y datos",
+    "Sign in to access all features":
+      "Inicia sesión para acceder a todas las funciones",
+    "Signed in as": "Iniciado sesión como",
+    "Sign In": "Iniciar Sesión",
+    "Sign Out": "Cerrar Sesión",
+    "Delete Account": "Eliminar Cuenta",
+    "Account Management": "Gestión de Cuenta",
+    "Are you sure you want to sign out?":
+      "¿Estás seguro de querer cerrar sesión?",
+    "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.":
+      "¿Estás seguro de querer eliminar tu cuenta? Esta acción no se puede deshacer y todos tus datos serán eliminados permanentemente.",
+    "Account deleted successfully": "Cuenta eliminada correctamente",
+    Account: "Cuenta",
+    "Clear & Download Remote": "Limpiar y Descargar Remoto",
+    "Push & Override Remote": "Enviar y Sobrescribir Remoto",
   },
 };

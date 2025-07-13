@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Alert, ActionSheetIOS, Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
@@ -16,12 +16,13 @@ import { storage, STORAGE_KEYS } from '@/utils/storage.utils';
 import { clearQueue } from '@/utils/offlineQueue.utils';
 import { apiClient } from '@/utils/api';
 import { smartSync } from '@/utils/sync.utils';
-import i18n from "@/i18n";
+import { SyncOptionsSheet } from '@/components/ui/SyncOptionsSheet';
 
 // Configure Google Sign-In
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+
 
 // Complete the sign-in with web browser for OAuth flows
 WebBrowser.maybeCompleteAuthSession();
@@ -46,9 +47,12 @@ interface AuthContextType extends AuthState {
   loginWithApple: () => Promise<boolean>;
   loginWithWeChat: () => Promise<boolean>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<boolean>;
   updateUser: (userData: Partial<User>) => void;
   syncData: () => Promise<void>;
   lastSyncTime: Date | null;
+  showSyncOptionsSheet: boolean;
+  setSyncOptionsSheet: (show: boolean) => void;
 }
 
 // Create auth context
@@ -65,6 +69,9 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>(initialAuthState);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [showSyncOptionsSheet, setShowSyncOptionsSheet] = useState(false);
+  const [syncToken, setSyncToken] = useState<string | null>(null);
+  const [localBills, setLocalBills] = useState<any[]>([]);
 
   // Google Auth Request Setup
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
@@ -207,88 +214,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        if (Platform.OS === 'ios') {
-          const options = [i18n.t('Merge (keep both)'), i18n.t('Clear & Download Remote'), i18n.t('Push & Override Remote'), i18n.t('Sign Out')];
-          const destructiveIndex = 1;
-          const signOutIndex = 3;
-
-          ActionSheetIOS.showActionSheetWithOptions(
-            {
-              options,
-              destructiveButtonIndex: destructiveIndex,
-              cancelButtonIndex: signOutIndex,
-            },
-            async (buttonIndex) => {
-              switch (buttonIndex) {
-                case 0: // Merge
-                  syncData();
-                  break;
-                case 1: // Clear & Download
-                  await storage.setItem(STORAGE_KEYS.BILLS, []);
-                  await clearQueue();
-                  syncData();
-                  break;
-                case 2: // Push & Override
-                  try {
-                    await apiClient.sync.uploadBills(token, localBills.map((b) => ({ action: 'create', bill: b })));
-                    await clearQueue();
-                    syncData();
-                  } catch (err) {
-                    console.error('Upload bills failed', err);
-                    syncData();
-                  }
-                  break;
-                case signOutIndex: // sign out
-                  await removeAuthToken();
-                  setAuthState({ ...initialAuthState, isLoading: false });
-                  break;
-                default:
-                  break;
-              }
-            }
-          );
-        } else {
-          Alert.alert(
-            i18n.t('Sync Options'),
-            i18n.t('Local bills detected. How would you like to sync with your cloud data?'),
-            [
-              {
-                text: i18n.t('Merge'),
-                onPress: () => syncData(),
-              },
-              {
-                text: i18n.t('Clear & Download Remote'),
-                onPress: async () => {
-                  await storage.setItem(STORAGE_KEYS.BILLS, []);
-                  await clearQueue();
-                  syncData();
-                },
-                style: 'destructive',
-              },
-              {
-                text: i18n.t('Push & Override Remote'),
-                onPress: async () => {
-                  try {
-                    await apiClient.sync.uploadBills(token, localBills.map((b) => ({ action: 'create', bill: b })));
-                    await clearQueue();
-                    syncData();
-                  } catch (err) {
-                    console.error('Upload bills failed', err);
-                    syncData();
-                  }
-                },
-              },
-              {
-                text: i18n.t('Sign Out'),
-                style: 'destructive',
-                onPress: async () => {
-                  await removeAuthToken();
-                  setAuthState({ ...initialAuthState, isLoading: false });
-                },
-              },
-            ]
-          );
-        }
+        // Store token and bills for sheet handlers
+        setSyncToken(token);
+        setLocalBills(localBills);
+        setShowSyncOptionsSheet(true);
       } catch (err) {
         console.error('Post-login sync prompt error:', err);
         syncData();
@@ -296,6 +225,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     },
     [syncData]
   );
+
+  // Sync option handlers
+  const handleMerge = useCallback(async () => {
+    syncData();
+  }, [syncData]);
+
+  const handleClearAndDownload = useCallback(async () => {
+    await storage.setItem(STORAGE_KEYS.BILLS, []);
+    await clearQueue();
+    syncData();
+  }, [syncData]);
+
+  const handlePushAndOverride = useCallback(async () => {
+    if (!syncToken) return;
+    try {
+      await apiClient.sync.uploadBills(syncToken, localBills.map((b) => ({ action: 'create', bill: b })));
+      await clearQueue();
+      syncData();
+    } catch (err) {
+      console.error('Upload bills failed', err);
+      syncData();
+    }
+  }, [syncToken, localBills, syncData]);
+
+  const handleSyncSignOut = useCallback(async () => {
+    await removeAuthToken();
+    setAuthState({ ...initialAuthState, isLoading: false });
+  }, []);
 
   /**
    * Email/Password login function
@@ -392,7 +349,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithGoogle = useCallback(async (): Promise<boolean> => {
     try {
       // Check if Google configuration is complete
-      if (!googleWebClientId || !googleIosClientId || !googleAndroidClientId) {
+      if (!googleWebClientId || !googleIosClientId) {
         console.error('Google OAuth configuration incomplete:', {
           webClientId: !!googleWebClientId,
           iosClientId: !!googleIosClientId,
@@ -427,7 +384,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setAuthState(prev => ({ ...prev, isLoading: false, error: 'Google sign-in failed' }));
       return false;
     }
-  }, [googlePromptAsync, handleGoogleSignInResponse, googleWebClientId, googleIosClientId, googleAndroidClientId]);
+  }, [googlePromptAsync, handleGoogleSignInResponse, googleWebClientId, googleIosClientId]);
 
   /**
    * Apple Sign In
@@ -580,6 +537,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   /**
+   * Delete account function
+   */
+  const deleteAccount = useCallback(async (): Promise<boolean> => {
+    try {
+      setAuthState(prev => ({ ...prev, isLoading: true }));
+
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Call API to delete account
+      await apiClient.auth.deleteAccount(token);
+
+      // Remove token from storage
+      await removeAuthToken();
+
+      // Clear local data
+      await storage.clear();
+
+      setAuthState({
+        isAuthenticated: false,
+        isLoading: false,
+        user: null,
+        error: null,
+      });
+
+      setLastSyncTime(null);
+      return true;
+    } catch (error) {
+      console.error('Delete account error:', error);
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: 'Failed to delete account',
+      }));
+      return false;
+    }
+  }, []);
+
+  /**
    * Update user data
    */
   const updateUser = useCallback((userData: Partial<User>): void => {
@@ -602,14 +600,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loginWithApple,
     loginWithWeChat,
     logout,
+    deleteAccount,
     updateUser,
     syncData,
     lastSyncTime,
+    showSyncOptionsSheet,
+    setSyncOptionsSheet: setShowSyncOptionsSheet,
   };
 
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
+      <SyncOptionsSheet
+        open={showSyncOptionsSheet}
+        onOpenChange={setShowSyncOptionsSheet}
+        onMerge={handleMerge}
+        onClearAndDownload={handleClearAndDownload}
+        onPushAndOverride={handlePushAndOverride}
+        onSignOut={handleSyncSignOut}
+      />
     </AuthContext.Provider>
   );
 };

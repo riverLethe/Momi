@@ -8,7 +8,6 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Apple, ChevronLeftIcon } from "lucide-react-native";
 import {
-  View,
   Text,
   Button,
   XStack,
@@ -16,25 +15,19 @@ import {
   H1,
   Paragraph,
   useTheme,
+  H2,
 } from "tamagui";
 import { useTranslation } from "react-i18next";
-import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "@/providers/AuthProvider";
 import { GoogleIcon } from "@/components/ui/GoogleIcon";
-import { WeChatIcon } from "@/components/ui/WeChatIcon";
-import { useGoogleConfig } from "@/hooks/useGoogleConfig";
-import { useLocale } from "@/i18n/useLocale";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { loginWithGoogle, loginWithApple, loginWithWeChat, isLoading } = useAuth();
+  const { loginWithGoogle, loginWithApple, loginWithWeChat } = useAuth();
   const { t } = useTranslation();
-  const { isGoogleConfigured } = useGoogleConfig();
-  const { locale } = useLocale();
   const theme = useTheme();
 
-  const isChinese = locale.startsWith("zh");
 
   const handleGoogleLogin = async () => {
     try {
@@ -95,24 +88,17 @@ export default function LoginScreen() {
 
             {/* Content Container */}
             <YStack flex={1} paddingHorizontal="$4" paddingTop="$4">
+
               {/* Title Section */}
-              <YStack marginBottom="$8" alignItems="center">
-                <H1 fontSize="$8" fontWeight="$8" color="$color" marginBottom="$3" textAlign="center">
-                  {t("Welcome back")}
-                </H1>
-                <Paragraph
-                  color="$color10"
-                  fontSize="$4"
-                  textAlign="center"
-                  lineHeight="$5"
-                  maxWidth={280}
-                >
+              <YStack alignItems="center" gap="$2" marginTop="$4">
+                <H2 color="$color">{t("Welcome back")}</H2>
+                <Text color="$color10" textAlign="center">
                   {t("Sign in to continue and sync your data")}
-                </Paragraph>
+                </Text>
               </YStack>
 
               {/* Social Login Section */}
-              <YStack marginBottom="$8" alignItems="center">
+              <YStack marginVertical="$8" alignItems="center">
                 <Button
                   size="$5"
                   width="100%"
@@ -122,11 +108,10 @@ export default function LoginScreen() {
                   borderRadius="$4"
                   marginBottom="$4"
                   onPress={handleGoogleLogin}
-                  disabled={isLoading}
                   icon={<GoogleIcon size={24} />}
                 >
                   <Text color="$color" fontWeight="$6" fontSize="$4">
-                    {isLoading ? t("Signing in...") : t("Continue with Google")}
+                    {t("Continue with Google")}
                   </Text>
                 </Button>
 
@@ -138,18 +123,17 @@ export default function LoginScreen() {
                     borderRadius="$4"
                     marginBottom="$4"
                     onPress={handleAppleLogin}
-                    disabled={isLoading}
                     icon={<Apple size={24} color="white" />}
                     pressStyle={{ backgroundColor: "$black8" }}
                     hoverStyle={{ backgroundColor: "$black6" }}
                   >
                     <Text color="white" fontWeight="$6" fontSize="$4">
-                      {isLoading ? t("Signing in...") : t("Continue with Apple")}
+                      {t("Continue with Apple")}
                     </Text>
                   </Button>
                 )}
 
-                <Button
+                {/* <Button
                   size="$5"
                   width="100%"
                   backgroundColor="$green9"
@@ -163,7 +147,7 @@ export default function LoginScreen() {
                   <Text color="white" fontWeight="$6" fontSize="$4">
                     {t("Continue with WeChat")}
                   </Text>
-                </Button>
+                </Button> */}
               </YStack>
 
               {/* Footer */}

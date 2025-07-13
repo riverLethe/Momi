@@ -587,5 +587,57 @@ export default {
     "Sync now": "Sync now",
     "Sync your data now": "Sync your data now",
     "Network Status": "Network Status",
+    "By signing in, you agree to our": "By signing in, you agree to our",
+    "Terms of Service": "Terms of Service",
+    "Privacy Policy": "Privacy Policy",
+    and: "and",
+
+    // Profile and Account
+    Settings: "Settings",
+    "Manage your preferences and data": "Manage your preferences and data",
+    "Sign in to access all features": "Sign in to access all features",
+    "Signed in as": "Signed in as",
+    "Sign In": "Sign In",
+    "Sign Out": "Sign Out",
+    "Delete Account": "Delete Account",
+    "Account Management": "Account Management",
+    "Are you sure you want to sign out?": "Are you sure you want to sign out?",
+    "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.":
+      "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.",
+    "Account deleted successfully": "Account deleted successfully",
+    "Failed to delete account": "Failed to delete account",
+    "Signed out successfully": "Signed out successfully",
+    "Failed to sign out": "Failed to sign out",
+    "Choose an option": "Choose an option",
+    "Welcome back! What would you like to do?":
+      "Welcome back! What would you like to do?",
+    "Go to Home": "Go to Home",
+    "View Profile": "View Profile",
+    "Manage Settings": "Manage Settings",
+    "View Reports": "View Reports",
+    "Manage Account": "Manage Account",
+    "Login Successful!": "Login Successful!",
+    "Choose what you'd like to do next:": "Choose what you'd like to do next:",
+    "Confirm Sign Out": "Confirm Sign Out",
+    "Successfully signed out": "Successfully signed out",
+    "Confirm Account Deletion": "Confirm Account Deletion",
+    "This action will permanently delete your account and all data, and cannot be undone. Are you sure you want to continue?":
+      "This action will permanently delete your account and all data, and cannot be undone. Are you sure you want to continue?",
+    "Account successfully deleted": "Account successfully deleted",
+    "Failed to delete account, please try again later":
+      "Failed to delete account, please try again later",
+
+    // Common
+    Remove: "Remove",
+    OK: "OK",
+    "Sync Options": "Sync Options",
+    "Local bills detected. How would you like to sync with your cloud data?":
+      "Local bills detected. How would you like to sync with your cloud data?",
+    Merge: "Merge",
+    "Clear and Download": "Clear and Download",
+    "Push and Override": "Push and Override",
+    Account: "Account",
+    "Clear & Download Remote": "Clear & Download Remote",
+    "Push & Override Remote": "Push & Override Remote",
   },
 };

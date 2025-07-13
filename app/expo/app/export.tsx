@@ -5,7 +5,7 @@ import { ChevronLeftIcon } from "lucide-react-native";
 import { Button, H2, Text, XStack, YStack, View, useTheme } from "tamagui";
 import { exportBillsAsCsv } from "@/utils/export.utils";
 import { getBills } from "@/utils/bills.utils";
-import { Alert, StyleSheet, Platform } from "react-native";
+import { Alert } from "react-native";
 import { addMonths, isAfter, startOfDay, endOfDay } from "date-fns";
 import { useTranslation } from "react-i18next";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
@@ -87,17 +87,9 @@ export default function ExportDataScreen() {
     }
   };
 
-  // Prevent selecting dates that would cause more than 3 months range
-  const canSelectStartDate = (date: Date) => {
-    return !isAfter(addMonths(date, 3), endDate);
-  };
-
-  const canSelectEndDate = (date: Date) => {
-    return !isAfter(date, addMonths(startDate, 3)) && !isAfter(date, today);
-  };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.get() }} edges={['top']}>
       <YStack flex={1} padding="$2" gap="$6" backgroundColor="$background">
         <XStack alignItems="center">
           <Button size="$3"
@@ -134,6 +126,7 @@ export default function ExportDataScreen() {
                   height={48}
                   justifyContent="flex-start"
                   paddingLeft="$3"
+                  borderColor="$color10"
                 >
                   {startDate.toLocaleDateString()}
                 </Button>
@@ -146,6 +139,7 @@ export default function ExportDataScreen() {
                   height={48}
                   justifyContent="flex-start"
                   paddingLeft="$3"
+                  borderColor="$color10"
                 >
                   {endDate.toLocaleDateString()}
                 </Button>
