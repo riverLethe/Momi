@@ -16,6 +16,7 @@ import { storage, STORAGE_KEYS } from '@/utils/storage.utils';
 import { clearQueue } from '@/utils/offlineQueue.utils';
 import { apiClient } from '@/utils/api';
 import { smartSync } from '@/utils/sync.utils';
+import i18n from "@/i18n";
 
 // Configure Google Sign-In
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -207,7 +208,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         if (Platform.OS === 'ios') {
-          const options = ['Merge (keep both)', 'Clear & Download Remote', 'Push & Override Remote', 'Sign Out'];
+          const options = [i18n.t('Merge (keep both)'), i18n.t('Clear & Download Remote'), i18n.t('Push & Override Remote'), i18n.t('Sign Out')];
           const destructiveIndex = 1;
           const signOutIndex = 3;
 
@@ -248,15 +249,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           );
         } else {
           Alert.alert(
-            'Sync Options',
-            'Local bills detected. How would you like to sync with your cloud data?',
+            i18n.t('Sync Options'),
+            i18n.t('Local bills detected. How would you like to sync with your cloud data?'),
             [
               {
-                text: 'Merge',
+                text: i18n.t('Merge'),
                 onPress: () => syncData(),
               },
               {
-                text: 'Clear & Download Remote',
+                text: i18n.t('Clear & Download Remote'),
                 onPress: async () => {
                   await storage.setItem(STORAGE_KEYS.BILLS, []);
                   await clearQueue();
@@ -265,7 +266,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 style: 'destructive',
               },
               {
-                text: 'Push & Override Remote',
+                text: i18n.t('Push & Override Remote'),
                 onPress: async () => {
                   try {
                     await apiClient.sync.uploadBills(token, localBills.map((b) => ({ action: 'create', bill: b })));
@@ -278,7 +279,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 },
               },
               {
-                text: 'Sign Out',
+                text: i18n.t('Sign Out'),
                 style: 'destructive',
                 onPress: async () => {
                   await removeAuthToken();
@@ -339,16 +340,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const handleGoogleSignInResponse = useCallback(async (response: AuthSession.AuthSessionResult): Promise<boolean> => {
     try {
-      console.log('Google sign-in response:', response);
-
       if (response.type === 'success') {
-        // expo-auth-session/providers/google returns access_token and id_token in params
-        const { access_token, id_token } = response.params;
+        // expo-auth-session/providers/google returns tokens in authentication object
+        const authentication = (response as any).authentication;
+        const params = response.params;
 
-        console.log('Google tokens:', { access_token: !!access_token, id_token: !!id_token });
+        // Try to get id_token from authentication object first, then from params
+        const idToken = authentication?.idToken || params?.id_token;
 
-        if (id_token) {
-          const apiResponse = await apiClient.auth.googleLogin({ idToken: id_token });
+        // Only proceed if we have an idToken (skip the first response with just authorization code)
+        if (idToken) {
+          const apiResponse = await apiClient.auth.googleLogin({ idToken });
 
           if (apiResponse.token) {
             await storeAuthToken(apiResponse.token);
@@ -365,8 +367,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             return true;
           }
         } else {
-          console.error('No id_token received from Google');
-          throw new Error('No id_token received from Google');
+          // This is likely the first response with authorization code, not an error
+          // Just log for debugging but don't throw error
+          return false; // Return false but don't throw error
         }
       } else {
         console.error('Google sign-in response type:', response.type);
@@ -407,14 +410,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      console.log('Starting Google sign-in...');
       const result = await googlePromptAsync();
-      console.log('Google sign-in result type:', result.type);
 
       if (result.type === 'success') {
         return await handleGoogleSignInResponse(result);
       } else if (result.type === 'cancel') {
-        console.log('Google sign-in cancelled by user');
         setAuthState(prev => ({ ...prev, isLoading: false }));
         return false;
       } else {
