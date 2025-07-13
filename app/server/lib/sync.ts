@@ -112,11 +112,14 @@ export class SyncService {
       args: [bill.id, userId],
     });
 
+    // 处理家庭空间ID
+    const familySpaceId = bill.familySpaceId || null;
+
     if (existingResult.rows.length === 0) {
       // Insert new bill
       await db.execute({
-        sql: `INSERT INTO bills (id, user_id, amount, category, description, bill_date, created_at, updated_at, sync_version)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO bills (id, user_id, amount, category, description, bill_date, created_at, updated_at, sync_version, family_space_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           bill.id,
           userId,
@@ -127,8 +130,20 @@ export class SyncService {
           bill.createdAt || new Date().toISOString(),
           new Date().toISOString(),
           bill.syncVersion || 1,
+          familySpaceId,
         ],
       });
+
+      // 如果是家庭账单，更新用户的最后记账时间
+      if (familySpaceId) {
+        try {
+          const { FamilyService } = require('./family');
+          await FamilyService.updateLastTransactionTime(userId);
+        } catch (error) {
+          console.error('Failed to update last transaction time:', error);
+        }
+      }
+
       return { bill };
     } else {
       // Check for conflicts
@@ -147,7 +162,7 @@ export class SyncService {
 
       // Update existing bill
       await db.execute({
-        sql: `UPDATE bills SET amount = ?, category = ?, description = ?, bill_date = ?, updated_at = ?, sync_version = ?
+        sql: `UPDATE bills SET amount = ?, category = ?, description = ?, bill_date = ?, updated_at = ?, sync_version = ?, family_space_id = ?
               WHERE id = ? AND user_id = ?`,
         args: [
           bill.amount,
@@ -156,10 +171,22 @@ export class SyncService {
           bill.billDate,
           new Date().toISOString(),
           (bill.syncVersion || 1) + 1,
+          familySpaceId,
           bill.id,
           userId,
         ],
       });
+
+      // 如果是家庭账单，更新用户的最后记账时间
+      if (familySpaceId) {
+        try {
+          const { FamilyService } = require('./family');
+          await FamilyService.updateLastTransactionTime(userId);
+        } catch (error) {
+          console.error('Failed to update last transaction time:', error);
+        }
+      }
+
       return { bill };
     }
   }

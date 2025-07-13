@@ -173,6 +173,35 @@ export class DatabaseService {
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
     `);
+    
+    // 家庭空间表
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS family_spaces (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        created_by TEXT NOT NULL,
+        creator_name TEXT NOT NULL,
+        invite_code TEXT UNIQUE NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users (id)
+      )
+    `);
+    
+    // 家庭成员表
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS family_members (
+        id TEXT PRIMARY KEY,
+        family_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        is_creator BOOLEAN DEFAULT 0,
+        joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_transaction_time DATETIME,
+        FOREIGN KEY (family_id) REFERENCES family_spaces (id),
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        UNIQUE(family_id, user_id)
+      )
+    `);
 
     // Create indexes for better performance
     await db.execute(
@@ -184,6 +213,13 @@ export class DatabaseService {
     await db.execute(
       `CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions (token)`
     );
+    await db.execute(
+      `CREATE INDEX IF NOT EXISTS idx_family_members_user ON family_members (user_id)`
+    );
+    await db.execute(
+      `CREATE INDEX IF NOT EXISTS idx_family_members_family ON family_members (family_id)`
+    );
+
   }
 
   /**

@@ -1,0 +1,423 @@
+import { db } from "./database";
+import { v4 as uuidv4 } from "uuid";
+
+// 类型定义
+export interface FamilySpace {
+  id: string;
+  name: string;
+  createdBy: string;
+  creatorName: string;
+  inviteCode: string;
+  createdAt: string;
+}
+
+export interface FamilyMember {
+  id: string;
+  familyId: string;
+  userId: string;
+  name: string;
+  isCreator: boolean;
+  joinedAt: string;
+  lastTransactionTime?: string;
+}
+
+// 家庭空间服务
+export class FamilyService {
+  /**
+   * 生成邀请码
+   */
+  static generateInviteCode(): string {
+    return 'FAM' + Math.floor(1000 + Math.random() * 9000);
+  }
+
+  /**
+   * 创建家庭空间
+   */
+  static async createFamilySpace(
+    name: string,
+    userId: string,
+    userName: string,
+    customInviteCode?: string
+  ): Promise<FamilySpace> {
+    const id = `family_${uuidv4()}`;
+    const inviteCode = customInviteCode || this.generateInviteCode();
+    const now = new Date().toISOString();
+
+    // 创建家庭空间
+    await db.execute({
+      sql: `INSERT INTO family_spaces (id, name, created_by, creator_name, invite_code, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [id, name, userId, userName, inviteCode, now],
+    });
+
+    // 添加创建者作为成员
+    await db.execute({
+      sql: `INSERT INTO family_members (id, family_id, user_id, username, is_creator, joined_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [`member_${uuidv4()}`, id, userId, userName, 1, now],
+    });
+
+    return {
+      id,
+      name,
+      createdBy: userId,
+      creatorName: userName,
+      inviteCode,
+      createdAt: now,
+    };
+  }
+
+  /**
+   * 获取家庭空间详情
+   */
+  static async getFamilySpace(id: string): Promise<FamilySpace | null> {
+    const result = await db.execute({
+      sql: `SELECT * FROM family_spaces WHERE id = ?`,
+      args: [id],
+    });
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const space = result.rows[0];
+    return {
+      id: space.id as string,
+      name: space.name as string,
+      createdBy: space.created_by as string,
+      creatorName: space.creator_name as string,
+      inviteCode: space.invite_code as string,
+      createdAt: space.created_at as string,
+    };
+  }
+
+  /**
+   * 通过邀请码获取家庭空间
+   */
+  static async getFamilySpaceByInviteCode(inviteCode: string): Promise<FamilySpace | null> {
+    const result = await db.execute({
+      sql: `SELECT * FROM family_spaces WHERE invite_code = ?`,
+      args: [inviteCode],
+    });
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const space = result.rows[0];
+    return {
+      id: space.id as string,
+      name: space.name as string,
+      createdBy: space.created_by as string,
+      creatorName: space.creator_name as string,
+      inviteCode: space.invite_code as string,
+      createdAt: space.created_at as string,
+    };
+  }
+
+  /**
+   * 获取家庭成员
+   */
+  static async getFamilyMembers(familyId: string): Promise<FamilyMember[]> {
+    const result = await db.execute({
+      sql: `SELECT * FROM family_members WHERE family_id = ?`,
+      args: [familyId],
+    });
+
+    return result.rows.map((row) => ({
+      id: row.id as string,
+      familyId: row.family_id as string,
+      userId: row.user_id as string,
+      name: row.username as string,
+      isCreator: Boolean(row.is_creator),
+      joinedAt: row.joined_at as string,
+      lastTransactionTime: row.last_transaction_time as string | undefined,
+    }));
+  }
+
+  /**
+   * 获取用户的家庭空间
+   */
+  static async getUserFamilySpaces(userId: string): Promise<FamilySpace[]> {
+    const result = await db.execute({
+      sql: `SELECT fs.* FROM family_spaces fs
+            JOIN family_members fm ON fs.id = fm.family_id
+            WHERE fm.user_id = ?`,
+      args: [userId],
+    });
+
+    return result.rows.map((row) => ({
+      id: row.id as string,
+      name: row.name as string,
+      createdBy: row.created_by as string,
+      creatorName: row.creator_name as string,
+      inviteCode: row.invite_code as string,
+      createdAt: row.created_at as string,
+    }));
+  }
+
+  /**
+   * 加入家庭空间
+   */
+  static async joinFamilySpace(
+    inviteCode: string,
+    userId: string,
+    userName: string
+  ): Promise<FamilySpace | null> {
+    // 查找家庭空间
+    const space = await this.getFamilySpaceByInviteCode(inviteCode);
+    if (!space) {
+      return null;
+    }
+
+    // 检查用户是否已经是成员
+    const memberResult = await db.execute({
+      sql: `SELECT * FROM family_members WHERE family_id = ? AND user_id = ?`,
+      args: [space.id, userId],
+    });
+
+    if (memberResult.rows.length > 0) {
+      return space; // 用户已经是成员
+    }
+
+    // 添加用户为成员
+    await db.execute({
+      sql: `INSERT INTO family_members (id, family_id, user_id, username, is_creator, joined_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [`member_${uuidv4()}`, space.id, userId, userName, 0, new Date().toISOString()],
+    });
+
+    return space;
+  }
+
+  /**
+   * 添加成员通过邮箱
+   */
+  static async addMemberByEmail(
+    familyId: string,
+    email: string,
+    currentUserId: string
+  ): Promise<boolean> {
+    // 验证当前用户是否是创建者
+    const isCreator = await this.isCreator(familyId, currentUserId);
+    if (!isCreator) {
+      return false;
+    }
+
+    // 查找用户
+    const userResult = await db.execute({
+      sql: `SELECT * FROM users WHERE email = ? AND is_deleted = 0`,
+      args: [email],
+    });
+
+    if (userResult.rows.length === 0) {
+      return false; // 用户不存在
+    }
+
+    const user = userResult.rows[0];
+    const userId = user.id as string;
+    const userName = user.name as string;
+
+    // 检查用户是否已经是成员
+    const memberResult = await db.execute({
+      sql: `SELECT * FROM family_members WHERE family_id = ? AND user_id = ?`,
+      args: [familyId, userId],
+    });
+
+    if (memberResult.rows.length > 0) {
+      return true; // 用户已经是成员
+    }
+
+    // 添加用户为成员
+    await db.execute({
+      sql: `INSERT INTO family_members (id, family_id, user_id, username, is_creator, joined_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [`member_${uuidv4()}`, familyId, userId, userName, 0, new Date().toISOString()],
+    });
+
+    return true;
+  }
+
+  /**
+   * 添加成员通过用户ID
+   */
+  static async addMemberById(
+    familyId: string,
+    targetUserId: string,
+    currentUserId: string
+  ): Promise<boolean> {
+    // 验证当前用户是否是创建者
+    const isCreator = await this.isCreator(familyId, currentUserId);
+    if (!isCreator) {
+      return false;
+    }
+
+    // 查找用户
+    const userResult = await db.execute({
+      sql: `SELECT * FROM users WHERE id = ? AND is_deleted = 0`,
+      args: [targetUserId],
+    });
+
+    if (userResult.rows.length === 0) {
+      return false; // 用户不存在
+    }
+
+    const user = userResult.rows[0];
+    const userId = user.id as string;
+    const userName = user.name as string;
+
+    // 检查用户是否已经是成员
+    const memberResult = await db.execute({
+      sql: `SELECT * FROM family_members WHERE family_id = ? AND user_id = ?`,
+      args: [familyId, userId],
+    });
+
+    if (memberResult.rows.length > 0) {
+      return true; // 用户已经是成员
+    }
+
+    // 添加用户为成员
+    await db.execute({
+      sql: `INSERT INTO family_members (id, family_id, user_id, username, is_creator, joined_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [`member_${uuidv4()}`, familyId, userId, userName, 0, new Date().toISOString()],
+    });
+
+    return true;
+  }
+
+  /**
+   * 退出家庭空间
+   */
+  static async leaveFamilySpace(familyId: string, userId: string): Promise<boolean> {
+    // 检查用户是否是创建者
+    const isCreator = await this.isCreator(familyId, userId);
+    if (isCreator) {
+      return false; // 创建者不能退出，只能解散
+    }
+
+    // 检查用户是否是成员
+    const memberResult = await db.execute({
+      sql: `SELECT * FROM family_members WHERE family_id = ? AND user_id = ?`,
+      args: [familyId, userId],
+    });
+
+    if (memberResult.rows.length === 0) {
+      return false; // 用户不是成员
+    }
+
+    // 移除成员
+    await db.execute({
+      sql: `DELETE FROM family_members WHERE family_id = ? AND user_id = ?`,
+      args: [familyId, userId],
+    });
+
+    return true;
+  }
+
+  /**
+   * 删除家庭空间
+   */
+  static async deleteFamilySpace(familyId: string, userId: string): Promise<boolean> {
+    // 验证当前用户是否是创建者
+    const isCreator = await this.isCreator(familyId, userId);
+    if (!isCreator) {
+      return false;
+    }
+
+    // 删除所有成员
+    await db.execute({
+      sql: `DELETE FROM family_members WHERE family_id = ?`,
+      args: [familyId],
+    });
+
+    // 删除家庭空间
+    await db.execute({
+      sql: `DELETE FROM family_spaces WHERE id = ?`,
+      args: [familyId],
+    });
+
+    return true;
+  }
+
+  /**
+   * 更新用户最后记账时间
+   */
+  static async updateLastTransactionTime(userId: string): Promise<void> {
+    const now = new Date().toISOString();
+
+    await db.execute({
+      sql: `UPDATE family_members SET last_transaction_time = ? WHERE user_id = ?`,
+      args: [now, userId],
+    });
+  }
+
+  /**
+   * 检查用户是否是创建者
+   */
+  static async isCreator(familyId: string, userId: string): Promise<boolean> {
+    const result = await db.execute({
+      sql: `SELECT * FROM family_members WHERE family_id = ? AND user_id = ? AND is_creator = 1`,
+      args: [familyId, userId],
+    });
+
+    return result.rows.length > 0;
+  }
+
+  /**
+   * 检查用户是否是家庭成员
+   */
+  static async isFamilyMember(familyId: string, userId: string): Promise<boolean> {
+    const result = await db.execute({
+      sql: `SELECT * FROM family_members WHERE family_id = ? AND user_id = ?`,
+      args: [familyId, userId],
+    });
+
+    return result.rows.length > 0;
+  }
+
+  /**
+   * 删除家庭成员
+   */
+  static async removeMember(familyId: string, memberId: string): Promise<boolean> {
+    try {
+      await db.execute({
+        sql: `DELETE FROM family_members WHERE family_id = ? AND id = ?`,
+        args: [familyId, memberId],
+      });
+      return true;
+    } catch (error) {
+      console.error('Error removing family member:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 更新邀请码
+   */
+  static async updateInviteCode(familyId: string, newInviteCode: string): Promise<FamilySpace | null> {
+    await db.execute({
+      sql: `UPDATE family_spaces SET invite_code = ? WHERE id = ?`,
+      args: [newInviteCode, familyId],
+    });
+
+    return this.getFamilySpace(familyId);
+  }
+
+  /**
+   * 获取完整的家庭空间信息（包括成员）
+   */
+  static async getFamilySpaceWithMembers(familyId: string): Promise<any> {
+    const space = await this.getFamilySpace(familyId);
+    if (!space) {
+      return null;
+    }
+
+    const members = await this.getFamilyMembers(familyId);
+
+    return {
+      ...space,
+      members,
+    };
+  }
+}

@@ -10,6 +10,7 @@ import {
   Bell,
   UserX,
   LogOut,
+  Users,
 } from "lucide-react-native";
 import {
   YStack,
@@ -104,6 +105,15 @@ export default function ProfileScreen() {
         >
           {/* Settings Section */}
           <ProfileSection title={t('Settings')}>
+            <ProfileRow
+              icon={
+                <Circle size="$3" backgroundColor="$purple4">
+                  <Users size={20} color="#8B5CF6" />
+                </Circle>
+              }
+              label={t('Family Space')}
+              onPress={handleFamilySpacePress}
+            />
             <ProfileRow
               icon={
                 <Circle size="$3" backgroundColor="$gray4">

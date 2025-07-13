@@ -95,10 +95,8 @@ export default function BillDetailsScreen() {
           return;
         }
 
-        // 只在没有数据时显示loading
-        if (!bill) {
-          setLoading(true);
-        }
+        // 设置loading状态，避免显示"找不到账单"错误
+        setLoading(true);
 
         try {
           // 从存储中查找
@@ -116,6 +114,7 @@ export default function BillDetailsScreen() {
           }
         } catch (error) {
           console.error("Failed to fetch bill:", error);
+          setBill(null);
         } finally {
           if (isMounted.current) {
             setLoading(false);
@@ -230,39 +229,29 @@ export default function BillDetailsScreen() {
   const handleOpenDateSheet = useCallback(() => setActiveSheet("date"), []);
   const handleOpenAmountSheet = useCallback(() => setActiveSheet("amount"), []);
 
-  if (loading) {
+  if (loading || !bill) {
     return (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.get() }} edges={['top']}>
           <Stack.Screen options={{ headerShown: false }} />
           <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="$background">
-            <ActivityIndicator size="small" color={theme.blue9?.get()} />
-            <Text marginTop="$3" color="$color10" fontSize="$3">
-              {t("Loading bill information...")}
-            </Text>
-          </YStack>
-        </SafeAreaView>
-      </TouchableWithoutFeedback>
-    );
-  }
-
-  if (!bill) {
-    return (
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <YStack
-            flex={1}
-            justifyContent="center"
-            alignItems="center"
-            padding="$4"
-            backgroundColor="$background"
-          >
-            <Text fontSize="$5" fontWeight="$6" textAlign="center" color="$color">
-              {t("Bill does not exist or has been deleted")}
-            </Text>
-            <Button marginTop="$4" onPress={() => router.back()}>
-              {t("Return to Bills List")}
-            </Button>
+            {loading ? (
+              <>
+                <ActivityIndicator size="small" color={theme.blue9?.get()} />
+                <Text marginTop="$3" color="$color10" fontSize="$3">
+                  {t("Loading bill information...")}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text fontSize="$5" fontWeight="$6" textAlign="center" color="$color">
+                  {t("Bill does not exist or has been deleted")}
+                </Text>
+                <Button marginTop="$4" onPress={() => router.back()}>
+                  {t("Return to Bills List")}
+                </Button>
+              </>
+            )}
           </YStack>
         </SafeAreaView>
       </TouchableWithoutFeedback>
@@ -271,7 +260,7 @@ export default function BillDetailsScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.get() }} edges={['top']}>
         <YStack flex={1} backgroundColor="$background">
           {/* 标题栏 */}
           <BillDetailHeader

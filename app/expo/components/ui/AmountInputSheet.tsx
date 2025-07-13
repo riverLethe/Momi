@@ -227,6 +227,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
                       flex={1}
                       size="$5"
                       onPress={() => handleKeypadPress(key)}
+                      bg="$card"
                     >
                       <Text fontSize="$6">{key}</Text>
                     </Button>
@@ -237,6 +238,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
                       size="$5"
                       onPress={handleDeletePress}
                       icon={<DeleteIcon size={24} color="#333" />}
+                      bg="$card"
                     />
                   )}
                 </XStack>
@@ -248,6 +250,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
                 flex={1}
                 size="$5"
                 onPress={() => handleOperatorPress("+")}
+                bg="$card"
               >
                 <Text fontSize="$6">+</Text>
               </Button>
@@ -255,6 +258,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
                 flex={1}
                 size="$5"
                 onPress={() => handleOperatorPress("-")}
+                bg="$card"
               >
                 <Text fontSize="$6">-</Text>
               </Button>
@@ -262,6 +266,7 @@ export const AmountInputSheet: React.FC<AmountInputSheetProps> = ({
                 flex={1}
                 size="$5"
                 onPress={handleClose}
+                bg="$card"
               >
                 <Text>{t("Cancel")}</Text>
               </Button>

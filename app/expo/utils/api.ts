@@ -116,6 +116,240 @@ export const readStream = async (
 
 // API 客户端
 export const apiClient = {
+  // 家庭空间相关
+  family: {
+    // 获取用户的家庭空间列表
+    getFamilySpaces: async (token: string) => {
+      const response = await fetch(`${API_URL}/api/family`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 创建新的家庭空间
+    createFamilySpace: async (token: string, familyData: { name: string; inviteCode: string }) => {
+      const response = await fetch(`${API_URL}/api/family`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(familyData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 根据邀请码获取家庭信息（不加入）
+    getFamilyByInviteCode: async (token: string, inviteCode: string) => {
+      const response = await fetch(`${API_URL}/api/family/lookup?inviteCode=${inviteCode}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 加入家庭空间
+    joinFamilySpace: async (token: string, inviteCode: string) => {
+      const response = await fetch(`${API_URL}/api/family/join`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ inviteCode }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 获取家庭空间详情
+    getFamilySpaceDetails: async (token: string, familyId: string) => {
+      const response = await fetch(`${API_URL}/api/family/details?familyId=${familyId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 获取家庭成员列表
+    getFamilyMembers: async (token: string, familyId: string) => {
+      const response = await fetch(`${API_URL}/api/family/members?familyId=${familyId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 添加家庭成员
+    addMember: async (token: string, familyId: string, email?: string, userId?: string) => {
+      const response = await fetch(`${API_URL}/api/family/members`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ familyId, email, userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 退出家庭空间
+    leaveFamilySpace: async (token: string, familyId: string) => {
+      const response = await fetch(`${API_URL}/api/family/leave`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ familyId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 删除家庭空间
+    deleteFamilySpace: async (token: string, familyId: string) => {
+      const response = await fetch(`${API_URL}/api/family/delete`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ familyId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 获取家庭账单列表
+    getBills: async (token: string, familyId: string, options?: {
+      limit?: number;
+      offset?: number;
+      startDate?: string;
+      endDate?: string;
+    }) => {
+      const params = new URLSearchParams({
+        familyId,
+        ...(options?.limit && { limit: options.limit.toString() }),
+        ...(options?.offset && { offset: options.offset.toString() }),
+        ...(options?.startDate && { startDate: options.startDate }),
+        ...(options?.endDate && { endDate: options.endDate }),
+      });
+
+      const response = await fetch(`${API_URL}/api/family/bills?${params}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 创建家庭账单
+    createBill: async (token: string, billData: {
+      familyId: string;
+      amount: number;
+      category: string;
+      notes?: string;
+      date?: string;
+      merchant?: string;
+    }) => {
+      const response = await fetch(`${API_URL}/api/family/bills`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(billData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 刷新邀请码
+    refreshInviteCode: async (token: string, newInviteCode: string) => {
+      const response = await fetch(`${API_URL}/api/family/refresh-invite-code`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newInviteCode }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+  },
+
   // 认证相关
   auth: {
     login: async (data: LoginRequest): Promise<LoginResponse> => {

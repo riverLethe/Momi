@@ -10,7 +10,8 @@ export interface FamilySpace {
 
 export interface FamilyMember {
   id: string;
-  username: string;
+  name: string;
   isCreator: boolean;
   joinedAt: Date;
+  lastTransactionTime?: Date; // 最后记账时间
 }

@@ -1,30 +1,20 @@
-import { storage, STORAGE_KEYS } from './storage.utils';
 import { FamilySpace, FamilyMember } from '@/types/family.types';
 import { User } from '@/types/user.types';
+import { apiClient } from './api';
+import { getAuthToken } from './auth.utils';
 
-/**
- * 生成唯一ID
- */
-const generateId = (): string => {
-  return 'family_' + Math.random().toString(36).substring(2, 15) + 
-         Math.random().toString(36).substring(2, 15) + 
-         '_' + Date.now().toString();
-};
-
-/**
- * 生成邀请码
- */
-const generateInviteCode = (): string => {
-  return 'FAM' + Math.floor(1000 + Math.random() * 9000);
-};
+// 这些函数已经移到服务端实现
 
 /**
  * 获取所有家庭空间
  */
 export const getFamilySpaces = async (): Promise<FamilySpace[]> => {
   try {
-    const spaces = await storage.getItem<FamilySpace[]>(STORAGE_KEYS.FAMILY_SPACES);
-    return spaces || [];
+    const token = await getAuthToken();
+    if (!token) throw new Error('未登录');
+    
+    const response = await apiClient.family.getFamilySpaces(token);
+    return response.data || [];
   } catch (error) {
     console.error('Failed to get family spaces:', error);
     return [];
@@ -39,30 +29,32 @@ export const createFamilySpace = async (
   user: User
 ): Promise<FamilySpace> => {
   try {
-    const spaces = await getFamilySpaces();
+    const token = await getAuthToken();
+    if (!token) throw new Error('未登录');
     
-    const newMember: FamilyMember = {
-      id: user.id,
-      username: user.name,
-      isCreator: true,
-      joinedAt: new Date()
-    };
-    
-    const newSpace: FamilySpace = {
-      id: generateId(),
-      name,
-      createdBy: user.id,
-      creatorName: user.name,
-      members: [newMember],
-      inviteCode: generateInviteCode(),
-      createdAt: new Date()
-    };
-    
-    await storage.setItem(STORAGE_KEYS.FAMILY_SPACES, [...spaces, newSpace]);
-    return newSpace;
+    const response = await apiClient.family.createFamilySpace(token, name);
+    return response.data;
   } catch (error) {
     console.error('Failed to create family space:', error);
     throw error;
+  }
+};
+
+/**
+ * 根据邀请码获取家庭信息（不加入）
+ */
+export const getFamilyByInviteCode = async (
+  inviteCode: string
+): Promise<FamilySpace | null> => {
+  try {
+    const token = await getAuthToken();
+    if (!token) throw new Error('未登录');
+    
+    const response = await apiClient.family.getFamilyByInviteCode(token, inviteCode);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get family by invite code:', error);
+    return null;
   }
 };
 
@@ -74,32 +66,14 @@ export const joinFamilySpace = async (
   user: User
 ): Promise<FamilySpace | null> => {
   try {
-    const spaces = await getFamilySpaces();
-    const spaceIndex = spaces.findIndex(space => space.inviteCode === inviteCode);
+    const token = await getAuthToken();
+    if (!token) throw new Error('未登录');
     
-    if (spaceIndex === -1) {
-      return null; // 没有找到匹配的邀请码
-    }
-    
-    // 检查用户是否已经是成员
-    if (spaces[spaceIndex].members.some(member => member.id === user.id)) {
-      return spaces[spaceIndex]; // 用户已经是成员
-    }
-    
-    const newMember: FamilyMember = {
-      id: user.id,
-      username: user.name,
-      isCreator: false,
-      joinedAt: new Date()
-    };
-    
-    spaces[spaceIndex].members.push(newMember);
-    await storage.setItem(STORAGE_KEYS.FAMILY_SPACES, spaces);
-    
-    return spaces[spaceIndex];
+    const response = await apiClient.family.joinFamilySpace(token, inviteCode);
+    return response.data;
   } catch (error) {
     console.error('Failed to join family space:', error);
-    throw error;
+    return null;
   }
 };
 
@@ -108,18 +82,62 @@ export const joinFamilySpace = async (
  */
 export const deleteFamilySpace = async (id: string): Promise<boolean> => {
   try {
-    const spaces = await getFamilySpaces();
-    const filteredSpaces = spaces.filter(space => space.id !== id);
+    const token = await getAuthToken();
+    if (!token) throw new Error('未登录');
     
-    if (spaces.length === filteredSpaces.length) {
-      return false; // 没有找到对应的家庭空间
-    }
-    
-    await storage.setItem(STORAGE_KEYS.FAMILY_SPACES, filteredSpaces);
-    return true;
+    const response = await apiClient.family.deleteFamilySpace(token, id);
+    return response.success;
   } catch (error) {
     console.error('Failed to delete family space:', error);
-    throw error;
+    return false;
+  }
+};
+
+/**
+ * 通过邮箱添加成员
+ */
+export const addMemberByEmail = async (familyId: string, email: string): Promise<boolean> => {
+  try {
+    const token = await getAuthToken();
+    if (!token) throw new Error('未登录');
+    
+    const response = await apiClient.family.addMember(token, familyId, email);
+    return response.success;
+  } catch (error) {
+    console.error('Failed to add member by email:', error);
+    return false;
+  }
+};
+
+/**
+ * 通过用户ID添加成员
+ */
+export const addMemberById = async (familyId: string, userId: string): Promise<boolean> => {
+  try {
+    const token = await getAuthToken();
+    if (!token) throw new Error('未登录');
+    
+    const response = await apiClient.family.addMember(token, familyId, undefined, userId);
+    return response.success;
+  } catch (error) {
+    console.error('Failed to add member by ID:', error);
+    return false;
+  }
+};
+
+/**
+ * 退出家庭空间
+ */
+export const leaveFamilySpace = async (familyId: string, userId: string): Promise<boolean> => {
+  try {
+    const token = await getAuthToken();
+    if (!token) throw new Error('未登录');
+    
+    const response = await apiClient.family.leaveFamilySpace(token, familyId);
+    return response.success;
+  } catch (error) {
+    console.error('Failed to leave family space:', error);
+    return false;
   }
 };
 
@@ -128,12 +146,35 @@ export const deleteFamilySpace = async (id: string): Promise<boolean> => {
  */
 export const getUserFamilySpaces = async (userId: string): Promise<FamilySpace[]> => {
   try {
-    const spaces = await getFamilySpaces();
-    return spaces.filter(space => 
-      space.members.some(member => member.id === userId)
-    );
+    // 直接调用获取所有家庭空间的方法，服务端已经过滤了当前用户的家庭空间
+    return await getFamilySpaces();
   } catch (error) {
     console.error('Failed to get user family spaces:', error);
     return [];
   }
-}; 
+};
+
+/**
+ * 更新用户最后记账时间
+ * 注意：此功能现在由服务端自动处理，当用户创建或更新账单时会自动更新
+ */
+export const updateLastTransactionTime = async (userId: string): Promise<void> => {
+  // 此功能现在由服务端自动处理
+  console.log('Last transaction time is now updated automatically by the server');
+};
+
+/**
+ * 获取家庭空间详情
+ */
+export const getFamilySpaceDetails = async (familyId: string): Promise<FamilySpace | null> => {
+  try {
+    const token = await getAuthToken();
+    if (!token) throw new Error('未登录');
+    
+    const response = await apiClient.family.getFamilySpaceDetails(token, familyId);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get family space details:', error);
+    return null;
+  }
+};
