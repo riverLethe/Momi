@@ -14,7 +14,7 @@
     "dev:setup": "./scripts/dev-setup.sh",
     "quick-start": "npm run dev:setup && npm run dev",
     "turso:setup": "./scripts/setup-turso.sh",
-    "turso:deploy": "npm run turso:setup && npm run db:deploy && npm run db:seed"
+    "turso:deploy": "npm run turso:setup"
   },
   "dependencies": {
     "@google/genai": "^1.4.0",

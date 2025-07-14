@@ -40,20 +40,35 @@ echo "🔗 Getting database connection info..."
 DB_URL=$(turso db show "$DB_NAME" --url)
 AUTH_TOKEN=$(turso db tokens create "$DB_NAME")
 
+# 初始化数据库表结构
+echo "🗄️ Initializing database schema..."
+
+# 设置临时环境变量用于初始化
+export TURSO_DATABASE_URL="$DB_URL"
+export TURSO_AUTH_TOKEN="$AUTH_TOKEN"
+
+# 运行数据库初始化脚本
+if node scripts/init-db.js; then
+    echo "✅ Database schema initialized successfully!"
+else
+    echo "❌ Failed to initialize database schema"
+    exit 1
+fi
+
 echo ""
 echo "🎉 Turso setup completed!"
 echo ""
 echo "📋 Add these environment variables to your production environment:"
 echo ""
-echo "DATABASE_URL=\"$DB_URL\""
+echo "TURSO_DATABASE_URL=\"$DB_URL\""
 echo "TURSO_AUTH_TOKEN=\"$AUTH_TOKEN\""
 echo ""
 echo "🚀 Next steps:"
 echo "1. Add the above variables to your hosting platform (Vercel, Railway, etc.)"
-echo "2. Run: npm run db:deploy"
+echo "2. Your database schema is already initialized!"
 echo "3. Run: npm run db:seed (if needed)"
 echo ""
 echo "💡 To manage your database:"
 echo "   turso db shell $DB_NAME       # Open database shell"
 echo "   turso db list                 # List all databases"
-echo "   turso db usage $DB_NAME       # Check usage stats" 
+echo "   turso db usage $DB_NAME       # Check usage stats"

@@ -7,16 +7,33 @@ const path = require("path");
 async function initializeDatabase() {
   console.log("🗄️ Initializing database schema...");
 
-  // Ensure data directory exists
-  const dataDir = path.join(__dirname, "..", "data");
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+  // Determine database configuration
+  let dbConfig;
+  
+  if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
+    // Turso configuration
+    console.log("🌐 Using Turso database...");
+    dbConfig = {
+      url: process.env.TURSO_DATABASE_URL,
+      authToken: process.env.TURSO_AUTH_TOKEN,
+    };
+  } else {
+    // Local SQLite configuration
+    console.log("💾 Using local SQLite database...");
+    
+    // Ensure data directory exists for local SQLite
+    const dataDir = path.join(__dirname, "..", "data");
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    dbConfig = {
+      url: process.env.DATABASE_URL || "file:./data/momiq.db",
+    };
   }
 
   // Create database client
-  const db = createClient({
-    url: process.env.DATABASE_URL || "file:./data/momiq.db",
-  });
+  const db = createClient(dbConfig);
 
   try {
     // Create tables
