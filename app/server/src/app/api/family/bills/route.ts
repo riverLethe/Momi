@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     }
 
     const members = await FamilyService.getFamilyMembers(familyId);
-    const isMember = members.some(member => member.userId === user.id);
+    const isMember = members.some((member) => member.userId === user.id);
     if (!isMember) {
       return NextResponse.json(
         { error: "Access denied. You are not a member of this family space" },
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN family_spaces fs ON b.family_space_id = fs.id
       WHERE b.family_space_id = ? AND b.is_deleted = 0
     `;
-    
+
     const args: any[] = [familyId];
 
     // 添加日期过滤
@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
           total,
           limit,
           offset,
-          hasMore: offset + bills.length < total,
+          hasMore: offset + (bills.length || 0) < (total as number),
         },
         familySpace: {
           id: familySpace.id,
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
     }
 
     const members = await FamilyService.getFamilyMembers(familyId);
-    const isMember = members.some(member => member.userId === user.id);
+    const isMember = members.some((member) => member.userId === user.id);
     if (!isMember) {
       return NextResponse.json(
         { error: "Access denied. You are not a member of this family space" },
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
     try {
       await FamilyService.updateLastTransactionTime(user.id);
     } catch (error) {
-      console.error('Failed to update last transaction time:', error);
+      console.error("Failed to update last transaction time:", error);
     }
 
     // 返回创建的账单

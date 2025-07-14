@@ -4,7 +4,11 @@ import { db } from "./database";
 export interface SyncData {
   bills: any[];
   budgets: any[];
-  lastSyncTimestamp: string;
+  lastSyncTimestamp?: string;
+  lastSyncTime?: string;
+  deviceId?: string;
+  deviceType?: string;
+  appVersion?: string;
 }
 
 export interface SyncResult {
@@ -137,10 +141,10 @@ export class SyncService {
       // 如果是家庭账单，更新用户的最后记账时间
       if (familySpaceId) {
         try {
-          const { FamilyService } = require('./family');
+          const { FamilyService } = require("./family");
           await FamilyService.updateLastTransactionTime(userId);
         } catch (error) {
-          console.error('Failed to update last transaction time:', error);
+          console.error("Failed to update last transaction time:", error);
         }
       }
 
@@ -180,10 +184,10 @@ export class SyncService {
       // 如果是家庭账单，更新用户的最后记账时间
       if (familySpaceId) {
         try {
-          const { FamilyService } = require('./family');
+          const { FamilyService } = require("./family");
           await FamilyService.updateLastTransactionTime(userId);
         } catch (error) {
-          console.error('Failed to update last transaction time:', error);
+          console.error("Failed to update last transaction time:", error);
         }
       }
 

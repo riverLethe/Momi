@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 删除家庭空间
-    const success = await FamilyService.deleteFamilySpace(familyId);
+    const success = await FamilyService.deleteFamilySpace(familyId, user.id);
 
     if (!success) {
       return NextResponse.json(
