@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button, Card, CardBody, Navbar, NavbarBrand, NavbarContent, NavbarItem, Chip } from '@nextui-org/react';
 import { useState, useEffect } from 'react';
 import { LanguagesIcon, MessageCircleMoreIcon } from 'lucide-react';
@@ -29,51 +28,53 @@ export default function Home() {
       {/* Header */}
       <Navbar
         position="sticky"
-        className='max-w-7xl mx-auto bg-background/50 backdrop-blur-[10px] z-100'
+        className=' bg-background/50 backdrop-blur-[10px] z-10'
         maxWidth='full'
       >
-        <div className='flex items-center gap-8'>
-          <NavbarBrand>
-            <div className="flex items-center py-3">
-              <img
-                src="/icon.png"
-                alt="Momi Logo"
-                className="w-[40px] h-[40px] object-cover rounded-md"
-              />
-            </div>
-          </NavbarBrand>
-          <NavbarContent className="hidden md:flex gap-8" justify="center">
+        <div className='max-w-7xl mx-auto w-full flex items-center justify-between'>
+          <div className='flex items-center gap-8'>
+            <NavbarBrand>
+              <div className="flex items-center py-3">
+                <img
+                  src="/icon.png"
+                  alt="Momi Logo"
+                  className="w-[40px] h-[40px] object-cover rounded-md"
+                />
+              </div>
+            </NavbarBrand>
+            <NavbarContent className="hidden md:flex gap-8" justify="center">
+              <NavbarItem>
+                <Link
+                  href="#features"
+                  className="text-gray-700 hover:text-blue-600 transition-all duration-300 font-medium text-lg relative group"
+                >
+                  {t('Features')}
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300 group-hover:w-full"></span>
+                </Link>
+              </NavbarItem>
+              <NavbarItem>
+                <Link
+                  href="#about"
+                  className="text-gray-700 hover:text-blue-600 transition-all duration-300 font-medium text-lg relative group"
+                >
+                  {t('About')}
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300 group-hover:w-full"></span>
+                </Link>
+              </NavbarItem>
+            </NavbarContent>
+          </div>
+          <NavbarContent justify="end">
             <NavbarItem>
-              <Link
-                href="#features"
-                className="text-gray-700 hover:text-blue-600 transition-all duration-300 font-medium text-lg relative group"
+              <Button
+                variant="light"
+                size="sm"
+                onPress={() => changeLanguage(i18n.language === 'en' ? 'zh' : 'en')}
               >
-                {t('Features')}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300 group-hover:w-full"></span>
-              </Link>
-            </NavbarItem>
-            <NavbarItem>
-              <Link
-                href="#about"
-                className="text-gray-700 hover:text-blue-600 transition-all duration-300 font-medium text-lg relative group"
-              >
-                {t('About')}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300 group-hover:w-full"></span>
-              </Link>
+                <LanguagesIcon />
+              </Button>
             </NavbarItem>
           </NavbarContent>
         </div>
-        <NavbarContent justify="end">
-          <NavbarItem>
-            <Button
-              variant="light"
-              size="sm"
-              onPress={() => changeLanguage(i18n.language === 'en' ? 'zh' : 'en')}
-            >
-              <LanguagesIcon />
-            </Button>
-          </NavbarItem>
-        </NavbarContent>
       </Navbar>
 
       {/* Hero Section */}
@@ -231,7 +232,7 @@ export default function Home() {
 
       {/* Features Section */}
       <section id="features" className="py-32 bg-gradient-to-b from-white via-gray-50 to-white relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-24">
             <Chip
               variant="flat"
@@ -252,8 +253,8 @@ export default function Home() {
           <div className="grid lg:grid-cols-3 gap-8 mb-20">
             {/* Feature 1 - AI Chat */}
             <Card className="rounded-md group relative overflow-hidden border-0 bg-gradient-to-br from-blue-50 to-indigo-100 hover:from-blue-100 hover:to-indigo-200 transition-all duration-700 transform hover:-translate-y-4 hover:scale-105">
-              <CardBody className="p-10">
-                <div className="relative z-10">
+              <CardBody className="p-10 overflow-y-hidden">
+                <div >
                   <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:shadow-3xl transition-all duration-500 transform group-hover:rotate-6">
                     <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -270,8 +271,8 @@ export default function Home() {
 
             {/* Feature 2 - Smart Analytics */}
             <Card className="rounded-md group relative overflow-hidden border-0 bg-gradient-to-br from-purple-50 to-pink-100 hover:from-purple-100 hover:to-pink-200 transition-all duration-700 transform hover:-translate-y-4 hover:scale-105" radius="lg">
-              <CardBody className="p-10">
-                <div className="relative z-10">
+              <CardBody className="p-10 overflow-y-hidden">
+                <div >
                   <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:shadow-3xl transition-all duration-500 transform group-hover:rotate-6">
                     <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -288,8 +289,8 @@ export default function Home() {
 
             {/* Feature 3 - Privacy */}
             <Card className="rounded-md group relative overflow-hidden border-0 bg-gradient-to-br from-green-50 to-emerald-100 hover:from-green-100 hover:to-emerald-200 transition-all duration-700 transform hover:-translate-y-4 hover:scale-105" radius="lg">
-              <CardBody className="p-10">
-                <div className="relative z-10">
+              <CardBody className="p-10 overflow-y-hidden">
+                <div >
                   <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:shadow-3xl transition-all duration-500 transform group-hover:rotate-6">
                     <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -309,8 +310,8 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Feature 4 - Lightning Fast */}
             <Card className="rounded-md group relative overflow-hidden border-0 bg-gradient-to-br from-orange-50 to-amber-100 hover:from-orange-100 hover:to-amber-200 transition-all duration-700 transform hover:-translate-y-4 hover:scale-105" radius="lg">
-              <CardBody className="p-10">
-                <div className="relative z-10">
+              <CardBody className="p-10 overflow-y-hidden">
+                <div >
                   <div className="w-24 h-24 bg-gradient-to-br from-orange-500 to-amber-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:shadow-3xl transition-all duration-500 transform group-hover:rotate-6">
                     <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -327,8 +328,8 @@ export default function Home() {
 
             {/* Feature 5 - Budget Management */}
             <Card className="rounded-md group relative overflow-hidden border-0 bg-gradient-to-br from-teal-50 to-cyan-100 hover:from-teal-100 hover:to-cyan-200 transition-all duration-700 transform hover:-translate-y-4 hover:scale-105" radius="lg">
-              <CardBody className="p-10">
-                <div className="relative z-10">
+              <CardBody className="p-10 overflow-y-hidden">
+                <div >
                   <div className="w-24 h-24 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:shadow-3xl transition-all duration-500 transform group-hover:rotate-6">
                     <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -345,8 +346,8 @@ export default function Home() {
 
             {/* Feature 6 - Data Export */}
             <Card className="rounded-md group relative overflow-hidden border-0 bg-gradient-to-br from-red-50 to-rose-100 hover:from-red-100 hover:to-rose-200 transition-all duration-700 transform hover:-translate-y-4 hover:scale-105" radius="lg">
-              <CardBody className="p-10">
-                <div className="relative z-10">
+              <CardBody className="p-10 overflow-y-hidden">
+                <div >
                   <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-rose-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:shadow-3xl transition-all duration-500 transform group-hover:rotate-6">
                     <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -363,8 +364,8 @@ export default function Home() {
 
             {/* Feature 7 - Data Security */}
             <Card className="rounded-md group relative overflow-hidden border-0 bg-gradient-to-br from-indigo-50 to-blue-100 hover:from-indigo-100 hover:to-blue-200 transition-all duration-700 transform hover:-translate-y-4 hover:scale-105" radius="lg">
-              <CardBody className="p-10">
-                <div className="relative z-10">
+              <CardBody className="p-10 overflow-y-hidden">
+                <div >
                   <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:shadow-3xl transition-all duration-500 transform group-hover:rotate-6">
                     <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -387,8 +388,8 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-32 bg-gradient-to-br from-orange-900/80 via-purple-900/50 to-purple-900 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <section className="py-32 bg-gradient-to-br from-orange-900/80 via-purple-900/50 to-purple-900 relative overflow-hidden relative z-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <Chip
               variant="flat"
@@ -425,7 +426,7 @@ export default function Home() {
 
           {/* Features highlight */}
           <div className="grid lg:grid-cols-3 gap-8">
-            <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 transition-all duration-500 transform hover:-translate-y-2" radius="lg">
+            <Card className="bg-default/5 backdrop-blur-xl border border-white/20 hover:border-white/40 transition-all duration-500 transform hover:-translate-y-2" radius="lg">
               <CardBody className="p-10 text-center">
                 <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
                   <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,7 +438,7 @@ export default function Home() {
               </CardBody>
             </Card>
 
-            <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 transition-all duration-500 transform hover:-translate-y-2" radius="lg">
+            <Card className="bg-default/5 backdrop-blur-xl border border-white/20 hover:border-white/40 transition-all duration-500 transform hover:-translate-y-2" radius="lg">
               <CardBody className="p-10 text-center">
                 <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
                   <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -449,7 +450,7 @@ export default function Home() {
               </CardBody>
             </Card>
 
-            <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 transition-all duration-500 transform hover:-translate-y-2" radius="lg">
+            <Card className="bg-default/5 backdrop-blur-xl border border-white/20 hover:border-white/40 transition-all duration-500 transform hover:-translate-y-2" radius="lg">
               <CardBody className="p-10 text-center">
                 <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
                   <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
