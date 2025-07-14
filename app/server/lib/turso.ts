@@ -9,7 +9,7 @@ export const tursoConfig = {
 
   // 创建 Turso 客户端
   createTursoClient: () => {
-    const url = process.env.DATABASE_URL;
+    const url = process.env.TURSO_DATABASE_URL;
     const authToken = process.env.TURSO_AUTH_TOKEN;
 
     if (!url) {
@@ -58,13 +58,13 @@ export const environmentUtils = {
   isProduction: () => process.env.NODE_ENV === "production",
   isDevelopment: () => process.env.NODE_ENV === "development",
   isTursoEnvironment: () => {
-    const url = process.env.DATABASE_URL || "";
+    const url = process.env.TURSO_DATABASE_URL || "";
     return tursoConfig.isTursoUrl(url);
   },
 
   // 获取数据库信息
   getDatabaseInfo: () => {
-    const url = process.env.DATABASE_URL || "";
+    const url = process.env.TURSO_DATABASE_URL || "";
     const isLocal = url.startsWith("file:");
     const isTurso = tursoConfig.isTursoUrl(url);
 
