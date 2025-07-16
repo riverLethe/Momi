@@ -1,7 +1,7 @@
 import { FamilySpace, FamilyMember } from '@/types/family.types';
 import { User } from '@/types/user.types';
 import { apiClient } from './api';
-import { getAuthToken } from './auth.utils';
+import { getAuthToken } from './userPreferences.utils';
 
 // 这些函数已经移到服务端实现
 
@@ -32,7 +32,7 @@ export const createFamilySpace = async (
     const token = await getAuthToken();
     if (!token) throw new Error('未登录');
     
-    const response = await apiClient.family.createFamilySpace(token, name);
+    const response = await apiClient.family.createFamilySpace(token, { name });
     return response.data;
   } catch (error) {
     console.error('Failed to create family space:', error);

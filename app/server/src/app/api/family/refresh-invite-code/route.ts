@@ -22,15 +22,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { newInviteCode } = await request.json();
-
-    if (!newInviteCode || newInviteCode.length !== 6) {
-      return NextResponse.json(
-        { error: "Invalid invite code format" },
-        { status: 400 }
-      );
-    }
-
     // 获取用户的家庭空间
     const userFamilies = await FamilyService.getUserFamilySpaces(user.id);
     if (userFamilies.length === 0) {
@@ -50,7 +41,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 更新邀请码
+    // 生成新的邀请码并更新
+    const newInviteCode = FamilyService.generateInviteCode();
     const updatedSpace = await FamilyService.updateInviteCode(familySpace.id, newInviteCode);
     
     if (!updatedSpace) {

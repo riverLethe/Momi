@@ -136,7 +136,7 @@ export const apiClient = {
     },
 
     // 创建新的家庭空间
-    createFamilySpace: async (token: string, familyData: { name: string; inviteCode: string }) => {
+    createFamilySpace: async (token: string, familyData: { name: string }) => {
       const response = await fetch(`${API_URL}/api/family`, {
         method: "POST",
         headers: {
@@ -240,6 +240,24 @@ export const apiClient = {
       return response.json();
     },
 
+    // 移除家庭成员
+    removeMember: async (token: string, familyId: string, memberId: string) => {
+      const response = await fetch(`${API_URL}/api/family/members`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ familyId, memberId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
     // 退出家庭空间
     leaveFamilySpace: async (token: string, familyId: string) => {
       const response = await fetch(`${API_URL}/api/family/leave`, {
@@ -332,14 +350,31 @@ export const apiClient = {
     },
 
     // 刷新邀请码
-    refreshInviteCode: async (token: string, newInviteCode: string) => {
+    refreshInviteCode: async (token: string) => {
       const response = await fetch(`${API_URL}/api/family/refresh-invite-code`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ newInviteCode }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 更新家庭名称
+    updateFamilyName: async (token: string, familyId: string, name: string) => {
+      const response = await fetch(`${API_URL}/api/family/update-name`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ familyId, name }),
       });
 
       if (!response.ok) {

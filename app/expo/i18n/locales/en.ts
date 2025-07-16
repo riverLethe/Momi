@@ -627,6 +627,14 @@ export default {
     "Failed to delete account, please try again later":
       "Failed to delete account, please try again later",
 
+    // Family Members
+    "Remove Member": "Remove Member",
+    "Are you sure you want to remove {{name}} from the family?": "Are you sure you want to remove {{name}} from the family?",
+    "You": "You",
+    "Last transaction": "Last transaction",
+    "No family members yet": "No family members yet",
+    "Share your invite code to add members": "Share your invite code to add members",
+
     // Common
     Remove: "Remove",
     OK: "OK",

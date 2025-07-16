@@ -405,6 +405,24 @@ export class FamilyService {
   }
 
   /**
+   * 更新家庭名称
+   */
+  static async updateFamilyName(familyId: string, newName: string, userId: string): Promise<FamilySpace | null> {
+    // 验证当前用户是否是创建者
+    const isCreator = await this.isCreator(familyId, userId);
+    if (!isCreator) {
+      return null;
+    }
+
+    await db.execute({
+      sql: `UPDATE family_spaces SET name = ? WHERE id = ?`,
+      args: [newName, familyId],
+    });
+
+    return this.getFamilySpace(familyId);
+  }
+
+  /**
    * 获取完整的家庭空间信息（包括成员）
    */
   static async getFamilySpaceWithMembers(familyId: string): Promise<any> {

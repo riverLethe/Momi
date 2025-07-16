@@ -598,6 +598,14 @@ export default {
     "Failed to delete account, please try again later":
       "注销账户失败，请稍后重试",
 
+    // Family Members
+    "Remove Member": "移除成员",
+    "Are you sure you want to remove {{name}} from the family?": "确定要将{{name}}从家庭中移除吗？",
+    "You": "您",
+    "Last transaction": "最后记账",
+    "No family members yet": "暂无家庭成员",
+    "Share your invite code to add members": "分享邀请码以添加成员",
+
     // Common actions
     Remove: "移除",
     OK: "确定",

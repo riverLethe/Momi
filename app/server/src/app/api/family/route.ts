@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 解析请求体
-    const { name, inviteCode } = await request.json();
+    const { name } = await request.json();
 
     if (!name || typeof name !== "string" || name.trim() === "") {
       return NextResponse.json(
@@ -79,12 +79,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 创建家庭空间
+    // 创建家庭空间（服务端自动生成邀请码）
     const familySpace = await FamilyService.createFamilySpace(
       name.trim(),
       user.id,
-      user.name,
-      inviteCode
+      user.name
     );
 
     // 获取成员

@@ -10,6 +10,7 @@ export interface FamilySpace {
 
 export interface FamilyMember {
   id: string;
+  userId: string; // 用户的真实ID
   name: string;
   isCreator: boolean;
   joinedAt: Date;

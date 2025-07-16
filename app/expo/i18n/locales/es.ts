@@ -294,5 +294,13 @@ export default {
     Account: "Cuenta",
     "Clear & Download Remote": "Limpiar y Descargar Remoto",
     "Push & Override Remote": "Enviar y Sobrescribir Remoto",
+
+    // Family Members
+    "Remove Member": "Eliminar Miembro",
+    "Are you sure you want to remove {{name}} from the family?": "¿Estás seguro de que quieres eliminar a {{name}} de la familia?",
+    "You": "Tú",
+    "Last transaction": "Última transacción",
+    "No family members yet": "Aún no hay miembros de la familia",
+    "Share your invite code to add members": "Comparte tu código de invitación para agregar miembros",
   },
 };

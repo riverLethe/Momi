@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import { getAuthToken } from './auth.utils';
+import { getAuthToken } from './userPreferences.utils';
 import { Bill } from '@/types/bills.types';
 
 /**
