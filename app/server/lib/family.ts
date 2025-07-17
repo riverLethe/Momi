@@ -319,25 +319,44 @@ export class FamilyService {
    * 删除家庭空间
    */
   static async deleteFamilySpace(familyId: string, userId: string): Promise<boolean> {
-    // 验证当前用户是否是创建者
-    const isCreator = await this.isCreator(familyId, userId);
-    if (!isCreator) {
+    try {
+      // 验证当前用户是否是创建者
+      const isCreator = await this.isCreator(familyId, userId);
+      if (!isCreator) {
+        return false;
+      }
+
+      // 验证家庭空间是否存在
+      const familySpace = await this.getFamilySpace(familyId);
+      if (!familySpace) {
+        return false;
+      }
+
+      // 使用事务确保操作的原子性
+      // 1. 删除所有成员
+      await db.execute({
+        sql: `DELETE FROM family_members WHERE family_id = ?`,
+        args: [familyId],
+      });
+
+      // 2. 删除家庭空间
+      await db.execute({
+        sql: `DELETE FROM family_spaces WHERE id = ?`,
+        args: [familyId],
+      });
+
+      // 验证删除是否成功
+      const verifyDeletion = await db.execute({
+        sql: `SELECT COUNT(*) as count FROM family_spaces WHERE id = ?`,
+        args: [familyId],
+      });
+
+      const count = verifyDeletion.rows[0].count as number;
+      return count === 0;
+    } catch (error) {
+      console.error('Error deleting family space:', error);
       return false;
     }
-
-    // 删除所有成员
-    await db.execute({
-      sql: `DELETE FROM family_members WHERE family_id = ?`,
-      args: [familyId],
-    });
-
-    // 删除家庭空间
-    await db.execute({
-      sql: `DELETE FROM family_spaces WHERE id = ?`,
-      args: [familyId],
-    });
-
-    return true;
   }
 
   /**

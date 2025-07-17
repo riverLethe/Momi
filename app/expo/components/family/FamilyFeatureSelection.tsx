@@ -25,7 +25,7 @@ export default function FamilyFeatureSelection({
 }: FamilyFeatureSelectionProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const { isProcessing, createFamilySpaceWithDefaultName, joinFamilyWithCode } = useFamilyActions();
+  const { isCreatingFamily, isJoiningFamily, createFamilySpaceWithDefaultName, joinFamilyWithCode } = useFamilyActions();
   const [joinCode, setJoinCode] = useState("");
 
   const handleCreateFamily = async () => {
@@ -59,10 +59,10 @@ export default function FamilyFeatureSelection({
             size="$4"
             borderRadius="$3"
             onPress={handleCreateFamily}
-            disabled={isProcessing}
+            disabled={isCreatingFamily}
             width="100%"
           >
-            {isProcessing ? (
+            {isCreatingFamily ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
               <Text color="white" fontWeight="$6">Create Family</Text>
@@ -97,9 +97,9 @@ export default function FamilyFeatureSelection({
               size="$4"
               borderRadius="$3"
               onPress={handleJoinFamily}
-              disabled={!joinCode.trim() || isProcessing}
+              disabled={!joinCode.trim() || isJoiningFamily}
             >
-              {isProcessing ? (
+              {isJoiningFamily ? (
                 <ActivityIndicator size="small" color="white" />
               ) : (
                 <Text color="white" fontWeight="$6">{t("Search")}</Text>

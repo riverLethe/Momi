@@ -31,7 +31,7 @@ export default function FamilyActionSheet({
 }: FamilyActionSheetProps) {
   const { user } = useAuth();
   const theme = useTheme();
-  const { dissolveFamily, leaveFamily } = useFamilyActions();
+  const { dissolveFamily, leaveFamily, isDissolvingFamily, isLeavingFamily } = useFamilyActions();
 
   const handleDissolveFamily = async () => {
     if (!familySpace) return;
@@ -75,20 +75,26 @@ export default function FamilyActionSheet({
             <Button
               backgroundColor="$red2"
               onPress={handleDissolveFamily}
+              disabled={isDissolvingFamily}
             >
               <XStack alignItems="center" gap="$2">
                 <Trash size={16} color={theme.red9?.get()} />
-                <Text color={theme.red9?.get()}>Dissolve Family</Text>
+                <Text color={theme.red9?.get()}>
+                  {isDissolvingFamily ? "Dissolving..." : "Dissolve Family"}
+                </Text>
               </XStack>
             </Button>
           ) : (
             <Button
               backgroundColor="$orange2"
               onPress={handleLeaveFamily}
+              disabled={isLeavingFamily}
             >
               <XStack alignItems="center" gap="$2">
                 <LogOut size={16} color={theme.orange9?.get()} />
-                <Text color={theme.orange9?.get()}>Leave Family</Text>
+                <Text color={theme.orange9?.get()}>
+                  {isLeavingFamily ? "Leaving..." : "Leave Family"}
+                </Text>
               </XStack>
             </Button>
           )}

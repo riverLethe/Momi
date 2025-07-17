@@ -12,13 +12,27 @@ export const useFamilyActions = () => {
   const { user } = useAuth();
   const { setCurrentFamilySpace } = useViewStore();
   
-  const [isProcessing, setIsProcessing] = useState(false);
+  // 为不同操作创建独立的加载状态
+  const [isLoadingFamilySpace, setIsLoadingFamilySpace] = useState(false);
+  const [isCreatingFamily, setIsCreatingFamily] = useState(false);
+  const [isJoiningFamily, setIsJoiningFamily] = useState(false);
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
+  const [isRefreshingCode, setIsRefreshingCode] = useState(false);
+  const [isRemovingMember, setIsRemovingMember] = useState(false);
+  const [isDissolvingFamily, setIsDissolvingFamily] = useState(false);
+  const [isLeavingFamily, setIsLeavingFamily] = useState(false);
+
+  // 保持向后兼容的通用 isProcessing 状态
+  const isProcessing = isLoadingFamilySpace || isCreatingFamily || isJoiningFamily || 
+                      isUpdatingName || isRefreshingCode || isRemovingMember || 
+                      isDissolvingFamily || isLeavingFamily;
 
   // Load family space
   const loadFamilySpace = async () => {
     if (!user) return null;
 
     try {
+      setIsLoadingFamilySpace(true);
       const userSpaces = await getUserFamilySpaces(user.id);
       const currentFamily = userSpaces.length > 0 ? userSpaces[0] : null;
       if (currentFamily) {
@@ -29,13 +43,15 @@ export const useFamilyActions = () => {
       console.error("Failed to load family space:", error);
       Alert.alert("Error", "Failed to load family space");
       return null;
+    } finally {
+      setIsLoadingFamilySpace(false);
     }
   };
 
   // Create family space with default name
   const createFamilySpaceWithDefaultName = async () => {
     try {
-      setIsProcessing(true);
+      setIsCreatingFamily(true);
       const token = await getAuthToken();
 
       if (!token) {
@@ -56,7 +72,7 @@ export const useFamilyActions = () => {
       Alert.alert("Error", "Failed to enable family feature");
       return null;
     } finally {
-      setIsProcessing(false);
+      setIsCreatingFamily(false);
     }
   };
 
@@ -72,7 +88,7 @@ export const useFamilyActions = () => {
       return null;
     }
 
-    setIsProcessing(true);
+    setIsJoiningFamily(true);
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -89,7 +105,7 @@ export const useFamilyActions = () => {
       Alert.alert("Error", "Failed to join family. Please check your invite code.");
       return null;
     } finally {
-      setIsProcessing(false);
+      setIsJoiningFamily(false);
     }
   };
 
@@ -98,7 +114,7 @@ export const useFamilyActions = () => {
     if (!newName.trim()) return null;
 
     try {
-      setIsProcessing(true);
+      setIsUpdatingName(true);
       const token = await getAuthToken();
       if (!token) {
         Alert.alert("Error", "Please login first");
@@ -121,7 +137,7 @@ export const useFamilyActions = () => {
       Alert.alert("Error", "Failed to update family name, please try again");
       return null;
     } finally {
-      setIsProcessing(false);
+      setIsUpdatingName(false);
     }
   };
 
@@ -148,7 +164,7 @@ export const useFamilyActions = () => {
             text: "Refresh",
             onPress: async () => {
               try {
-                setIsProcessing(true);
+                setIsRefreshingCode(true);
                 const token = await getAuthToken();
                 if (!token) {
                   Alert.alert("Error", "Please login first");
@@ -172,7 +188,7 @@ export const useFamilyActions = () => {
                 Alert.alert("Error", "Failed to refresh invite code");
                 resolve(null);
               } finally {
-                setIsProcessing(false);
+                setIsRefreshingCode(false);
               }
             }
           }
@@ -197,7 +213,7 @@ export const useFamilyActions = () => {
             style: "destructive",
             onPress: async () => {
               try {
-                setIsProcessing(true);
+                setIsRemovingMember(true);
                 const token = await getAuthToken();
                 if (!token) {
                   Alert.alert("Error", "Please login first");
@@ -221,7 +237,7 @@ export const useFamilyActions = () => {
                 Alert.alert("Error", "Failed to remove member");
                 resolve(null);
               } finally {
-                setIsProcessing(false);
+                setIsRemovingMember(false);
               }
             }
           }
@@ -243,7 +259,7 @@ export const useFamilyActions = () => {
             style: "destructive",
             onPress: async () => {
               try {
-                setIsProcessing(true);
+                setIsDissolvingFamily(true);
                 const token = await getAuthToken();
                 if (!token) {
                   Alert.alert("Error", "Please login first");
@@ -266,7 +282,7 @@ export const useFamilyActions = () => {
                 Alert.alert("Error", "Failed to dissolve family");
                 resolve(false);
               } finally {
-                setIsProcessing(false);
+                setIsDissolvingFamily(false);
               }
             }
           }
@@ -288,7 +304,7 @@ export const useFamilyActions = () => {
             style: "destructive",
             onPress: async () => {
               try {
-                setIsProcessing(true);
+                setIsLeavingFamily(true);
                 const token = await getAuthToken();
                 if (!token) {
                   Alert.alert("Error", "Please login first");
@@ -311,7 +327,7 @@ export const useFamilyActions = () => {
                 Alert.alert("Error", "Failed to leave family");
                 resolve(false);
               } finally {
-                setIsProcessing(false);
+                setIsLeavingFamily(false);
               }
             }
           }
@@ -321,7 +337,20 @@ export const useFamilyActions = () => {
   };
 
   return {
+    // 向后兼容的通用状态
     isProcessing,
+    
+    // 独立的加载状态
+    isLoadingFamilySpace,
+    isCreatingFamily,
+    isJoiningFamily,
+    isUpdatingName,
+    isRefreshingCode,
+    isRemovingMember,
+    isDissolvingFamily,
+    isLeavingFamily,
+    
+    // 函数
     loadFamilySpace,
     createFamilySpaceWithDefaultName,
     joinFamilyWithCode,

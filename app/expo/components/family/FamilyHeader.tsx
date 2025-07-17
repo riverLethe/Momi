@@ -20,7 +20,7 @@ export default function FamilyHeader({
   onFamilyUpdated,
 }: FamilyHeaderProps) {
   const { user } = useAuth();
-  const { updateFamilyName, isProcessing } = useFamilyActions();
+  const { updateFamilyName, isUpdatingName } = useFamilyActions();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(familySpace.name);
   const [isPressed, setIsPressed] = useState(false);
@@ -34,7 +34,7 @@ export default function FamilyHeader({
   };
 
   const handleNameSave = async () => {
-    if (isProcessing) return
+    if (isUpdatingName) return
     if (!familySpace || !editedName.trim() || editedName === familySpace.name) {
       setIsEditingName(false);
       setEditedName(familySpace?.name || "");

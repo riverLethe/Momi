@@ -12,18 +12,20 @@ import { useAuth } from "@/providers/AuthProvider";
 interface FamilyInfoProps {
   familySpace: FamilySpace;
   onFamilyUpdated: (updatedSpace: FamilySpace) => void;
+  onFamilyDeleted?: () => void;
 }
 
 export default function FamilyInfo({
   familySpace,
   onFamilyUpdated,
+  onFamilyDeleted,
 }: FamilyInfoProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
 
   // Check if current user is the owner
   const isOwner = familySpace.createdBy === user?.id;
-  const { refreshInviteCode, isProcessing, dissolveFamily, leaveFamily } = useFamilyActions();
+  const { refreshInviteCode, isRefreshingCode, isDissolvingFamily, isLeavingFamily, dissolveFamily, leaveFamily } = useFamilyActions();
 
   const handleCopyInviteCode = async () => {
     if (!familySpace) return;
@@ -69,6 +71,7 @@ export default function FamilyInfo({
             const success = await dissolveFamily(familySpace);
             if (success) {
               Alert.alert("Success", "Family dissolved successfully");
+              onFamilyDeleted?.();
             }
           },
         },
@@ -90,6 +93,7 @@ export default function FamilyInfo({
             const success = await leaveFamily(familySpace);
             if (success) {
               Alert.alert("Success", "Left family successfully");
+              onFamilyDeleted?.();
             }
           },
         },
@@ -136,7 +140,7 @@ export default function FamilyInfo({
               backgroundColor="$blue9"
               color="white"
               onPress={handleRefreshInviteCode}
-              disabled={isProcessing}
+              disabled={isRefreshingCode}
               pressStyle={{ opacity: 0.8 }}
               chromeless
               icon={<RefreshCw size={16} color="white" />}
@@ -162,6 +166,7 @@ export default function FamilyInfo({
             size="$4"
             backgroundColor="$red9"
             onPress={handleDissolveFamily}
+            disabled={isDissolvingFamily}
             chromeless
             width="$4"
             icon={<UnlinkIcon size={16} color="white" />}
@@ -171,6 +176,7 @@ export default function FamilyInfo({
             size="$4"
             backgroundColor="$red9"
             onPress={handleLeaveFamily}
+            disabled={isLeavingFamily}
             chromeless
             width="$4"
             icon={<Trash2 size={16} color="white" />}

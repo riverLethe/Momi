@@ -7,7 +7,6 @@ import {
   XStack,
   Button,
   Spinner,
-  Stack,
 } from "tamagui";
 import { useFamilyActions } from "@/components/family/useFamilyActions";
 import FamilyFeatureSelection from "@/components/family/FamilyFeatureSelection";
@@ -19,8 +18,9 @@ import { useTranslation } from "react-i18next";
 import FamilyHeader from "@/components/family/FamilyHeader";
 
 export default function FamilySpacesScreen() {
-  const { loadFamilySpace, isProcessing } = useFamilyActions();
+  const { loadFamilySpace, isLoadingFamilySpace } = useFamilyActions();
   const [familySpace, setFamilySpace] = useState<FamilySpace | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const theme = useTheme();
   const router = useRouter();
   const { t } = useTranslation();
@@ -32,10 +32,15 @@ export default function FamilySpacesScreen() {
   const loadFamilySpaceData = async () => {
     const space = await loadFamilySpace();
     setFamilySpace(space);
+    setIsInitialLoading(false);
   };
 
   const handleFamilyUpdated = (updatedSpace: FamilySpace) => {
     setFamilySpace(updatedSpace);
+  };
+
+  const handleFamilyDeleted = () => {
+    setFamilySpace(null);
   };
 
   return (
@@ -66,7 +71,7 @@ export default function FamilySpacesScreen() {
             )}
           </XStack>
           <YStack flex={1} paddingHorizontal="$2">
-            {isProcessing ? (
+            {isInitialLoading || isLoadingFamilySpace ? (
               <YStack flex={1} alignItems="center" justifyContent="center">
                 <Spinner size="large" />
                 <Text marginTop="$4">Loading family space...</Text>
@@ -75,6 +80,7 @@ export default function FamilySpacesScreen() {
               <FamilyInfo
                 familySpace={familySpace}
                 onFamilyUpdated={handleFamilyUpdated}
+                onFamilyDeleted={handleFamilyDeleted}
               />
             ) : (
               <FamilyFeatureSelection

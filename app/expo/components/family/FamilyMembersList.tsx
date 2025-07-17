@@ -28,7 +28,7 @@ interface FamilyMemberItemProps {
   onRemove: (memberId: string, memberName: string) => void;
   isCreator: boolean;
   currentUserId?: string;
-  isProcessing: boolean;
+  isRemovingMember: boolean;
   /** Whether the swipeable row is currently open */
   isOpen?: boolean;
   /** Callback when the row has been opened */
@@ -45,7 +45,7 @@ const FamilyMemberItem: React.FC<FamilyMemberItemProps> = ({
   onRemove,
   isCreator,
   currentUserId,
-  isProcessing,
+  isRemovingMember,
   isOpen = false,
   onSwipeOpen,
   onSwipeClose,
@@ -80,7 +80,7 @@ const FamilyMemberItem: React.FC<FamilyMemberItemProps> = ({
 
   return (
     <SwipeableRow
-      disabled={!canRemove || isProcessing}
+      disabled={!canRemove || isRemovingMember}
       onDelete={canRemove ? handleDelete : undefined}
       isOpen={isOpen}
       onSwipeOpen={onSwipeOpen}
@@ -90,11 +90,11 @@ const FamilyMemberItem: React.FC<FamilyMemberItemProps> = ({
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handlePress}
-        disabled={isProcessing}
+        disabled={isRemovingMember}
         style={{
           paddingVertical: 16,
           paddingHorizontal: 16,
-          opacity: isProcessing ? 0.4 : 1,
+          opacity: isRemovingMember ? 0.4 : 1,
         }}
       >
         <XStack alignItems="center" justifyContent="space-between" width="100%">
@@ -151,7 +151,7 @@ export default function FamilyMembersList({
   const { user } = useAuth();
   const theme = useTheme();
   const { t } = useTranslation();
-  const { removeMember, isProcessing } = useFamilyActions();
+  const { removeMember, isRemovingMember } = useFamilyActions();
 
   /** Track global open member id for swipe actions */
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
@@ -214,7 +214,7 @@ export default function FamilyMembersList({
                   onRemove={handleRemoveMember}
                   isCreator={isCreator}
                   currentUserId={user?.id}
-                  isProcessing={isProcessing}
+                  isRemovingMember={isRemovingMember}
                   isOpen={openMemberId === member.id}
                   onSwipeOpen={() => setOpenMemberId(member.id)}
                   onSwipeClose={() => {
