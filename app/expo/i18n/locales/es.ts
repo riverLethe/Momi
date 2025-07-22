@@ -424,5 +424,6 @@ export default {
     "Log Out Anyway": "Cerrar Sesión de Todos Modos",
     "Logout failed": "Error al cerrar sesión",
     "Member List": "Lista de Miembros",
+    Fruit: "Fruta",
   },
 };

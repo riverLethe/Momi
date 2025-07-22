@@ -754,5 +754,6 @@ export default {
     // App Name
     MomiQ: "MomiQ",
     "Member List": "Member List",
+    Fruit: "Fruit",
   },
 };

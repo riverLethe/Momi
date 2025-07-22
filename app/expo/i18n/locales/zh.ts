@@ -720,5 +720,6 @@ export default {
     "Log Out Anyway": "仍然退出登录",
     "Logout failed": "退出登录失败",
     "Member List": "成员列表",
+    Fruit: "水果",
   },
 };
