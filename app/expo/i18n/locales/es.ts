@@ -1,5 +1,7 @@
 export default {
   translation: {
+    // App Name
+    MomiQ: "MomiQ",
     // Categories
     Food: "Comida",
     Transport: "Transporte",
@@ -297,10 +299,130 @@ export default {
 
     // Family Members
     "Remove Member": "Eliminar Miembro",
-    "Are you sure you want to remove {{name}} from the family?": "¿Estás seguro de que quieres eliminar a {{name}} de la familia?",
-    "You": "Tú",
+    "Are you sure you want to remove {{name}} from the family?":
+      "¿Estás seguro de que quieres eliminar a {{name}} de la familia?",
+    You: "Tú",
     "Last transaction": "Última transacción",
     "No family members yet": "Aún no hay miembros de la familia",
-    "Share your invite code to add members": "Comparte tu código de invitación para agregar miembros",
+    "Share your invite code to add members":
+      "Comparte tu código de invitación para agregar miembros",
+
+    // Family Join Requests
+    "New Join Requests": "Nuevos Pedidos de Unión",
+    "users want to join your family space":
+      "usuarios quieren unirse a tu espacio familiar",
+    "Handle Later": "Manejar Más Tarde",
+    "Join Request": "Pedido de Unión",
+    "Are you sure you want to approve": "¿Estás seguro de querer aprobar",
+    "Are you sure you want to reject": "¿Estás seguro de querer rechazar",
+    "'s join request?": "'s pedido de unión?",
+    Approve: "Aprobar",
+    Reject: "Rechazar",
+    Success: "Éxito",
+    "Failed to process request": "Error al procesar el pedido",
+
+    // Family Space
+    "Family Space": "Espacio Familiar",
+    "Read Only": "Solo Lectura",
+    "Join Family": "Unirse a la Familia",
+    "Join someone else's family using an invite code":
+      "Unirse a la familia de alguien más usando un código de invitación",
+    "Enter 6-digit invite code": "Introducir código de invitación de 6 dígitos",
+    "Create My Family": "Crear Mi Familia",
+    "Create your family space and invite someone to join":
+      "Crea tu espacio familiar y invita a alguien a unirse",
+
+    // 家庭操作相关 (Family Actions)
+    "Family Actions": "Acciones Familiares",
+    "Dissolving...": "Disolviendo...",
+    "Leaving...": "Saliendo...",
+    "Family Name": "Nombre de Familia",
+    Info: "Información",
+    "Invite code copied to clipboard":
+      "Código de invitación copiado al portapapeles",
+    "Failed to load family space": "Error al cargar el espacio familiar",
+    "Family feature enabled successfully":
+      "Función familiar habilitada con éxito",
+    "Failed to enable family feature": "Error al habilitar la función familiar",
+    "Please enter invite code": "Por favor ingrese el código de invitación",
+    "Invite code must be 7 characters":
+      "El código de invitación debe tener 7 caracteres",
+    "Invalid invite code": "Código de invitación inválido",
+    "You are already a member of this family":
+      "Ya eres miembro de esta familia",
+    "Family: {{name}}\nCreated by: {{creator}}\nMembers: {{count}}\n\nDo you want to send a join request to this family?":
+      "Familia: {{name}}\nCreado por: {{creator}}\nMiembros: {{count}}\n\n¿Quieres enviar una solicitud para unirte a esta familia?",
+    "Join request sent! Waiting for approval from family creator.":
+      "¡Solicitud de unión enviada! Esperando la aprobación del creador de la familia.",
+    "Failed to send join request": "Error al enviar la solicitud de unión",
+    "Failed to find family. Please check your invite code.":
+      "Error al encontrar la familia. Por favor verifica tu código de invitación.",
+    "Family name updated": "Nombre de familia actualizado",
+    "Failed to update family name":
+      "Error al actualizar el nombre de la familia",
+    "Failed to update family name, please try again":
+      "Error al actualizar el nombre de la familia, por favor intenta de nuevo",
+    "Failed to copy invite code": "Error al copiar el código de invitación",
+    "Refresh Invite Code": "Actualizar Código de Invitación",
+    "Are you sure you want to refresh the invite code? The old invite code will become invalid.":
+      "¿Estás seguro de que quieres actualizar el código de invitación? El código anterior quedará invalidado.",
+    "Invite code refreshed": "Código de invitación actualizado",
+    "Failed to refresh invite code":
+      "Error al actualizar el código de invitación",
+    'Are you sure you want to dissolve "{{name}}"? This action cannot be undone and all members will be removed.':
+      '¿Estás seguro de que quieres disolver "{{name}}"? Esta acción no se puede deshacer y todos los miembros serán eliminados.',
+    "Family dissolved successfully": "Familia disuelta con éxito",
+    "Failed to dissolve family": "Error al disolver la familia",
+    'Are you sure you want to leave "{{name}}"?':
+      '¿Estás seguro de que quieres abandonar "{{name}}"?',
+    "Left family successfully": "Abandonaste la familia con éxito",
+    "Failed to leave family": "Error al abandonar la familia",
+    "Please login first": "Por favor inicia sesión primero",
+    "Member removed successfully": "Miembro eliminado con éxito",
+    "Failed to remove member": "Error al eliminar miembro",
+    "Dissolve Family": "Disolver Familia",
+    "Leave Family": "Abandonar Familia",
+    "Send Request": "Enviar Solicitud",
+    Refresh: "Actualizar",
+    Dissolve: "Disolver",
+    Leave: "Abandonar",
+
+    // Data Sync Status
+    "Not signed in": "No ha iniciado sesión",
+    "Syncing...": "Sincronizando...",
+    "changes pending": "cambios pendientes",
+    "Synced {{time}} ago": "Sincronizado hace {{time}}",
+
+    // Sync Error Messages
+    "Sync Failed": "Error de sincronización",
+    "Failed to sync your data. Please try again later.":
+      "Error al sincronizar tus datos. Por favor, inténtalo de nuevo más tarde.",
+
+    // Auth Provider Messages
+    "Merging local and remote data...": "Fusionando datos locales y remotos...",
+    "Clearing local data and downloading from server...":
+      "Borrando datos locales y descargando del servidor...",
+    "Pushing local data to server...": "Enviando datos locales al servidor...",
+    "Login failed. Please check your credentials.":
+      "Error de inicio de sesión. Por favor, verifica tus credenciales.",
+    "Google sign-in failed": "Error al iniciar sesión con Google",
+    "Google login is not properly configured. Please check environment variables.":
+      "El inicio de sesión con Google no está configurado correctamente. Por favor, verifica las variables de entorno.",
+    "Google login is not configured":
+      "El inicio de sesión con Google no está configurado",
+    "Apple Sign In is only available on iOS devices":
+      "El inicio de sesión con Apple solo está disponible en dispositivos iOS",
+    "Apple sign-in failed": "Error al iniciar sesión con Apple",
+    "WeChat login is not configured":
+      "El inicio de sesión con WeChat no está configurado",
+    "Pending Changes": "Cambios Pendientes",
+    "You have {{count}} unsaved changes. We'll try to sync them before logging out.":
+      "Tienes {{count}} cambios sin guardar. Intentaremos sincronizarlos antes de cerrar sesión.",
+    "Offline Changes": "Cambios Sin Conexión",
+    "You have {{count}} unsaved changes that cannot be synced while offline. These changes will be lost if you log out now.":
+      "Tienes {{count}} cambios sin guardar que no se pueden sincronizar mientras estás desconectado. Estos cambios se perderán si cierras sesión ahora.",
+    "Log Out Anyway": "Cerrar Sesión de Todos Modos",
+    "Logout failed": "Error al cerrar sesión",
+    "Member List": "Lista de Miembros",
   },
 };

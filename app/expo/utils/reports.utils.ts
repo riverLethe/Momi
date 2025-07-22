@@ -814,16 +814,83 @@ function buildBudgetReportCacheKey(
   return `budget_${viewMode}_${periodType}_${selectedPeriodId ?? "default"}`;
 }
 
-// 主要的报表数据获取函数
+// 向后兼容的重载版本 - 用于小组件等无法访问 DataProvider 的场景
 export async function fetchReportData(
   periodType: DatePeriodEnum,
   viewMode: "personal" | "family",
   selectedPeriodId?: string,
   dataVersion?: number,
-  forceRefresh = false,
-  /** When true, skip CPU-intensive computations (health score, insights, etc.). */
-  lightweight = false
+  forceRefresh?: boolean,
+  lightweight?: boolean
+): Promise<ReportData>;
+
+// 新版本 - 接受数据参数
+export async function fetchReportData(
+  periodType: DatePeriodEnum,
+  viewMode: "personal" | "family",
+  bills: Bill[],
+  transactions: Transaction[],
+  budgets: Budgets,
+  selectedPeriodId?: string,
+  dataVersion?: number,
+  forceRefresh?: boolean,
+  lightweight?: boolean
+): Promise<ReportData>;
+
+// 主要的报表数据获取函数
+export async function fetchReportData(
+  periodType: DatePeriodEnum,
+  viewMode: "personal" | "family",
+  billsOrSelectedPeriodId?: Bill[] | string,
+  transactionsOrDataVersion?: Transaction[] | number,
+  budgetsOrForceRefresh?: Budgets | boolean,
+  selectedPeriodIdOrLightweight?: string | boolean,
+  dataVersionOrUndefined?: number,
+  forceRefreshOrUndefined?: boolean,
+  lightweightOrUndefined?: boolean
 ): Promise<ReportData> {
+  // 检测调用方式并解析参数
+  let bills: Bill[];
+  let transactions: Transaction[];
+  let budgets: Budgets;
+  let selectedPeriodId: string | undefined;
+  let dataVersion: number | undefined;
+  let forceRefresh: boolean;
+  let lightweight: boolean;
+
+  // 如果第三个参数是数组，说明是新的调用方式
+  if (Array.isArray(billsOrSelectedPeriodId)) {
+    // 新版本调用方式
+    bills = billsOrSelectedPeriodId;
+    transactions = transactionsOrDataVersion as Transaction[];
+    budgets = budgetsOrForceRefresh as Budgets;
+    selectedPeriodId = selectedPeriodIdOrLightweight as string;
+    dataVersion = dataVersionOrUndefined;
+    forceRefresh = forceRefreshOrUndefined ?? false;
+    lightweight = lightweightOrUndefined ?? false;
+  } else {
+    // 旧版本调用方式 - 需要获取数据
+    selectedPeriodId = billsOrSelectedPeriodId as string;
+    dataVersion = transactionsOrDataVersion as number;
+    forceRefresh = budgetsOrForceRefresh as boolean ?? false;
+    lightweight = selectedPeriodIdOrLightweight as boolean ?? false;
+
+    // 获取个人数据（小组件模式）
+    const [billsData, transactionsData, budgetsData] = await Promise.all([
+      getBills(),
+      getTransactions(),
+      getBudgets(),
+    ]);
+
+    // 对于家庭模式，目前只能使用个人数据，因为这里无法访问 DataProvider
+    bills = viewMode === "personal" 
+      ? billsData.filter(bill => !bill.isFamilyBill)
+      : billsData; // 暂时使用所有账单作为回退
+    
+    transactions = transactionsData;
+    budgets = budgetsData;
+  }
+
   // ---- 1. 并发请求去重 --------------------------------------------------
   const cacheKey = buildReportCacheKey(periodType, viewMode, selectedPeriodId);
 
@@ -886,26 +953,7 @@ export async function fetchReportData(
         }
       }
 
-      // 快速获取本地数据 - 并行加载但使用缓存
-      let bills: Bill[], transactions: Transaction[], budgets: Budgets;
-
-      try {
-        [bills, transactions, budgets] = await Promise.all([
-          getBills(),
-          getTransactions(),
-          getBudgets(),
-        ]);
-      } catch (error) {
-        console.error("获取基础数据失败:", error);
-        // 使用空数组作为默认值继续执行
-        bills = [];
-        transactions = [];
-        budgets = {
-          weekly: undefined,
-          monthly: undefined,
-          yearly: undefined,
-        };
-      }
+      // 快速获取本地数据 - 现在通过参数传入，无需重新获取
 
       // 快速生成核心数据
       const categoryData = await generateCategoryDataFromRawData(
@@ -1391,6 +1439,8 @@ function calculateVolatilityPercentage(trendData: TrendData[]): number {
 export async function fetchBudgetReportData(
   periodType: DatePeriodEnum,
   viewMode: "personal" | "family",
+  bills: Bill[],
+  budgets: Budgets,
   selectedPeriodId?: string,
   budgetVersion?: number,
   forceRefresh = false
@@ -1433,8 +1483,7 @@ export async function fetchBudgetReportData(
       }
     }
 
-    // 获取最新预算和账单数据
-    const [bills, budgets] = await Promise.all([getBills(), getBudgets()]);
+    // 获取最新预算和账单数据 - 现在通过参数传入
 
     // 计算预算状态
     const budgetStatus = await calculateBudgetStatus(

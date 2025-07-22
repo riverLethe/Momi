@@ -12,6 +12,7 @@ import { View, YStack, Text, useTheme } from "tamagui";
 
 // Data & Welcome -----------------------------------------------------------
 import { useData } from "@/providers/DataProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import WelcomeScreen from "@/components/home/WelcomeScreen";
 
 // 懒加载PeriodPage组件，避免阻塞初始渲染
@@ -37,6 +38,7 @@ export default function HomeScreenPager() {
   // Global data status / decide what to show
   // ---------------------------------------------------------------------
   const { bills, isLoading: dataLoading } = useData();
+  const { user } = useAuth();
   const initialLoading = dataLoading.initial;
   const hasBills = bills.length > 0;
   const insets = useSafeAreaInsets();
@@ -173,6 +175,7 @@ export default function HomeScreenPager() {
             selectedPeriodId={selectedIds[periodOrder[visibleIdx]]}
             onPeriodSelectorChange={handlePeriodSelectorChange}
             onBillsPress={() => router.push("/bills")}
+            hasFamily={!!user?.family}
           />
         </View>
 

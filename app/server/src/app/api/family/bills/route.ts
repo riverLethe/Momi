@@ -60,7 +60,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 构建查询条件
+    // 获取家庭成员ID列表（排除当前用户）
+    const otherMemberIds = members
+      .filter(member => member.userId !== user.id)
+      .map(member => member.userId);
+
+    // 如果没有其他成员，返回空结果
+    if (otherMemberIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          bills: [],
+          pagination: {
+            total: 0,
+            limit,
+            offset,
+            hasMore: false,
+          },
+          familySpace: {
+            id: familySpace.id,
+            name: familySpace.name,
+          },
+        },
+      });
+    }
+
+    // 构建查询条件 - 隐式共享模型：只包含其他家庭成员的账单
     let sql = `
       SELECT 
         b.id,
@@ -71,17 +96,18 @@ export async function GET(request: NextRequest) {
         b.created_at as createdAt,
         b.updated_at as updatedAt,
         b.user_id as createdBy,
-        u.username as creatorName,
+        u.name as creatorName,
         b.family_space_id as familyId,
         fs.name as familyName,
         CASE WHEN b.family_space_id IS NOT NULL THEN 1 ELSE 0 END as isFamilyBill
       FROM bills b
       LEFT JOIN users u ON b.user_id = u.id
       LEFT JOIN family_spaces fs ON b.family_space_id = fs.id
-      WHERE b.family_space_id = ? AND b.is_deleted = 0
+      WHERE (b.user_id IN (${otherMemberIds.map(() => '?').join(',')}) OR (b.family_space_id = ? AND b.user_id != ?))
+        AND b.is_deleted = 0
     `;
 
-    const args: any[] = [familyId];
+    const args: any[] = [...otherMemberIds, familyId, user.id];
 
     // 添加日期过滤
     if (startDate) {
@@ -119,13 +145,14 @@ export async function GET(request: NextRequest) {
       familyName: row.familyName,
     }));
 
-    // 获取总数
+    // 获取总数 - 使用相同的查询逻辑（排除当前用户）
     let countSql = `
       SELECT COUNT(*) as total
       FROM bills b
-      WHERE b.family_space_id = ? AND b.is_deleted = 0
+      WHERE (b.user_id IN (${otherMemberIds.map(() => '?').join(',')}) OR (b.family_space_id = ? AND b.user_id != ?))
+        AND b.is_deleted = 0
     `;
-    const countArgs: any[] = [familyId];
+    const countArgs: any[] = [...otherMemberIds, familyId, user.id];
 
     if (startDate) {
       countSql += " AND b.bill_date >= ?";

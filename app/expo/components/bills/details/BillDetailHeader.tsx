@@ -7,7 +7,8 @@ import { BillDetailHeaderProps } from "./types";
 export const BillDetailHeader: React.FC<BillDetailHeaderProps> = React.memo(({
     onBack,
     onDelete,
-    updating
+    updating,
+    isReadOnly = false
 }) => {
     const { t } = useTranslation();
     const theme = useTheme();
@@ -26,20 +27,29 @@ export const BillDetailHeader: React.FC<BillDetailHeaderProps> = React.memo(({
                 <ChevronLeft size={20} color={theme.color?.get()} />
             </Button>
 
-            <Text fontSize="$4" fontWeight="$6" color="$color">
-                {t("Bill Details")}
-            </Text>
+            <XStack alignItems="center" gap="$2">
+                <Text fontSize="$4" fontWeight="$6" color="$color">
+                    {t("Bill Details")}
+                </Text>
+                {isReadOnly && (
+                    <Text fontSize="$2" color="$gray9" fontWeight="600">
+                        ({t("Read Only")})
+                    </Text>
+                )}
+            </XStack>
 
             <XStack gap="$2">
-                <Button
-                    size="$3"
-                    circular
-                    chromeless
-                    onPress={onDelete}
-                    disabled={updating}
-                >
-                    <Trash2 size={20} color={updating ? theme.color8?.get() : theme.red9?.get()} />
-                </Button>
+                {!isReadOnly && (
+                    <Button
+                        size="$3"
+                        circular
+                        chromeless
+                        onPress={onDelete}
+                        disabled={updating}
+                    >
+                        <Trash2 size={20} color={updating ? theme.color8?.get() : theme.red9?.get()} />
+                    </Button>
+                )}
             </XStack>
         </XStack>
     );
@@ -47,4 +57,4 @@ export const BillDetailHeader: React.FC<BillDetailHeaderProps> = React.memo(({
 
 BillDetailHeader.displayName = "BillDetailHeader";
 
-export default BillDetailHeader; 
+export default BillDetailHeader;

@@ -11,6 +11,7 @@ export interface Bill {
   isFamilyBill: boolean;
   familyId?: string;
   familyName?: string;
+  isReadOnly?: boolean; // 标识账单是否只读（家庭账单中非本人创建的账单）
   createdAt: Date;
   updatedAt: Date;
 }

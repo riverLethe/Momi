@@ -16,6 +16,7 @@ import { ChatProvider } from "@/providers/ChatProvider";
 import NotificationProvider from "@/providers/NotificationProvider";
 import I18nProvider from "@/providers/I18nProvider";
 import ThemeProvider, { useTheme } from "@/providers/ThemeProvider";
+import { useViewStore } from "@/stores/viewStore";
 
 // Import i18n instance to initialize it
 import "@/i18n";
@@ -41,6 +42,12 @@ Notifications.setNotificationHandler({
 // Add wrapper component to use theme inside TamaguiProvider
 function AppContent() {
   const { actualTheme } = useTheme();
+  const { initializeViewMode } = useViewStore();
+
+  // 在应用启动时初始化视图模式
+  useEffect(() => {
+    initializeViewMode();
+  }, [initializeViewMode]);
 
   return (
     <TamaguiProvider config={config} defaultTheme={actualTheme}>

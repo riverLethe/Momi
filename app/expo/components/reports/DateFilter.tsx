@@ -1,8 +1,10 @@
 import React from "react";
-import { Calendar, ChevronDown, CreditCard, ReceiptTextIcon } from "lucide-react-native";
-import { Button, XStack, Text, ScrollView, Sheet, YStack, View, useTheme } from "tamagui";
+import { Calendar, ChevronDown, CreditCard, ReceiptTextIcon, Users, User } from "lucide-react-native";
+import { Button, XStack, Text, ScrollView, Sheet, YStack, View, useTheme, Switch } from "tamagui";
 import { useTranslation } from "react-i18next";
 import { DatePeriodEnum, PeriodSelectorData } from "@/types/reports.types";
+import { useViewStore } from "@/stores/viewStore";
+import { useData } from "@/providers/DataProvider";
 
 interface DateFilterProps {
   selectedPeriod: DatePeriodEnum;
@@ -11,6 +13,8 @@ interface DateFilterProps {
   selectedPeriodId?: string;
   onPeriodSelectorChange?: (periodId: string) => void;
   onBillsPress?: () => void;
+  hasFamily?: boolean; // 是否有家庭
+  onViewModeChange?: (isFamily: boolean) => void; // 视图模式变化回调
 }
 
 export const DateFilter: React.FC<DateFilterProps> = ({
@@ -20,15 +24,42 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   selectedPeriodId,
   onPeriodSelectorChange,
   onBillsPress,
+  hasFamily = false,
+  onViewModeChange,
 }) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const [periodSheetOpen, setPeriodSheetOpen] = React.useState(false);
+  const { viewMode, setViewMode } = useViewStore();
+  const {
+    refreshFamilyBills,
+    isFamilyBillsLoading,
+  } = useData();
 
   // Get current selected period selector
   const selectedSelector =
     periodSelectors?.find((p) => p.id === selectedPeriodId) ||
     periodSelectors?.[0];
+
+  // 处理视图模式切换
+  const handleViewModeToggle = async (isFamily: boolean) => {
+    const newMode = isFamily ? "family" : "personal";
+    
+    // 更新视图模式
+    setViewMode(newMode);
+    
+    // 如果切换到家庭模式，获取家庭账单数据
+    if (isFamily && hasFamily) {
+      try {
+        await refreshFamilyBills();
+      } catch (error) {
+        console.error("Failed to load family bills:", error);
+      }
+    }
+    
+    // 通知父组件视图模式变化
+    onViewModeChange?.(isFamily);
+  };
 
   return (
     <>
@@ -66,49 +97,51 @@ export const DateFilter: React.FC<DateFilterProps> = ({
             ))}
           </XStack>
         </ScrollView>
-        {/**go to bills */}
-        <Button
-          onPress={onBillsPress}
-          size="$2"
-          marginRight="$1"
-          paddingHorizontal="$1.5"
-          paddingVertical="$2"
-          backgroundColor="$blue9"
-          chromeless
 
-          pressStyle={{
-            opacity: 0.8,
-            backgroundColor: "$blue8",
-            borderColor: "$blue8",
-          }}
-
-        >
-          <ReceiptTextIcon size={18} color="white" />
-        </Button>
-
-        {/* Period Selector Button (if available) */}
-        {/* {periodSelectors && periodSelectors.length > 0 && (
-          <Button
-            alignSelf="center"
-            backgroundColor="$blue4"
-            size="$2"
-            paddingHorizontal="$2"
-            paddingVertical="$1"
-            onPress={() => setPeriodSheetOpen(true)}
-            position="absolute"
-            right="$1"
-            top="$1.5"
-          >
-            <XStack alignItems="center" gap="$2">
-              <Text fontWeight="$6" fontSize="$2.5" color="$gray11">
-                {selectedPeriod === DatePeriodEnum.WEEK
-                  ? `${t("Week of")} ${selectedSelector?.label}`
-                  : selectedSelector?.label}
+        {/* 右侧控制区域 */}
+        <XStack alignItems="center" gap="$2">
+          {/* 个人/家庭切换开关 */}
+          {hasFamily && (
+            <XStack alignItems="center" gap="$1.5" paddingHorizontal="$2">
+              <Switch
+                size="$2"
+                checked={viewMode === "family"}
+                onCheckedChange={handleViewModeToggle}
+                backgroundColor={viewMode === "family" ? "$blue9" : "$gray5"}
+                disabled={isFamilyBillsLoading}
+                opacity={isFamilyBillsLoading ? 0.6 : 1}
+              >
+                <Switch.Thumb
+                  backgroundColor="white"
+                  scale={0.8}
+                />
+              </Switch>
+              <Text fontSize="$3" opacity={isFamilyBillsLoading ? 0.6 : 1}>
+                {t("Family")}
+                {isFamilyBillsLoading && " (加载中...)"}
               </Text>
-              <ChevronDown size={14} color="#64748B" />
             </XStack>
+          )}
+
+          {/* 账单按钮 */}
+          <Button
+            onPress={onBillsPress}
+            size="$2"
+            marginRight="$1"
+            paddingHorizontal="$1.5"
+            paddingVertical="$2"
+            backgroundColor="$blue9"
+            chromeless
+            pressStyle={{
+              opacity: 0.8,
+              backgroundColor: "$blue8",
+              borderColor: "$blue8",
+            }}
+          >
+            <ReceiptTextIcon size={18} color="white" />
           </Button>
-        )} */}
+        </XStack>
+
       </XStack>
 
       {/* Period Selector Sheet */}

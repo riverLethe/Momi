@@ -239,7 +239,7 @@ export default function FamilyMembersList({
         </Card>
       ) : (
         /* Empty State */
-        <YStack alignItems="center" gap="$2" paddingVertical="$4">
+        <YStack alignItems="center" gap="$2" paddingVertical="$4" marginTop="$4">
           <Users size={32} color={theme.gray8?.get()} />
           <Text color="$color10" fontSize="$3" textAlign="center">
             {t("No family members yet")}

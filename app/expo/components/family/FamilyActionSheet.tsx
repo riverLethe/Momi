@@ -15,6 +15,7 @@ import {
 import { FamilySpace } from "@/types/family.types";
 import { useAuth } from "@/providers/AuthProvider";
 import { useFamilyActions } from "./useFamilyActions";
+import { useTranslation } from "react-i18next";
 
 interface FamilyActionSheetProps {
   open: boolean;
@@ -32,6 +33,7 @@ export default function FamilyActionSheet({
   const { user } = useAuth();
   const theme = useTheme();
   const { dissolveFamily, leaveFamily, isDissolvingFamily, isLeavingFamily } = useFamilyActions();
+  const { t } = useTranslation();
 
   const handleDissolveFamily = async () => {
     if (!familySpace) return;
@@ -69,7 +71,7 @@ export default function FamilyActionSheet({
       <Sheet.Handle />
       <Sheet.Frame padding="$4" backgroundColor="$background">
         <YStack gap="$3">
-          <H3 color="$color" textAlign="center">Family Actions</H3>
+          <H3 color="$color" textAlign="center">{t("Family Actions")}</H3>
 
           {isCreator ? (
             <Button
@@ -80,7 +82,7 @@ export default function FamilyActionSheet({
               <XStack alignItems="center" gap="$2">
                 <Trash size={16} color={theme.red9?.get()} />
                 <Text color={theme.red9?.get()}>
-                  {isDissolvingFamily ? "Dissolving..." : "Dissolve Family"}
+                  {isDissolvingFamily ? t("Dissolving...") : t("Dissolve Family")}
                 </Text>
               </XStack>
             </Button>
@@ -93,7 +95,7 @@ export default function FamilyActionSheet({
               <XStack alignItems="center" gap="$2">
                 <LogOut size={16} color={theme.orange9?.get()} />
                 <Text color={theme.orange9?.get()}>
-                  {isLeavingFamily ? "Leaving..." : "Leave Family"}
+                  {isLeavingFamily ? t("Leaving...") : t("Leave Family")}
                 </Text>
               </XStack>
             </Button>

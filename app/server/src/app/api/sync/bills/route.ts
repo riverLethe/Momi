@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthService } from "../../../../../lib/auth";
-import { db } from "../../../../../lib/database";
-import { SyncService } from "../../../../../lib/sync";
+import { AuthService } from "@/lib/auth";
+import { db } from "@/lib/database";
+import { SyncService } from "@/lib/sync";
 
 interface BillSyncOperation {
   action: "create" | "update" | "delete";

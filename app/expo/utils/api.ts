@@ -383,6 +383,59 @@ export const apiClient = {
 
       return response.json();
     },
+
+    // 发送加入家庭请求
+    requestJoinFamily: async (token: string, inviteCode: string) => {
+      const response = await fetch(`${API_URL}/api/family/request-join`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ inviteCode }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 获取待处理的加入请求
+    getPendingJoinRequests: async (token: string, familyId: string) => {
+      const response = await fetch(`${API_URL}/api/family/join-requests?familyId=${familyId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
+    // 处理加入请求（批准或拒绝）
+    handleJoinRequest: async (token: string, requestId: string, action: 'approve' | 'reject') => {
+      const response = await fetch(`${API_URL}/api/family/handle-join-request`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ requestId, action }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
   },
 
   // 认证相关
@@ -546,7 +599,7 @@ export const apiClient = {
     downloadBills: async (
       token: string,
       lastSyncTime?: string
-    ): Promise<any[]> => {
+    ): Promise<{ success: boolean; bills: any[] }> => {
       const url = lastSyncTime
         ? `${API_URL}/api/sync/bills?lastSync=${lastSyncTime}`
         : `${API_URL}/api/sync/bills`;

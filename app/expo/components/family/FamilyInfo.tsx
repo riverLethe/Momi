@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, XStack, YStack, Text, Button, CardHeader } from "tamagui";
+import { Card, XStack, YStack, Text, Button } from "tamagui";
 import FamilyMembersList from "./FamilyMembersList";
 import { FamilySpace } from "@/types/family.types";
 import { Copy, RefreshCw, Trash2, UnlinkIcon } from "lucide-react-native";
@@ -31,74 +31,33 @@ export default function FamilyInfo({
     if (!familySpace) return;
 
     await Clipboard.setStringAsync(familySpace.inviteCode);
-    Alert.alert("Success", "Invite code copied to clipboard");
+    Alert.alert(t("Success"), t("Invite code copied to clipboard"));
   };
 
   const handleRefreshInviteCode = async () => {
     if (!familySpace) return;
 
-    Alert.alert(
-      "Refresh Invite Code",
-      "Are you sure you want to refresh the invite code? The old code will become invalid.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Refresh",
-          onPress: async () => {
-            const result = await refreshInviteCode(familySpace);
-            if (result && onFamilyUpdated) {
-              onFamilyUpdated(result);
-              Alert.alert("Success", "Invite code refreshed");
-            }
-          },
-        },
-      ]
-    );
+    const result = await refreshInviteCode(familySpace);
+    if (result && onFamilyUpdated) {
+      onFamilyUpdated(result);
+    }
   };
 
 
   // Handle dissolve family
-  const handleDissolveFamily = () => {
-    Alert.alert(
-      "Dissolve Family",
-      "Are you sure you want to dissolve this family? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Dissolve",
-          style: "destructive",
-          onPress: async () => {
-            const success = await dissolveFamily(familySpace);
-            if (success) {
-              Alert.alert("Success", "Family dissolved successfully");
-              onFamilyDeleted?.();
-            }
-          },
-        },
-      ]
-    );
+  const handleDissolveFamily = async () => {
+    const success = await dissolveFamily(familySpace);
+    if (success) {
+      onFamilyDeleted?.();
+    }
   };
 
   // Handle leave family
-  const handleLeaveFamily = () => {
-    Alert.alert(
-      "Leave Family",
-      "Are you sure you want to leave this family?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Leave",
-          style: "destructive",
-          onPress: async () => {
-            const success = await leaveFamily(familySpace);
-            if (success) {
-              Alert.alert("Success", "Left family successfully");
-              onFamilyDeleted?.();
-            }
-          },
-        },
-      ]
-    );
+  const handleLeaveFamily = async () => {
+    const success = await leaveFamily(familySpace);
+    if (success) {
+      onFamilyDeleted?.();
+    }
   };
   return (
     <YStack gap="$3" flex={1}>
@@ -157,6 +116,7 @@ export default function FamilyInfo({
         familySpace={familySpace}
         onFamilyUpdated={onFamilyUpdated}
       />
+
 
       {/* Action Buttons */}
       <XStack gap="$2" position="absolute" bottom={0} right={0}>

@@ -10,6 +10,7 @@ export interface BillDetailHeaderProps {
   onBack: () => void;
   onDelete: () => void;
   updating: boolean;
+  isReadOnly?: boolean; // 是否为只读状态
 }
 
 export interface BillAmountCardProps extends BillDetailProps {

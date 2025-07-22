@@ -4,6 +4,8 @@ import { updateBudgetWidgetForPeriod, BudgetSegment } from "./widgetData.utils";
 import { formatCurrency } from "./format";
 import i18n from "@/i18n";
 import { generatePeriodSelectors } from "./date.utils";
+import { getBills } from "./bills.utils";
+import { getBudgets } from "./budget.utils";
 
 /**
  * Fetches report data for week / month / year and updates the Budget widgets.
@@ -51,10 +53,22 @@ export async function syncBudgetWidgets(
         budgetReport = currentBudgetData;
       } else {
         const firstSelectorId = generatePeriodSelectors(type)[0]?.id;
+
+        // 获取数据
+        const [bills, budgets] = await Promise.all([getBills(), getBudgets()]);
+
+        // 对于家庭模式，目前只能使用个人数据，因为这里无法访问 DataProvider
+        const billsForMode =
+          viewMode === "personal"
+            ? bills.filter((bill) => !bill.isFamilyBill)
+            : bills; // 暂时使用所有账单作为回退
+
         // 直接获取预算报表
         budgetReport = await fetchBudgetReportData(
           type,
           viewMode,
+          billsForMode,
+          budgets,
           firstSelectorId,
           budgetVersion
         );

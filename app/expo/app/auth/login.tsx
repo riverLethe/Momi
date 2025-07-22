@@ -33,7 +33,10 @@ export default function LoginScreen() {
     try {
       const success = await loginWithGoogle();
       if (success) {
-        router.back();
+        // 使用 setTimeout 确保状态更新后再导航
+        setTimeout(() => {
+          router.back();
+        }, 100);
       }
     } catch (error) {
       Alert.alert(t("Login Failed"), t("Google login failed. Please try again."));
@@ -44,7 +47,10 @@ export default function LoginScreen() {
     try {
       const success = await loginWithApple();
       if (success) {
-        router.back();
+        // 使用 setTimeout 确保状态更新后再导航
+        setTimeout(() => {
+          router.back();
+        }, 100);
       }
     } catch (error) {
       Alert.alert(t("Login Failed"), t("Apple login failed. Please try again."));
@@ -55,7 +61,10 @@ export default function LoginScreen() {
     try {
       const success = await loginWithWeChat();
       if (success) {
-        router.back();
+        // 使用 setTimeout 确保状态更新后再导航
+        setTimeout(() => {
+          router.back();
+        }, 100);
       }
     } catch (error) {
       Alert.alert(t("Login Failed"), t("WeChat login failed. Please try again."));
@@ -99,21 +108,7 @@ export default function LoginScreen() {
 
               {/* Social Login Section */}
               <YStack marginVertical="$8" alignItems="center">
-                <Button
-                  size="$5"
-                  width="100%"
-                  backgroundColor="$card"
-                  borderColor="$borderColor"
-                  borderWidth={1}
-                  borderRadius="$4"
-                  marginBottom="$4"
-                  onPress={handleGoogleLogin}
-                  icon={<GoogleIcon size={24} />}
-                >
-                  <Text color="$color" fontWeight="$6" fontSize="$4">
-                    {t("Continue with Google")}
-                  </Text>
-                </Button>
+
 
                 {Platform.OS === "ios" && (
                   <Button
@@ -132,6 +127,21 @@ export default function LoginScreen() {
                     </Text>
                   </Button>
                 )}
+                <Button
+                  size="$5"
+                  width="100%"
+                  backgroundColor="$card"
+                  borderColor="$borderColor"
+                  borderWidth={1}
+                  borderRadius="$4"
+                  marginBottom="$4"
+                  onPress={handleGoogleLogin}
+                  icon={<GoogleIcon size={24} />}
+                >
+                  <Text color="$color" fontWeight="$6" fontSize="$4">
+                    {t("Continue with Google")}
+                  </Text>
+                </Button>
 
                 {/* <Button
                   size="$5"

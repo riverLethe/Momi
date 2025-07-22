@@ -9,6 +9,7 @@ import {
 import { useFamilyActions } from "./useFamilyActions";
 import { FamilySpace } from "@/types/family.types";
 import { useAuth } from "@/providers/AuthProvider";
+import { useTranslation } from "react-i18next";
 
 interface FamilyHeaderProps {
   familySpace: FamilySpace;
@@ -21,6 +22,7 @@ export default function FamilyHeader({
 }: FamilyHeaderProps) {
   const { user } = useAuth();
   const { updateFamilyName, isUpdatingName } = useFamilyActions();
+  const { t } = useTranslation();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(familySpace.name);
   const [isPressed, setIsPressed] = useState(false);
@@ -64,7 +66,7 @@ export default function FamilyHeader({
             onChangeText={setEditedName}
             onBlur={handleNameSave}
             onSubmitEditing={handleNameSave}
-            placeholder="Family Name"
+            placeholder={t("Family Name")}
             borderWidth={0}
             autoFocus
           />

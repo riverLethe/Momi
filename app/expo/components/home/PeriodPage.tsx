@@ -11,6 +11,7 @@ import { format } from "date-fns";
 // Stores & Providers -------------------------------------------------------
 import { useData } from "@/providers/DataProvider";
 import { useBudgets } from "@/hooks/useBudgets";
+import { useViewStore } from "@/stores/viewStore";
 
 // New hooks (logic extracted) ---------------------------------------------
 import { useCategoryFilters } from "@/hooks/useCategoryFilters";
@@ -56,9 +57,13 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
 }) => {
     const router = useRouter();
 
-    // Data -------------------------------------------------------------------
-    const { bills, transactions, refreshData } = useData();
+    // View mode and data -----------------------------------------------------
+    const { viewMode } = useViewStore();
+    const { bills: rawBills, transactions, refreshData, getBillsForViewMode } = useData();
     const { budgets } = useBudgets();
+
+    // Get bills based on current view mode
+    const bills = useMemo(() => getBillsForViewMode(viewMode), [getBillsForViewMode, viewMode]);
 
     // Reports ----------------------------------------------------------------
     const {
@@ -72,7 +77,7 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
         refreshCoreReport,
         refreshBudgetReport,
         refreshBothReports,
-    } = useSplitReportData("personal", periodType);
+    } = useSplitReportData(viewMode, periodType);
 
     // 缓存周期选择器查找
     const currentSelector = useMemo(() =>
@@ -149,8 +154,8 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
         };
     }, [coreReport, budgetReport]);
 
-    useSpendingWidgetSync(combinedReportData, periodType, "personal");
-    useBudgetWidgetSync(budgetReport, periodType, "personal");
+    useSpendingWidgetSync(combinedReportData, periodType, viewMode);
+    useBudgetWidgetSync(budgetReport, periodType, viewMode);
 
     // Sync external selectedId -> internal
     useEffect(() => {
@@ -270,4 +275,4 @@ const PeriodPage: React.FC<PeriodPageProps> = ({
     );
 };
 
-export default React.memo(PeriodPage); 
+export default React.memo(PeriodPage);

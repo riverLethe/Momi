@@ -1,12 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
-import { Alert } from "react-native";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Alert, AppState } from "react-native";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/utils/api";
 import { getAuthToken } from "@/utils/userPreferences.utils";
 import { storage, STORAGE_KEYS } from "@/utils/storage.utils";
-import { getQueue, clearQueue } from "@/utils/offlineQueue.utils";
+import {
+  getQueue,
+  clearQueue,
+  getPendingCount,
+} from "@/utils/offlineQueue.utils";
 import { getBills as getLocalBills } from "@/utils/bills.utils";
+import { useTranslation } from "react-i18next";
 
 interface SyncState {
   isOnline: boolean;
@@ -21,6 +26,7 @@ const PENDING_CHANGES_KEY = "momiq_pending_changes";
 
 export const useDataSync = () => {
   const { isAuthenticated, user } = useAuth();
+  const { t } = useTranslation();
   const [syncState, setSyncState] = useState<SyncState>({
     isOnline: false,
     isSyncing: false,
@@ -29,17 +35,65 @@ export const useDataSync = () => {
     error: null,
   });
 
-  // Monitor network connectivity
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
-      setSyncState((prev) => ({
-        ...prev,
-        isOnline: state.isConnected === true,
-      }));
-    });
+  // 提前声明syncData函数引用，但实现在后面定义
+  const syncDataRef = useRef<(force?: boolean) => Promise<void>>(() =>
+    Promise.resolve()
+  );
 
-    return () => unsubscribe();
-  }, []);
+  // Monitor network connectivity and app state
+  useEffect(() => {
+    // Network connectivity monitoring
+    const netInfoUnsubscribe = NetInfo.addEventListener(
+      (state: NetInfoState) => {
+        const wasOffline = !syncState.isOnline;
+        const isNowOnline = state.isConnected === true;
+
+        setSyncState((prev) => ({
+          ...prev,
+          isOnline: isNowOnline,
+        }));
+
+        // If we just came back online and have pending changes, trigger sync
+        if (
+          wasOffline &&
+          isNowOnline &&
+          syncState.pendingChanges > 0 &&
+          !syncState.isSyncing
+        ) {
+          console.info("Network connection restored, triggering sync...");
+          syncDataRef.current();
+        }
+      }
+    );
+
+    // App state monitoring (background/foreground transitions)
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      (nextAppState) => {
+        if (
+          nextAppState === "active" &&
+          isAuthenticated &&
+          syncState.pendingChanges > 0
+        ) {
+          // App has come to the foreground
+          console.info(
+            "App returned to foreground, checking for pending changes..."
+          );
+          syncDataRef.current();
+        }
+      }
+    );
+
+    return () => {
+      netInfoUnsubscribe();
+      appStateSubscription.remove();
+    };
+  }, [
+    isAuthenticated,
+    syncState.isOnline,
+    syncState.pendingChanges,
+    syncState.isSyncing,
+  ]);
 
   // Load local sync state on mount
   useEffect(() => {
@@ -87,15 +141,16 @@ export const useDataSync = () => {
     await savePendingChanges(newCount);
   }, [syncState.pendingChanges]);
 
+  // 定义syncData实现
   const syncData = useCallback(
     async (force = false) => {
       if (!isAuthenticated || !user) {
-        console.log("Not authenticated, skipping sync");
+        console.info("Not authenticated, skipping sync");
         return;
       }
 
       if (syncState.isSyncing && !force) {
-        console.log("Sync already in progress");
+        console.info("Sync already in progress");
         return;
       }
 
@@ -105,68 +160,154 @@ export const useDataSync = () => {
         error: null,
       }));
 
+      // Implement exponential backoff for retries
+      let retryCount = 0;
+      const maxRetries = 3;
+      const baseDelay = 1000; // 1 second
+
+      const performSync = async (): Promise<boolean> => {
+        try {
+          const token = await getAuthToken();
+          if (!token) {
+            throw new Error("No auth token available");
+          }
+
+          // Check network status before proceeding
+          const netInfo = await NetInfo.fetch();
+          if (!netInfo.isConnected) {
+            console.info("Device is offline, deferring sync");
+            return false;
+          }
+
+          // STEP 1: flush offline queue (if any)
+          const queue = await getQueue();
+          if (queue.length > 0) {
+            console.info(`Uploading ${queue.length} queued bill operations...`);
+            // Split into batches of 50 operations for better reliability
+            const batchSize = 50;
+            for (let i = 0; i < queue.length; i += batchSize) {
+              const batch = queue.slice(i, i + batchSize);
+              await apiClient.sync.uploadBills(token, batch);
+              console.info(
+                `Uploaded batch ${i / batchSize + 1} of ${Math.ceil(queue.length / batchSize)}`
+              );
+            }
+          }
+
+          // STEP 2: download remote changes since last sync
+          const lastSyncTimeStr = await storage.getItem<string>(LAST_SYNC_KEY);
+          console.info(
+            `Downloading bills since ${lastSyncTimeStr || "beginning"}`
+          );
+
+          const remoteBills = await apiClient.sync.downloadBills(
+            token,
+            lastSyncTimeStr || undefined
+          );
+
+          if (Array.isArray(remoteBills) && remoteBills.length > 0) {
+            console.info(`Downloaded ${remoteBills.length} bills from server`);
+            const localBills = await getLocalBills();
+            console.info(`Merging with ${localBills.length} local bills`);
+
+            // Smart merge with conflict resolution
+            const merged: any[] = [...localBills];
+            const conflicts: any[] = [];
+
+            remoteBills.forEach((remote: any) => {
+              const idx = merged.findIndex((b: any) => b.id === remote.id);
+
+              // Handle deleted bills
+              if (remote.deleted) {
+                if (idx !== -1) merged.splice(idx, 1);
+                return;
+              }
+
+              if (idx !== -1) {
+                // Potential conflict - check timestamps
+                const localBill = merged[idx];
+                const localUpdatedAt = new Date(
+                  localBill.updatedAt || localBill.createdAt
+                ).getTime();
+                const remoteUpdatedAt = new Date(
+                  remote.updatedAt || remote.createdAt
+                ).getTime();
+
+                if (remoteUpdatedAt > localUpdatedAt) {
+                  // Remote is newer, use it
+                  merged[idx] = remote;
+                } else if (remoteUpdatedAt < localUpdatedAt) {
+                  // Local is newer, keep it and track conflict
+                  conflicts.push({
+                    local: localBill,
+                    remote: remote,
+                    resolution: "kept-local",
+                  });
+                } else {
+                  // Same timestamp, keep remote for consistency
+                  merged[idx] = remote;
+                }
+              } else {
+                // No conflict, just add the remote bill
+                merged.push(remote);
+              }
+            });
+
+            // Save merged bills
+            await storage.setItem(STORAGE_KEYS.BILLS, merged);
+            // Invalidate cache so next reads get fresh data
+            storage.invalidateCache(STORAGE_KEYS.BILLS);
+
+            // Log conflicts if any
+            if (conflicts.length > 0) {
+              console.info(
+                `Resolved ${conflicts.length} conflicts during sync`
+              );
+            }
+          } else {
+            console.info("No new bills to download");
+          }
+
+          // STEP 3: clear offline queue & pending counter
+          await clearQueue();
+
+          // STEP 4: update last sync time
+          const newSyncTime = new Date();
+          await storage.setItem(LAST_SYNC_KEY, newSyncTime.toISOString());
+          await savePendingChanges(0);
+
+          console.info("Data sync completed successfully");
+          return true;
+        } catch (error: any) {
+          console.error("Sync attempt failed:", error);
+
+          if (retryCount < maxRetries) {
+            // Exponential backoff
+            const delay = baseDelay * Math.pow(2, retryCount);
+            console.info(
+              `Retrying sync in ${delay}ms (attempt ${retryCount + 1} of ${maxRetries})`
+            );
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            retryCount++;
+            return performSync(); // Recursive retry
+          }
+
+          throw error; // Rethrow after max retries
+        }
+      };
+
       try {
-        const token = await getAuthToken();
-        if (!token) {
-          throw new Error("No auth token available");
-        }
-
-        // STEP 1: flush offline queue (if any)
-        const queue = await getQueue();
-        if (queue.length > 0) {
-          console.log(`Uploading ${queue.length} queued bill operations...`);
-          await apiClient.sync.uploadBills(token, queue);
-        }
-
-        // STEP 2: download remote changes since last sync
-        const remoteBills = await apiClient.sync.downloadBills(
-          token,
-          syncState.lastSyncTime
-            ? syncState.lastSyncTime.toISOString()
-            : undefined
-        );
-
-        if (Array.isArray(remoteBills) && remoteBills.length > 0) {
-          const localBills = await getLocalBills();
-          const merged: any[] = [...localBills];
-
-          remoteBills.forEach((remote: any) => {
-            const idx = merged.findIndex((b: any) => b.id === remote.id);
-            if (remote.deleted) {
-              if (idx !== -1) merged.splice(idx, 1);
-              return;
-            }
-            if (idx !== -1) {
-              merged[idx] = remote;
-            } else {
-              merged.push(remote);
-            }
-          });
-
-          await storage.setItem(STORAGE_KEYS.BILLS, merged);
-          // invalidate cache so next reads get fresh data
-          storage.invalidateCache(STORAGE_KEYS.BILLS);
-        }
-
-        // STEP 3: clear offline queue & pending counter
-        await clearQueue();
-
-        // STEP 4: update last sync time
-        const newSyncTime = new Date();
-        await storage.setItem(LAST_SYNC_KEY, newSyncTime.toISOString());
-        await savePendingChanges(0);
+        const success = await performSync();
 
         setSyncState((prev) => ({
           ...prev,
           isSyncing: false,
-          lastSyncTime: newSyncTime,
-          pendingChanges: 0,
+          lastSyncTime: success ? new Date() : prev.lastSyncTime,
+          pendingChanges: success ? 0 : prev.pendingChanges,
           error: null,
         }));
-
-        console.log("Data sync completed successfully");
       } catch (error: any) {
-        console.error("Sync failed:", error);
+        console.error("Sync failed after retries:", error);
 
         setSyncState((prev) => ({
           ...prev,
@@ -176,8 +317,8 @@ export const useDataSync = () => {
 
         if (syncState.isOnline) {
           Alert.alert(
-            "Sync Failed",
-            "Failed to sync your data. Please try again later.",
+            t("Sync Failed"),
+            t("Failed to sync your data. Please try again later."),
             [{ text: "OK" }]
           );
         }
@@ -222,6 +363,7 @@ export const useDataSync = () => {
   };
 
   // Auto-sync when device is back online and there are pending changes
+  // Implements regular sync strategy: automatically sync operation queue to remote when user is online
   useEffect(() => {
     if (
       isAuthenticated &&
@@ -229,6 +371,9 @@ export const useDataSync = () => {
       syncState.pendingChanges > 0 &&
       !syncState.isSyncing
     ) {
+      console.info(
+        "Detected network connection and pending changes, starting automatic sync..."
+      );
       syncData();
     }
   }, [
@@ -238,6 +383,50 @@ export const useDataSync = () => {
     syncState.isSyncing,
     syncData,
   ]);
+
+  // 更新syncDataRef引用
+  useEffect(() => {
+    syncDataRef.current = syncData;
+  }, [syncData]);
+
+  // Periodic sync check (every 5 minutes)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const checkInterval = setInterval(
+      async () => {
+        try {
+          // Check for pending changes
+          const pendingCount = await getPendingCount();
+
+          // Also check if we haven't synced in a while (over 30 minutes)
+          const lastSyncTimeStr = await storage.getItem<string>(LAST_SYNC_KEY);
+          const lastSyncTime = lastSyncTimeStr
+            ? new Date(lastSyncTimeStr)
+            : null;
+          const syncTooOld = lastSyncTime
+            ? Date.now() - lastSyncTime.getTime() > 30 * 60 * 1000
+            : true;
+
+          if (
+            syncState.isOnline &&
+            !syncState.isSyncing &&
+            (pendingCount > 0 || syncTooOld)
+          ) {
+            console.info(
+              "Periodic check: Found pending changes or sync is outdated, starting sync..."
+            );
+            syncDataRef.current();
+          }
+        } catch (error) {
+          console.error("Periodic sync check failed:", error);
+        }
+      },
+      5 * 60 * 1000
+    ); // Check every 5 minutes
+
+    return () => clearInterval(checkInterval);
+  }, [isAuthenticated, syncState.isOnline, syncState.isSyncing]);
 
   return {
     ...syncState,

@@ -1,7 +1,7 @@
 import React from "react";
 import { Sheet, YStack, Button, Text, Separator } from "tamagui";
+import { Progress } from "@tamagui/progress";
 import { useTranslation } from "react-i18next";
-import { Merge, Download, Upload, LogOut } from "lucide-react-native";
 
 interface SyncOptionsSheetProps {
   open: boolean;
@@ -9,7 +9,9 @@ interface SyncOptionsSheetProps {
   onMerge: () => void;
   onClearAndDownload: () => void;
   onPushAndOverride: () => void;
-  onSignOut: () => void;
+  syncProgress?: number;
+  syncOperation?: string;
+  isSyncing?: boolean;
 }
 
 export const SyncOptionsSheet: React.FC<SyncOptionsSheetProps> = ({
@@ -18,7 +20,9 @@ export const SyncOptionsSheet: React.FC<SyncOptionsSheetProps> = ({
   onMerge,
   onClearAndDownload,
   onPushAndOverride,
-  onSignOut,
+  syncProgress = 0,
+  syncOperation = '',
+  isSyncing = false,
 }) => {
   const { t } = useTranslation();
 
@@ -54,68 +58,75 @@ export const SyncOptionsSheet: React.FC<SyncOptionsSheetProps> = ({
 
           <Separator />
 
-          <YStack gap="$3" width="100%">
-            <Button
-              onPress={() => {
-                onMerge();
-                onOpenChange(false);
-              }}
-              theme={"gray" as any}
-              borderRadius="$4"
-              height={48}
-              justifyContent="flex-start"
-              paddingLeft="$3"
-              borderColor="$color10"
-              backgroundColor="$card"
-            >
-              {t('Merge')}
-            </Button>
+          {isSyncing ? (
+            <YStack gap="$4" width="100%" paddingVertical="$4">
+              <Text fontSize="$3" color="$blue10" textAlign="center">
+                {syncOperation}
+              </Text>
 
-            <Button
-              onPress={() => {
-                onClearAndDownload();
-                onOpenChange(false);
-              }}
-              theme={"gray" as any}
-              borderRadius="$4"
-              height={48}
-              justifyContent="flex-start"
-              paddingLeft="$3"
-              borderColor="$color10"
-              backgroundColor="$card"
-            >
-              {t('Clear & Download Remote')}
-            </Button>
+              <Progress value={syncProgress} size="$4">
+                <Progress.Indicator animation="bouncy" backgroundColor="$blue10" />
+              </Progress>
 
-            <Button
-              onPress={() => {
-                onPushAndOverride();
-                onOpenChange(false);
-              }}
-              theme={"gray" as any}
-              borderRadius="$4"
-              height={48}
-              justifyContent="flex-start"
-              paddingLeft="$3"
-              borderColor="$color10"
-              backgroundColor="$card"
-            >
-              {t('Push & Override Remote')}
-            </Button>
+              <Text fontSize="$2" color="$color10" textAlign="center">
+                {Math.round(syncProgress)}%
+              </Text>
+            </YStack>
+          ) : (
+            <YStack gap="$3" width="100%">
+              <Button
+                onPress={() => {
+                  onMerge();
+                  // 不需要在这里关闭 sheet，因为 handleMerge 方法会在完成后关闭
+                }}
+                theme={"gray" as any}
+                borderRadius="$4"
+                height={48}
+                justifyContent="flex-start"
+                paddingLeft="$3"
+                borderColor="$color10"
+                backgroundColor="$card"
+                disabled={isSyncing}
+              >
+                {t('Merge')}
+              </Button>
 
-            {/* <Button
-              size="$4"
-              variant="outlined"
-              onPress={() => {
-                onSignOut();
-                onOpenChange(false);
-              }}
-              icon={LogOut}
-              theme="red"
-            >
-              {t('Sign Out')}
-            </Button> */}
-          </YStack>
+              <Button
+                onPress={() => {
+                  onClearAndDownload();
+                  // 不需要在这里关闭 sheet，因为 handleClearAndDownload 方法会在完成后关闭
+                }}
+                theme={"gray" as any}
+                borderRadius="$4"
+                height={48}
+                justifyContent="flex-start"
+                paddingLeft="$3"
+                borderColor="$color10"
+                backgroundColor="$card"
+                disabled={isSyncing}
+              >
+                {t('Clear & Download Remote')}
+              </Button>
+
+              <Button
+                onPress={() => {
+                  onPushAndOverride();
+                  // 不需要在这里关闭 sheet，因为 handlePushAndOverride 方法会在完成后关闭
+                }}
+                theme={"gray" as any}
+                borderRadius="$4"
+                height={48}
+                justifyContent="flex-start"
+                paddingLeft="$3"
+                borderColor="$color10"
+                backgroundColor="$card"
+                disabled={isSyncing}
+              >
+                {t('Push & Override Remote')}
+              </Button>
+            </YStack>
+          )}
+
         </YStack>
       </Sheet.Frame>
     </Sheet>

@@ -6,13 +6,18 @@ import { getTransactions, getRecentTransactions } from '@/utils/transactions.uti
 import { useAuth } from './AuthProvider';
 import { syncSpendingWidgets } from "@/utils/spendingWidgetSync.utils";
 import { storage } from '@/utils/storage.utils';
+import { getFamilyBills } from '@/utils/family-bills.utils';
 
 // Define the data context type
 interface DataContextType {
+  // 个人数据
   bills: Bill[];
   transactions: Transaction[];
   recentTransactions: Transaction[];
   upcomingBills: Bill[];
+  // 家庭数据
+  familyBills: Bill[];
+  isFamilyBillsLoading: boolean;
   isLoading: {
     bills: boolean;
     transactions: boolean;
@@ -23,6 +28,11 @@ interface DataContextType {
   refreshData: (dataType?: 'bills' | 'transactions' | 'all') => Promise<void>;
   refreshUpcomingBills: () => Promise<void>;
   refreshRecentTransactions: () => Promise<void>;
+  // 家庭账单方法
+  refreshFamilyBills: () => Promise<void>;
+  loadFamilyBillsByDateRange: (startDate: string, endDate: string) => Promise<Bill[]>;
+  // 工具方法：按需获取指定视图模式的账单数据
+  getBillsForViewMode: (viewMode: 'personal' | 'family') => Bill[];
   dataVersion: number;
   budgetVersion: number;
   /**
@@ -47,11 +57,13 @@ interface DataProviderProps {
  * Data Provider component
  */
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { user, isRefreshBill, setIsRefreshBill } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [upcomingBills, setUpcomingBills] = useState<Bill[]>([]);
+  const [familyBills, setFamilyBills] = useState<Bill[]>([]);
+  const [isFamilyBillsLoading, setIsFamilyBillsLoading] = useState(false);
   const [isLoading, setIsLoading] = useState<DataContextType['isLoading']>({
     bills: false,
     transactions: false,
@@ -62,6 +74,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [dataVersion, setDataVersion] = useState<number>(Date.now());
   const [budgetVersion, setBudgetVersion] = useState<number>(Date.now());
   const lastRefresh = React.useRef<number>(0);
+  const familyBillsCache = React.useRef<{ [familyId: string]: { bills: Bill[], timestamp: number } }>({});
 
   // 加载账单数据
   const loadBills = useCallback(async () => {
@@ -77,6 +90,11 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setIsLoading(prev => ({ ...prev, bills: false, initial: false }));
     }
   }, []);
+  useEffect(() => {
+    if (!isRefreshBill) return
+    refreshData()
+    setIsRefreshBill(false);
+  }, [isRefreshBill])
 
   // 加载交易数据
   const loadTransactions = useCallback(async () => {
@@ -114,12 +132,88 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   }, []);
 
+  // 加载家庭账单数据
+  const loadFamilyBills = useCallback(async (
+    familyId?: string,
+    options?: {
+      startDate?: string;
+      endDate?: string;
+      limit?: number;
+      forceRefresh?: boolean;
+    }
+  ) => {
+    const targetFamilyId = familyId || user?.family?.id;
+    if (!targetFamilyId) {
+      console.warn("No family ID available for loading family bills");
+      return [];
+    }
+
+    // 检查缓存
+    const cached = familyBillsCache.current[targetFamilyId];
+    const cacheAge = cached ? Date.now() - cached.timestamp : Infinity;
+    const maxCacheAge = 5 * 60 * 1000; // 5分钟
+
+    if (!options?.forceRefresh && cached && cacheAge < maxCacheAge) {
+      setFamilyBills(cached.bills);
+      return cached.bills;
+    }
+
+    try {
+      setIsFamilyBillsLoading(true);
+
+      const response = await getFamilyBills(targetFamilyId, {
+        startDate: options?.startDate,
+        endDate: options?.endDate,
+        limit: options?.limit || 1000,
+      });
+
+      const bills = response.data?.bills || [];
+
+      // 标记这些账单为家庭账单
+      const processedFamilyBills: Bill[] = bills.map((bill: Bill) => ({
+        ...bill,
+        isFamilyBill: true,
+        familyId: targetFamilyId,
+        familyName: user?.family?.name || "Family",
+        // 家庭账单只读 - 只有创建者可以编辑
+        isReadOnly: bill.createdBy !== user?.id,
+      }));
+
+      setFamilyBills(processedFamilyBills);
+
+      // 更新缓存
+      familyBillsCache.current[targetFamilyId] = {
+        bills: processedFamilyBills,
+        timestamp: Date.now(),
+      };
+
+      return processedFamilyBills;
+    } catch (error) {
+      console.error(`Failed to load family bills for ${targetFamilyId}:`, error);
+      return [];
+    } finally {
+      setIsFamilyBillsLoading(false);
+    }
+  }, [user?.family?.id, user?.family?.name, user?.id]);
+
+  // 按日期范围加载家庭账单
+  const loadFamilyBillsByDateRange = useCallback(async (
+    startDate: string,
+    endDate: string,
+    familyId?: string
+  ) => {
+    return loadFamilyBills(familyId, {
+      startDate,
+      endDate,
+      forceRefresh: true, // 日期范围查询总是强制刷新
+    });
+  }, [loadFamilyBills]);
+
   // Function to refresh specific data
   const refreshData = useCallback(async (dataType: 'bills' | 'transactions' | 'all' = 'all') => {
     // 使用防抖逻辑，避免短时间内多次刷新
     const now = Date.now();
     if (now - lastRefresh.current < 1000) { // 1秒内不重复刷新
-      console.log("刷新间隔过短，跳过");
       return;
     }
     lastRefresh.current = now;
@@ -129,6 +223,11 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       if (dataType === 'bills' || dataType === 'all') {
         storage.invalidateCache('momiq_bills');
         await loadBills();
+
+        // 如果用户有家庭，也刷新家庭账单
+        if (user?.family?.id) {
+          await loadFamilyBills(user.family.id, { forceRefresh: true });
+        }
       }
 
       if (dataType === 'transactions' || dataType === 'all') {
@@ -138,7 +237,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
       // 更新数据版本 - 使用时间戳作为版本号
       const newVersion = Math.floor(now / 1000); // 使用秒级时间戳
-      console.log(`设置新数据版本: ${newVersion}`);
       setDataVersion(newVersion);
 
       // 账单或交易变化时，预算报表也需要更新（因为会影响预算状态和健康分数）
@@ -153,9 +251,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         }).catch(() => { });
       }, 200); // 减少延迟时间
     } catch (error) {
-      console.error("刷新数据失败:", error);
+      console.error("Failed to refresh data:", error);
     }
-  }, [loadBills, loadTransactions]);
+  }, [loadBills, loadTransactions, loadFamilyBills, user?.family?.id]);
 
   // 刷新即将到期账单
   const refreshUpcomingBills = useCallback(async () => {
@@ -167,12 +265,50 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     await loadRecentTransactions();
   }, [loadRecentTransactions]);
 
+  // 刷新家庭账单
+  const refreshFamilyBills = useCallback(async () => {
+    const familyId = user?.family?.id;
+    if (!familyId) {
+      console.warn("No family ID available for refreshing family bills");
+      return;
+    }
+    await loadFamilyBills(familyId, { forceRefresh: true });
+  }, [user?.family?.id, loadFamilyBills]);
+
+  // 按需获取指定视图模式的账单数据
+  const getBillsForViewMode = useCallback((viewMode: 'personal' | 'family'): Bill[] => {
+    if (viewMode === "personal") {
+      // 个人模式：只返回个人账单
+      return bills.filter(bill => !bill.isFamilyBill);
+    } else if (viewMode === "family") {
+      // 家庭模式：返回个人账单 + 家庭账单，但去重
+      const personalBills = bills.filter(bill => !bill.isFamilyBill);
+      const allBills = [...personalBills, ...familyBills];
+
+      // 按ID去重，优先保留家庭账单版本（因为可能包含更多信息）
+      const billMap = new Map<string, Bill>();
+      allBills.forEach(bill => {
+        const existing = billMap.get(bill.id);
+        if (!existing || bill.isFamilyBill) {
+          billMap.set(bill.id, bill);
+        }
+      });
+
+      return Array.from(billMap.values()).sort((a, b) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+    }
+
+    return bills;
+  }, [bills, familyBills]);
+
   // 初次加载数据
   useEffect(() => {
     const initialLoad = async () => {
       try {
         // 优先加载关键数据 - bills为主，transactions可后台
         await loadBills();
+
 
         // 后台加载次要数据
         setTimeout(() => {
@@ -181,12 +317,17 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           loadRecentTransactions();
         }, 100);
       } catch (error) {
-        console.error('初始数据加载失败:', error);
+        console.error('Failed to load initial data:', error);
       }
     };
 
     initialLoad();
   }, [loadBills, loadTransactions, loadUpcomingBills, loadRecentTransactions]);
+  useEffect(() => {
+    if (!user?.family?.id) return
+    // 如果用户有家庭，同时加载家庭账单数据
+    loadFamilyBills(user.family.id, { forceRefresh: false });
+  }, [loadFamilyBills, user?.family?.id]);
 
   /**
    * Increment the global {@link dataVersion} so that any hook relying on this
@@ -204,14 +345,22 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   // Context value
   const contextValue: DataContextType = {
+    // 个人数据
     bills,
     transactions,
     recentTransactions,
     upcomingBills,
+    // 家庭数据
+    familyBills,
+    isFamilyBillsLoading,
     isLoading,
     refreshData,
     refreshUpcomingBills,
     refreshRecentTransactions,
+    // 家庭账单方法
+    refreshFamilyBills,
+    loadFamilyBillsByDateRange,
+    getBillsForViewMode,
     dataVersion,
     budgetVersion,
     bumpDataVersion,
@@ -236,4 +385,4 @@ export const useData = (): DataContextType => {
   }
 
   return context;
-}; 
+};

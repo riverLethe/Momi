@@ -8,6 +8,7 @@ const DEFAULT_USER_PREFERENCES: UserPreferences = {
   theme: "system",
   notificationsEnabled: true,
   defaultAccount: "main",
+  viewMode: "personal", // 默认为个人视图
 };
 
 /**

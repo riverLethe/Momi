@@ -1,5 +1,7 @@
 export default {
   translation: {
+    // App Name
+    MomiQ: "抹米记账",
     // Categories
     Food: "餐饮",
     Transport: "交通",
@@ -600,11 +602,25 @@ export default {
 
     // Family Members
     "Remove Member": "移除成员",
-    "Are you sure you want to remove {{name}} from the family?": "确定要将{{name}}从家庭中移除吗？",
-    "You": "您",
+    "Are you sure you want to remove {{name}} from the family?":
+      "确定要将{{name}}从家庭中移除吗？",
+    You: "您",
     "Last transaction": "最后记账",
     "No family members yet": "暂无家庭成员",
     "Share your invite code to add members": "分享邀请码以添加成员",
+
+    // Family Join Requests
+    "New Join Requests": "新的加入请求",
+    "users want to join your family space": "个用户想要加入您的家庭空间",
+    "Handle Later": "稍后处理",
+    "Join Request": "加入请求",
+    "Are you sure you want to approve": "确定要批准",
+    "Are you sure you want to reject": "确定要拒绝",
+    "'s join request?": "的加入请求吗？",
+    Approve: "批准",
+    Reject: "拒绝",
+    Success: "成功",
+    "Failed to process request": "处理请求失败",
 
     // Common actions
     Remove: "移除",
@@ -613,10 +629,96 @@ export default {
     "Local bills detected. How would you like to sync with your cloud data?":
       "检测到本地账单。您希望如何与云数据同步？",
     Merge: "合并",
-    "Clear and Download": "清空并下载",
-    "Push and Override": "推送并覆盖",
     Account: "账户",
     "Clear & Download Remote": "清空并下载",
     "Push & Override Remote": "推送并覆盖",
+
+    // Family Space
+    "Family Space": "家庭空间",
+    "Read Only": "只读",
+    "Join Family": "加入家庭",
+    "Join someone else's family using an invite code":
+      "使用邀请码加入别人的家庭",
+    "Enter 6-digit invite code": "输入6位邀请码",
+    "Create My Family": "创建我的家庭",
+    "Create your family space and invite someone to join":
+      "创建您的家庭空间并邀请某人加入",
+    // 家庭操作相关
+    "Family Actions": "家庭操作",
+    "Dissolving...": "解散中...",
+    "Leaving...": "离开中...",
+    "Family Name": "家庭名称",
+    Info: "信息",
+    "Invite code copied to clipboard": "邀请码已复制到剪贴板",
+    "Failed to load family space": "加载家庭空间失败",
+    "Family feature enabled successfully": "家庭功能已成功启用",
+    "Failed to enable family feature": "启用家庭功能失败",
+    "Please enter invite code": "请输入邀请码",
+    "Invite code must be 7 characters": "邀请码必须为7个字符",
+    "Invalid invite code": "无效的邀请码",
+    "You are already a member of this family": "您已经是该家庭的成员",
+    "Family: {{name}}\nCreated by: {{creator}}\nMembers: {{count}}\n\nDo you want to send a join request to this family?":
+      "家庭: {{name}}\n创建者: {{creator}}\n成员数: {{count}}\n\n您想向该家庭发送加入请求吗？",
+    "Join request sent! Waiting for approval from family creator.":
+      "加入请求已发送！等待家庭创建者批准。",
+    "Failed to send join request": "发送加入请求失败",
+    "Failed to find family. Please check your invite code.":
+      "查找家庭失败。请检查您的邀请码。",
+    "Family name updated": "家庭名称已更新",
+    "Failed to update family name": "更新家庭名称失败",
+    "Failed to update family name, please try again":
+      "更新家庭名称失败，请重试",
+    "Failed to copy invite code": "复制邀请码失败",
+    "Refresh Invite Code": "刷新邀请码",
+    "Are you sure you want to refresh the invite code? The old invite code will become invalid.":
+      "您确定要刷新邀请码吗？旧的邀请码将变为无效。",
+    "Invite code refreshed": "邀请码已刷新",
+    "Failed to refresh invite code": "刷新邀请码失败",
+    'Are you sure you want to dissolve "{{name}}"? This action cannot be undone and all members will be removed.':
+      '您确定要解散"{{name}}"吗？此操作无法撤消，所有成员将被移除。',
+    "Family dissolved successfully": "家庭已成功解散",
+    "Failed to dissolve family": "解散家庭失败",
+    'Are you sure you want to leave "{{name}}"?': '您确定要离开"{{name}}"吗？',
+    "Left family successfully": "已成功离开家庭",
+    "Failed to leave family": "离开家庭失败",
+    "Please login first": "请先登录",
+    "Member removed successfully": "成员已成功移除",
+    "Failed to remove member": "移除成员失败",
+
+    // Data Sync Status
+    "Not signed in": "未登录",
+    "Syncing...": "同步中...",
+    "changes pending": "待处理更改",
+    "Synced {{time}} ago": "{{time}}前同步",
+
+    // Sync Error Messages
+    "Sync Failed": "同步失败",
+    "Failed to sync your data. Please try again later.":
+      "同步数据失败，请稍后重试。",
+
+    // Auth Provider Messages
+    "Merging local and remote data...": "合并本地和远程数据...",
+    "Clearing local data and downloading from server...":
+      "清除本地数据并从服务器下载...",
+    "Pushing local data to server...": "推送本地数据到服务器...",
+    "Login failed. Please check your credentials.":
+      "登录失败，请检查您的凭据。",
+    "Google sign-in failed": "Google登录失败",
+    "Google login is not properly configured. Please check environment variables.":
+      "Google登录未正确配置，请检查环境变量。",
+    "Google login is not configured": "Google登录未配置",
+    "Apple Sign In is only available on iOS devices":
+      "Apple登录仅在iOS设备上可用",
+    "Apple sign-in failed": "Apple登录失败",
+    "WeChat login is not configured": "微信登录未配置",
+    "Pending Changes": "待处理更改",
+    "You have {{count}} unsaved changes. We'll try to sync them before logging out.":
+      "您有{{count}}个未保存的更改。我们将尝试在退出登录前同步它们。",
+    "Offline Changes": "离线更改",
+    "You have {{count}} unsaved changes that cannot be synced while offline. These changes will be lost if you log out now.":
+      "您有{{count}}个无法在离线状态下同步的未保存更改。如果现在退出登录，这些更改将丢失。",
+    "Log Out Anyway": "仍然退出登录",
+    "Logout failed": "退出登录失败",
+    "Member List": "成员列表",
   },
 };

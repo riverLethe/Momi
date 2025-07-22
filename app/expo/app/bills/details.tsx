@@ -151,7 +151,7 @@ export default function BillDetailsScreen() {
 
   // 删除账单处理 - 优化删除操作
   const handleDeletePress = useCallback(() => {
-    if (!bill) return;
+    if (!bill || bill.isReadOnly) return; // 只读账单不允许删除
 
     setUpdating(true);
     confirmDeleteBill(bill, {
@@ -171,7 +171,7 @@ export default function BillDetailsScreen() {
 
   // 更新分类处理 - 优化更新操作
   const handleCategoryChange = useCallback(async (categoryId: string) => {
-    if (!bill) return;
+    if (!bill || bill.isReadOnly) return; // 只读账单不允许编辑
     // 只有当分类实际变化时才更新
     if (bill.category === categoryId) {
       setActiveSheet(null);
@@ -199,7 +199,7 @@ export default function BillDetailsScreen() {
 
   // 更新字段通用处理 - 优化字段更新
   const handleUpdateField = useCallback(async (field: keyof Bill, value: any) => {
-    if (!bill) return;
+    if (!bill || bill.isReadOnly) return; // 只读账单不允许编辑
     // 只有当值实际变化时才更新
     if (bill[field] === value) {
       return;
@@ -224,10 +224,21 @@ export default function BillDetailsScreen() {
     });
   }, [bill, updateBillField, id]);
 
-  // Sheet打开处理器
-  const handleOpenCategorySheet = useCallback(() => setActiveSheet("category"), []);
-  const handleOpenDateSheet = useCallback(() => setActiveSheet("date"), []);
-  const handleOpenAmountSheet = useCallback(() => setActiveSheet("amount"), []);
+  // Sheet打开处理器 - 只读账单不允许打开编辑弹窗
+  const handleOpenCategorySheet = useCallback(() => {
+    if (bill?.isReadOnly) return;
+    setActiveSheet("category");
+  }, [bill?.isReadOnly]);
+  
+  const handleOpenDateSheet = useCallback(() => {
+    if (bill?.isReadOnly) return;
+    setActiveSheet("date");
+  }, [bill?.isReadOnly]);
+  
+  const handleOpenAmountSheet = useCallback(() => {
+    if (bill?.isReadOnly) return;
+    setActiveSheet("amount");
+  }, [bill?.isReadOnly]);
 
   if (loading || !bill) {
     return (
@@ -267,6 +278,7 @@ export default function BillDetailsScreen() {
             onBack={() => router.back()}
             onDelete={handleDeletePress}
             updating={updating}
+            isReadOnly={bill.isReadOnly}
           />
 
           <KeyboardAvoidingView

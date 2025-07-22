@@ -74,10 +74,21 @@ async function initializeDatabase() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         sync_version INTEGER DEFAULT 1,
+        family_space_id TEXT,
         is_deleted BOOLEAN DEFAULT 0,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (family_space_id) REFERENCES family_spaces (id)
       )
     `);
+
+    // Migration: Add family_space_id column to existing bills table if it doesn't exist
+    try {
+      await db.execute(`
+        ALTER TABLE bills ADD COLUMN family_space_id TEXT
+      `);
+    } catch (error) {
+      // Column already exists, ignore the error
+    }
 
     await db.execute(`
       CREATE TABLE IF NOT EXISTS budgets (
@@ -152,6 +163,9 @@ async function initializeDatabase() {
     // Create indexes
     await db.execute(
       `CREATE INDEX IF NOT EXISTS idx_bills_user_date ON bills (user_id, bill_date)`
+    );
+    await db.execute(
+      `CREATE INDEX IF NOT EXISTS idx_bills_family_date ON bills (family_space_id, bill_date)`
     );
     await db.execute(
       `CREATE INDEX IF NOT EXISTS idx_budgets_user_category ON budgets (user_id, category)`

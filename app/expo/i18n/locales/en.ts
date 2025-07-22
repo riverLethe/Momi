@@ -629,11 +629,27 @@ export default {
 
     // Family Members
     "Remove Member": "Remove Member",
-    "Are you sure you want to remove {{name}} from the family?": "Are you sure you want to remove {{name}} from the family?",
-    "You": "You",
+    "Are you sure you want to remove {{name}} from the family?":
+      "Are you sure you want to remove {{name}} from the family?",
+    You: "You",
     "Last transaction": "Last transaction",
     "No family members yet": "No family members yet",
-    "Share your invite code to add members": "Share your invite code to add members",
+    "Share your invite code to add members":
+      "Share your invite code to add members",
+
+    // Family Join Requests
+    "New Join Requests": "New Join Requests",
+    "users want to join your family space":
+      "users want to join your family space",
+    "Handle Later": "Handle Later",
+    "Join Request": "Join Request",
+    "Are you sure you want to approve": "Are you sure you want to approve",
+    "Are you sure you want to reject": "Are you sure you want to reject",
+    "'s join request?": "'s join request?",
+    Approve: "Approve",
+    Reject: "Reject",
+    Success: "Success",
+    "Failed to process request": "Failed to process request",
 
     // Common
     Remove: "Remove",
@@ -642,10 +658,101 @@ export default {
     "Local bills detected. How would you like to sync with your cloud data?":
       "Local bills detected. How would you like to sync with your cloud data?",
     Merge: "Merge",
-    "Clear and Download": "Clear and Download",
-    "Push and Override": "Push and Override",
     Account: "Account",
     "Clear & Download Remote": "Clear & Download Remote",
     "Push & Override Remote": "Push & Override Remote",
+    "Family Space": "Family Space",
+    "Read Only": "Read Only",
+    "Join Family": "Join Family",
+    "Join someone else's family using an invite code":
+      "Join someone else's family using an invite code",
+    "Enter 6-digit invite code": "Enter 6-digit invite code",
+    "Create My Family": "Create My Family",
+    "Create your family space and invite someone to join":
+      "Create your family space and invite someone to join",
+
+    // 家庭操作相关 (Family Actions)
+    "Family Actions": "Family Actions",
+    "Dissolving...": "Dissolving...",
+    "Leaving...": "Leaving...",
+    "Family Name": "Family Name",
+    Info: "Info",
+    "Invite code copied to clipboard": "Invite code copied to clipboard",
+    "Failed to load family space": "Failed to load family space",
+    "Family feature enabled successfully":
+      "Family feature enabled successfully",
+    "Failed to enable family feature": "Failed to enable family feature",
+    "Please enter invite code": "Please enter invite code",
+    "Invite code must be 7 characters": "Invite code must be 7 characters",
+    "Invalid invite code": "Invalid invite code",
+    "You are already a member of this family":
+      "You are already a member of this family",
+    "Family: {{name}}\nCreated by: {{creator}}\nMembers: {{count}}\n\nDo you want to send a join request to this family?":
+      "Family: {{name}}\nCreated by: {{creator}}\nMembers: {{count}}\n\nDo you want to send a join request to this family?",
+    "Join request sent! Waiting for approval from family creator.":
+      "Join request sent! Waiting for approval from family creator.",
+    "Failed to send join request": "Failed to send join request",
+    "Failed to find family. Please check your invite code.":
+      "Failed to find family. Please check your invite code.",
+    "Family name updated": "Family name updated",
+    "Failed to update family name": "Failed to update family name",
+    "Failed to update family name, please try again":
+      "Failed to update family name, please try again",
+    "Failed to copy invite code": "Failed to copy invite code",
+    "Refresh Invite Code": "Refresh Invite Code",
+    "Are you sure you want to refresh the invite code? The old invite code will become invalid.":
+      "Are you sure you want to refresh the invite code? The old invite code will become invalid.",
+    "Invite code refreshed": "Invite code refreshed",
+    "Failed to refresh invite code": "Failed to refresh invite code",
+    'Are you sure you want to dissolve "{{name}}"? This action cannot be undone and all members will be removed.':
+      'Are you sure you want to dissolve "{{name}}"? This action cannot be undone and all members will be removed.',
+    "Family dissolved successfully": "Family dissolved successfully",
+    "Failed to dissolve family": "Failed to dissolve family",
+    'Are you sure you want to leave "{{name}}"?':
+      'Are you sure you want to leave "{{name}}"?',
+    "Left family successfully": "Left family successfully",
+    "Failed to leave family": "Failed to leave family",
+    "Please login first": "Please login first",
+    "Member removed successfully": "Member removed successfully",
+    "Failed to remove member": "Failed to remove member",
+    "Dissolve Family": "Dissolve Family",
+
+    // Sync Error Messages
+    "Sync Failed": "Sync Failed",
+    "Failed to sync your data. Please try again later.":
+      "Failed to sync your data. Please try again later.",
+
+    // Auth Provider Messages
+    "Merging local and remote data...": "Merging local and remote data...",
+    "Clearing local data and downloading from server...":
+      "Clearing local data and downloading from server...",
+    "Pushing local data to server...": "Pushing local data to server...",
+    "Login failed. Please check your credentials.":
+      "Login failed. Please check your credentials.",
+    "Google sign-in failed": "Google sign-in failed",
+    "Google login is not properly configured. Please check environment variables.":
+      "Google login is not properly configured. Please check environment variables.",
+    "Google login is not configured": "Google login is not configured",
+    "Apple Sign In is only available on iOS devices":
+      "Apple Sign In is only available on iOS devices",
+    "Apple sign-in failed": "Apple sign-in failed",
+    "WeChat login is not configured": "WeChat login is not configured",
+    "Pending Changes": "Pending Changes",
+    "You have {{count}} unsaved changes. We'll try to sync them before logging out.":
+      "You have {{count}} unsaved changes. We'll try to sync them before logging out.",
+    "Offline Changes": "Offline Changes",
+    "You have {{count}} unsaved changes that cannot be synced while offline. These changes will be lost if you log out now.":
+      "You have {{count}} unsaved changes that cannot be synced while offline. These changes will be lost if you log out now.",
+    "Log Out Anyway": "Log Out Anyway",
+    "Logout failed": "Logout failed",
+    "Leave Family": "Leave Family",
+    "Send Request": "Send Request",
+    Refresh: "Refresh",
+    Dissolve: "Dissolve",
+    Leave: "Leave",
+
+    // App Name
+    MomiQ: "MomiQ",
+    "Member List": "Member List",
   },
 };

@@ -16,3 +16,15 @@ export interface FamilyMember {
   joinedAt: Date;
   lastTransactionTime?: Date; // 最后记账时间
 }
+
+export interface FamilyJoinRequest {
+  id: string;
+  familyId: string;
+  userId: string;
+  username: string;
+  userEmail?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt: string;
+  respondedAt?: string;
+  respondedBy?: string;
+}

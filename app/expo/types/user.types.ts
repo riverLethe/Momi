@@ -1,3 +1,5 @@
+import { FamilySpace } from "./family.types";
+
 export interface User {
   id: string;
   name: string;
@@ -5,6 +7,7 @@ export interface User {
   avatar?: string;
   createdAt: Date;
   updatedAt: Date;
+  family?: FamilySpace | null;
 }
 
 export interface UserPreferences {
@@ -13,6 +16,7 @@ export interface UserPreferences {
   theme: "light" | "dark" | "system";
   notificationsEnabled: boolean;
   defaultAccount: string;
+  viewMode?: "personal" | "family"; // 添加视图模式偏好设置
   /**
    * Categories that should be INCLUDED when calculating budget statistics.
    * If this array is non-empty it takes precedence over excluded categories.

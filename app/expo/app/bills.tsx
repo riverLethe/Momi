@@ -26,13 +26,16 @@ export default function BillsScreen() {
   const { viewMode } = useViewStore();
   const { isAuthenticated, user } = useAuth();
   const { t } = useTranslation();
-  const { bills, isLoading: dataLoading, refreshData } = useData();
+  const { getBillsForViewMode, isLoading: dataLoading, refreshData } = useData();
 
   const [syncingRemote, setSyncingRemote] = useState(false);
   const { confirmDeleteBill } = useBillActions();
 
   /** Track global open bill id for swipe actions */
   const [openBillId, setOpenBillId] = useState<string | null>(null);
+
+  // 获取当前视图模式对应的账单数据
+  const bills = useMemo(() => getBillsForViewMode(viewMode), [getBillsForViewMode, viewMode]);
 
   // Detect AI filter params from route (deep link or AI search)
   const params = useLocalSearchParams();
@@ -172,29 +175,17 @@ export default function BillsScreen() {
         if (typeof stableParams.endDate === "string") query.endDate = stableParams.endDate;
       }
 
-      // View mode filter still applies – family/personal
-      const scopedBills = bills.filter((b) =>
-        viewMode === "family" ? b.isFamilyBill : !b.isFamilyBill
-      );
-
-      return filterBills(scopedBills, query);
+      // bills 数据已经根据视图模式过滤，直接使用
+      return filterBills(bills, query);
     }
 
     // ---- Default (manual) filters ----
+    // bills 数据已经根据视图模式合并，直接使用
     let filtered = [...bills];
 
-    // View mode filter (personal/family)
-    if (viewMode === "family") {
-      if (!isAuthenticated) {
-        // If not logged in, can't view family bills
-        filtered = [];
-      } else {
-        // Filter to show only family bills
-        filtered = filtered.filter((bill) => bill.isFamilyBill);
-      }
-    } else {
-      // Filter to show only personal bills
-      filtered = filtered.filter((bill) => !bill.isFamilyBill);
+    // 如果未登录且在家庭模式，返回空数组
+    if (viewMode === "family" && !isAuthenticated) {
+      filtered = [];
     }
 
     // Date filter

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DatePeriodEnum,
   PeriodSelectorData,
@@ -8,13 +8,14 @@ import {
 import { fetchReportData, fetchBudgetReportData } from "@/utils/reports.utils";
 import { generatePeriodSelectors } from "@/utils/date.utils";
 import { useData } from "@/providers/DataProvider";
-import { InteractionManager } from "react-native";
+import { useBudgets } from "@/hooks/useBudgets";
 
 export const useReportData = (
   viewMode: "personal" | "family",
   initialPeriodType: DatePeriodEnum = DatePeriodEnum.WEEK
 ) => {
-  const { dataVersion } = useData();
+  const { dataVersion, getBillsForViewMode, transactions } = useData();
+  const { budgets } = useBudgets();
   const [periodType, setPeriodType] =
     useState<DatePeriodEnum>(initialPeriodType);
   const [periodSelectors, setPeriodSelectors] = useState<PeriodSelectorData[]>(
@@ -62,9 +63,15 @@ export const useReportData = (
         // 记录此次请求编号
         const currentRequestId = ++requestIdRef.current;
 
+        // 获取当前视图模式的账单数据
+        const bills = getBillsForViewMode(viewMode);
+
         const data = await fetchReportData(
           periodType,
           viewMode,
+          bills,
+          transactions,
+          budgets,
           selectedPeriodId,
           dataVersion,
           forceRefresh
@@ -84,7 +91,15 @@ export const useReportData = (
         isLoadingRef.current = false;
       }
     },
-    [periodType, viewMode, selectedPeriodId, dataVersion]
+    [
+      periodType,
+      viewMode,
+      selectedPeriodId,
+      dataVersion,
+      getBillsForViewMode,
+      transactions,
+      budgets,
+    ]
   );
 
   // 初始加载和数据变化时的重新加载
@@ -145,7 +160,9 @@ export const useSplitReportData = (
   viewMode: "personal" | "family",
   initialPeriodType: DatePeriodEnum = DatePeriodEnum.WEEK
 ) => {
-  const { dataVersion, budgetVersion } = useData();
+  const { dataVersion, budgetVersion, getBillsForViewMode, transactions } =
+    useData();
+  const { budgets } = useBudgets();
   const [periodType, setPeriodType] =
     useState<DatePeriodEnum>(initialPeriodType);
   const [periodSelectors, setPeriodSelectors] = useState<PeriodSelectorData[]>(
@@ -180,9 +197,15 @@ export const useSplitReportData = (
       const currentRequestId = ++coreRequestIdRef.current;
 
       try {
+        // 获取当前视图模式的账单数据
+        const bills = getBillsForViewMode(viewMode);
+
         const data = await fetchReportData(
           periodType,
           viewMode,
+          bills,
+          transactions,
+          budgets,
           selectedPeriodId,
           dataVersion,
           forceRefresh,
@@ -203,7 +226,15 @@ export const useSplitReportData = (
         }
       }
     },
-    [periodType, viewMode, selectedPeriodId, dataVersion]
+    [
+      periodType,
+      viewMode,
+      selectedPeriodId,
+      dataVersion,
+      getBillsForViewMode,
+      transactions,
+      budgets,
+    ]
   );
 
   // 加载预算报表数据
@@ -213,9 +244,14 @@ export const useSplitReportData = (
       const currentRequestId = ++budgetRequestIdRef.current;
 
       try {
+        // 获取当前视图模式的账单数据
+        const bills = getBillsForViewMode(viewMode);
+
         const data = await fetchBudgetReportData(
           periodType,
           viewMode,
+          bills,
+          budgets,
           selectedPeriodId,
           budgetVersion,
           forceRefresh
@@ -235,7 +271,14 @@ export const useSplitReportData = (
         }
       }
     },
-    [periodType, viewMode, selectedPeriodId, budgetVersion]
+    [
+      periodType,
+      viewMode,
+      selectedPeriodId,
+      budgetVersion,
+      getBillsForViewMode,
+      budgets,
+    ]
   );
 
   // 核心报表数据变化时重新加载

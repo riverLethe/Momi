@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { Alert, Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Google from 'expo-auth-session/providers/google';
+import NetInfo from '@react-native-community/netinfo';
+import { useTranslation } from 'react-i18next';
 import { User, AuthState } from '@/types/user.types';
 import {
   getAuthToken,
@@ -13,10 +15,10 @@ import {
   isAuthenticated as checkAuthentication,
 } from '@/utils/userPreferences.utils';
 import { storage, STORAGE_KEYS } from '@/utils/storage.utils';
-import { clearQueue } from '@/utils/offlineQueue.utils';
+import { clearQueue, getPendingCount, getQueue } from '@/utils/offlineQueue.utils';
 import { apiClient } from '@/utils/api';
-import { smartSync } from '@/utils/sync.utils';
 import { SyncOptionsSheet } from '@/components/ui/SyncOptionsSheet';
+import { GlobalJoinRequestsListener } from '@/components/family/GlobalJoinRequestsListener';
 
 // Configure Google Sign-In
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -53,6 +55,8 @@ interface AuthContextType extends AuthState {
   lastSyncTime: Date | null;
   showSyncOptionsSheet: boolean;
   setSyncOptionsSheet: (show: boolean) => void;
+  isRefreshBill: boolean;
+  setIsRefreshBill: (isRefresh: boolean) => void;
 }
 
 // Create auth context
@@ -67,11 +71,16 @@ interface AuthProviderProps {
  * Auth Provider component
  */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const { t } = useTranslation();
   const [authState, setAuthState] = useState<AuthState>(initialAuthState);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [showSyncOptionsSheet, setShowSyncOptionsSheet] = useState(false);
   const [syncToken, setSyncToken] = useState<string | null>(null);
   const [localBills, setLocalBills] = useState<any[]>([]);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncOperation, setSyncOperation] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isRefreshBill, setIsRefreshBill] = useState(false);
 
   // Google Auth Request Setup
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
@@ -182,26 +191,133 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   /**
    * Sync data with server
+   * Implements regular sync strategy:
+   * 1. Records user operations on bills while offline in an operation queue
+   * 2. Automatically syncs the operation queue to remote when user has network
+   * 3. Clears operation queue when user logs out
    */
   const syncData = useCallback(async (): Promise<void> => {
     if (!authState.isAuthenticated || !authState.user) return;
 
     try {
-      // 使用智能同步策略，非阻塞
-      await smartSync(authState.user.id, "app_start");
+      // Get authentication token
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error("No auth token available");
+      }
 
-      // 更新本地存储的同步时间，确保与useDataSync保持一致
+      // Check network status
+      const netInfo = await NetInfo.fetch();
+      const isOnline = netInfo.isConnected === true;
+
+      if (!isOnline) {
+        console.info('Device offline, skipping sync');
+        return;
+      }
+
+      // Get offline operation queue
+      const queue = await getQueue();
+      if (queue.length > 0) {
+        console.info(`Uploading ${queue.length} queued bill operations...`);
+
+        // Process in batches for better reliability
+        const batchSize = 50;
+        for (let i = 0; i < queue.length; i += batchSize) {
+          const batch = queue.slice(i, i + batchSize);
+          await apiClient.sync.uploadBills(token, batch);
+          console.info(`Uploaded batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(queue.length / batchSize)}`);
+        }
+
+        // Clear queue after successful upload
+        await clearQueue();
+      }
+
+      // Download remote changes
+      const lastSyncTimeStr = await storage.getItem<string>("momiq_last_sync");
+      console.info(`Downloading bills since ${lastSyncTimeStr || 'beginning'}`);
+
+      const response = await apiClient.sync.downloadBills(
+        token,
+        lastSyncTimeStr ? lastSyncTimeStr : undefined
+      );
+
+      const remoteBills = response.bills || [];
+
+      if (Array.isArray(remoteBills) && remoteBills.length > 0) {
+        console.info(`Downloaded ${remoteBills.length} bills from server`);
+
+        // Get local bills
+        const localBills = (await storage.getItem<any[]>(STORAGE_KEYS.BILLS)) || [];
+        console.info(`Merging with ${localBills.length} local bills`);
+
+        // Merge local and remote bills with conflict resolution
+        const merged: any[] = [...localBills];
+        const conflicts: any[] = [];
+
+        remoteBills.forEach((remote: any) => {
+          const idx = merged.findIndex((b: any) => b.id === remote.id);
+
+          // Handle deleted bills
+          if (remote.deleted) {
+            if (idx !== -1) merged.splice(idx, 1);
+            return;
+          }
+
+          if (idx !== -1) {
+            // Potential conflict - check timestamps
+            const localBill = merged[idx];
+            const localUpdatedAt = new Date(localBill.updatedAt || localBill.createdAt).getTime();
+            const remoteUpdatedAt = new Date(remote.updatedAt || remote.createdAt).getTime();
+
+            if (remoteUpdatedAt > localUpdatedAt) {
+              // Remote is newer, use it
+              merged[idx] = remote;
+            } else if (remoteUpdatedAt < localUpdatedAt) {
+              // Local is newer, keep it and track conflict
+              conflicts.push({
+                local: localBill,
+                remote: remote,
+                resolution: 'kept-local'
+              });
+            } else {
+              // Same timestamp, keep remote for consistency
+              merged[idx] = remote;
+            }
+          } else {
+            // No conflict, just add the remote bill
+            merged.push(remote);
+          }
+        });
+
+        // Save merged bills
+        await storage.setItem(STORAGE_KEYS.BILLS, merged);
+        // Refresh cache
+        storage.invalidateCache(STORAGE_KEYS.BILLS);
+
+
+      } else {
+        console.info('No new bills to download');
+      }
+
+      // Update sync time
       const newSyncTime = new Date();
       await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
       setLastSyncTime(newSyncTime);
+
+      // 刷新数据提供者中的数据
+      setIsRefreshBill(true);
+      console.info('Data sync completed successfully');
     } catch (error) {
       console.error('Data sync error:', error);
-      // 不阻塞用户流程，静默处理错误
+      // Don't block user flow, handle error silently
+      // But we could add a retry mechanism here in the future
     }
   }, [authState.isAuthenticated, authState.user]);
 
   /**
    * After successful login prompt user how to handle existing local bills.
+   * Provides options to merge data, clear local and download from server,
+   * or push local data to server and override.
    */
   const handlePostLoginSync = useCallback(
     async (token: string) => {
@@ -228,31 +344,254 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Sync option handlers
   const handleMerge = useCallback(async () => {
-    syncData();
-  }, [syncData]);
-
-  const handleClearAndDownload = useCallback(async () => {
-    await storage.setItem(STORAGE_KEYS.BILLS, []);
-    await clearQueue();
-    syncData();
-  }, [syncData]);
-
-  const handlePushAndOverride = useCallback(async () => {
-    if (!syncToken) return;
+    // Merge strategy: Combine remote and local bills, deduplicating by bill ID
+    // This is the smart merge option that preserves the most data
     try {
-      await apiClient.sync.uploadBills(syncToken, localBills.map((b) => ({ action: 'create', bill: b })));
-      await clearQueue();
-      syncData();
+      setIsSyncing(true);
+      setSyncOperation(t('Merging local and remote data...'));
+      setSyncProgress(10);
+      console.info('Executing merge strategy');
+      // Get remote bills and merge with local bills
+      if (syncToken) {
+        const token = syncToken;
+        setSyncProgress(20);
+        const response = await apiClient.sync.downloadBills(token);
+        const remoteBills = response.bills || [];
+
+        if (Array.isArray(remoteBills) && remoteBills.length > 0) {
+          // Merge local and remote bills, deduplicating by ID
+          const merged: any[] = [...localBills];
+          const conflicts: any[] = [];
+
+          remoteBills.forEach((remote: any) => {
+            const idx = merged.findIndex((b: any) => b.id === remote.id);
+            if (remote.deleted) {
+              // If remote bill is marked as deleted, remove from merged result
+              if (idx !== -1) merged.splice(idx, 1);
+              return;
+            }
+
+            if (idx !== -1) {
+              // If bill exists locally with same ID, keep the newest version
+              const localBill = merged[idx];
+              const localUpdatedAt = new Date(localBill.updatedAt || localBill.createdAt).getTime();
+              const remoteUpdatedAt = new Date(remote.updatedAt || remote.createdAt).getTime();
+
+              if (remoteUpdatedAt > localUpdatedAt) {
+                merged[idx] = remote;
+              } else if (remoteUpdatedAt < localUpdatedAt) {
+                // Local is newer, track conflict but keep local
+                conflicts.push({
+                  local: localBill,
+                  remote: remote,
+                  resolution: 'kept-local'
+                });
+              }
+            } else {
+              // If bill doesn't exist locally, add the remote bill
+              merged.push(remote);
+            }
+          });
+
+          setSyncProgress(50);
+          // Save merged bills
+          await storage.setItem(STORAGE_KEYS.BILLS, merged);
+          setSyncProgress(70);
+          // Clear offline queue since we've processed all changes
+          await clearQueue();
+          setSyncProgress(80);
+          // Update sync time
+          const newSyncTime = new Date();
+          await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+          setLastSyncTime(newSyncTime);
+          setSyncProgress(90);
+
+          // Refresh cache
+          storage.invalidateCache(STORAGE_KEYS.BILLS);
+          setSyncProgress(100);
+
+        }
+      }
+
+      // Wait a moment to show 100% completion
+      setTimeout(async () => {
+        // 刷新数据提供者中的数据
+        setIsRefreshBill(true);
+        setIsSyncing(false);
+        setSyncProgress(0);
+        // Close sync options sheet
+        setShowSyncOptionsSheet(false);
+      }, 1000);
     } catch (err) {
-      console.error('Upload bills failed', err);
+      console.error('Bill merge failed:', err);
+      // Still try regular sync on error
       syncData();
     }
   }, [syncToken, localBills, syncData]);
 
+  const handleClearAndDownload = useCallback(async () => {
+    // Clear and download strategy: Clear local bills and download all bills from remote
+    // This is useful when you want to reset local data and use server as source of truth
+    try {
+      setIsSyncing(true);
+      setSyncOperation(t('Clearing local data and downloading from server...'));
+      setSyncProgress(10);
+      console.info('Executing clear and download strategy');
+      // Clear local bills
+      await storage.setItem(STORAGE_KEYS.BILLS, []);
+      setSyncProgress(30);
+      // Clear offline queue
+      await clearQueue();
+      setSyncProgress(40);
+
+      // Download bills from remote
+      if (syncToken) {
+        const token = syncToken;
+        setSyncProgress(50);
+        const response = await apiClient.sync.downloadBills(token);
+        const remoteBills = response.bills || [];
+        setSyncProgress(70);
+
+        if (Array.isArray(remoteBills) && remoteBills.length > 0) {
+          console.info(`Downloaded ${remoteBills.length} bills from server`);
+          // Save remote bills locally
+          await storage.setItem(STORAGE_KEYS.BILLS, remoteBills);
+          setSyncProgress(85);
+          // Update sync time
+          const newSyncTime = new Date();
+          await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+          setLastSyncTime(newSyncTime);
+          setSyncProgress(95);
+
+          // Refresh cache
+          storage.invalidateCache(STORAGE_KEYS.BILLS);
+          setSyncProgress(100);
+        } else {
+          console.info('No bills found on server');
+          setSyncProgress(100);
+        }
+      }
+
+      // Wait a moment to show 100% completion
+      setTimeout(async () => {
+        // 刷新数据提供者中的数据
+        setIsRefreshBill(true);
+        setIsSyncing(false);
+        setSyncProgress(0);
+        // Close sync options sheet
+        setShowSyncOptionsSheet(false);
+      }, 1000);
+    } catch (err) {
+      console.error('Clear and download bills failed:', err);
+      // Still try regular sync on error
+      syncData();
+    }
+  }, [syncToken, syncData]);
+
+  const handlePushAndOverride = useCallback(async () => {
+    // Push and override strategy: Push all local bills and override remote bills
+    // This is useful when local data is the source of truth and you want to reset server data
+    if (!syncToken) return;
+
+    try {
+      setIsSyncing(true);
+      setSyncOperation(t('Pushing local data to server...'));
+      setSyncProgress(5);
+      console.info('Executing push and override strategy');
+      // Upload all local bills as create operations to server
+      const operations = localBills.map((bill) => ({
+        action: 'create' as const,
+        bill: bill
+      }));
+      setSyncProgress(15);
+
+      console.info(`Uploading ${operations.length} local bills to override server data`);
+
+      // Process in batches for better reliability
+      const batchSize = 50;
+      const totalBatches = Math.ceil(operations.length / batchSize);
+      for (let i = 0; i < operations.length; i += batchSize) {
+        const batch = operations.slice(i, i + batchSize);
+        await apiClient.sync.uploadBills(syncToken, batch);
+        const currentBatch = Math.floor(i / batchSize) + 1;
+        console.info(`Uploaded batch ${currentBatch} of ${totalBatches}`);
+        // Calculate progress: 15% starting + 65% for upload (from 15% to 80%)
+        const uploadProgress = 15 + Math.round((currentBatch / totalBatches) * 65);
+        setSyncProgress(uploadProgress);
+      }
+
+      // Clear offline queue
+      await clearQueue();
+      setSyncProgress(85);
+      // Update sync time
+      const newSyncTime = new Date();
+      await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+      setLastSyncTime(newSyncTime);
+      setSyncProgress(100);
+
+      // Wait a moment to show 100% completion
+      setTimeout(() => {
+        setIsSyncing(false);
+        setSyncProgress(0);
+        // Close sync options sheet
+        setShowSyncOptionsSheet(false);
+      }, 1000);
+    } catch (err) {
+      console.error('Push and override bills failed:', err);
+      // Still try regular sync on error
+      syncData();
+    }
+  }, [syncToken, localBills, syncData]);
+
+  /**
+   * Handle synchronized sign out
+   * Attempts to sync pending changes before clearing auth token and queue
+   */
   const handleSyncSignOut = useCallback(async () => {
+    try {
+      // Check if there are pending changes to sync
+      const pendingCount = await getPendingCount();
+      const isConnected = await NetInfo.fetch().then(state => state.isConnected);
+      const token = await getAuthToken();
+
+      // If we have pending changes, network connection, and valid token, try to sync before logout
+      if (pendingCount > 0 && isConnected && token) {
+        console.info(`Attempting to sync ${pendingCount} pending changes before logout`);
+
+        // Set a timeout to ensure the sync doesn't hang indefinitely
+        const syncPromise = syncData();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Sync timeout')), 10000); // 10 second timeout
+        });
+
+        try {
+          // Race between sync and timeout
+          await Promise.race([syncPromise, timeoutPromise]);
+          console.info('Pre-logout sync completed successfully');
+        } catch (syncError) {
+          console.warn('Pre-logout sync failed or timed out:', syncError);
+          // Continue with logout even if sync fails
+        }
+      }
+    } catch (error) {
+      console.error('Error during pre-logout sync check:', error);
+      // Continue with logout even if there was an error checking sync status
+    }
+
+    // Remove authentication token
     await removeAuthToken();
+    // Clear offline operation queue
+    await clearQueue();
+    // Reset authentication state
     setAuthState({ ...initialAuthState, isLoading: false });
-  }, []);
+    // Reset sync-related states
+    setLastSyncTime(null);
+    setSyncToken(null);
+    setLocalBills([]);
+    // Clear sync time record
+    await storage.removeItem("momiq_last_sync");
+    console.info('User logged out, sync state reset');
+  }, [syncData]);
 
   /**
    * Email/Password login function
@@ -291,7 +630,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return false;
     }
   }, [syncData, handlePostLoginSync]);
-
+  const refreshUserInfo = useCallback(async (token: string, user: User) => {
+    // 获取用户完整信息
+    try {
+      const userData = await apiClient.auth.getProfile(token);
+      setAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+        user: userData,
+        error: null,
+      });
+    } catch (profileError) {
+      console.error('Failed to fetch user profile after Apple login:', profileError);
+      // 如果获取完整信息失败，仍使用登录返回的基本用户信息
+      setAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+        user: user,
+        error: null,
+      });
+    }
+  }, []);
   /**
    * Handle Google Sign In response
    */
@@ -311,13 +670,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           if (apiResponse.token) {
             await storeAuthToken(apiResponse.token);
-
-            setAuthState({
-              isAuthenticated: true,
-              isLoading: false,
-              user: apiResponse.user,
-              error: null,
-            });
+            refreshUserInfo(apiResponse.token, apiResponse.user);
 
             handlePostLoginSync(apiResponse.token);
 
@@ -355,13 +708,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           iosClientId: !!googleIosClientId,
           androidClientId: !!googleAndroidClientId
         });
-        Alert.alert('Error', 'Google login is not properly configured. Please check environment variables.');
+        Alert.alert(t('Error'), t('Google login is not properly configured. Please check environment variables.'));
         return false;
       }
 
       if (!googlePromptAsync || typeof googlePromptAsync !== 'function') {
         console.error('Google promptAsync not available');
-        Alert.alert('Error', 'Google login is not configured');
+        Alert.alert(t('Error'), t('Google login is not configured'));
         return false;
       }
 
@@ -394,12 +747,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
       if (Platform.OS !== 'ios') {
-        Alert.alert('Error', 'Apple Sign In is only available on iOS devices');
+        Alert.alert(t('Error'), t('Apple Sign In is only available on iOS devices'));
         setAuthState(prev => ({ ...prev, isLoading: false }));
         return false;
       }
 
-      // 使用 expo-apple-authentication 进行苹果登录
+      // Use expo-apple-authentication for Apple Sign In
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -408,7 +761,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (credential && credential.identityToken) {
-        // 发送 identity token 到后端进行验证
+        // Send identity token to backend for verification
         const appleResponse = await apiClient.auth.appleLogin({
           identityToken: credential.identityToken,
           user: credential.user
@@ -416,13 +769,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (appleResponse.token) {
           await storeAuthToken(appleResponse.token);
-
-          setAuthState({
-            isAuthenticated: true,
-            isLoading: false,
-            user: appleResponse.user,
-            error: null,
-          });
+          refreshUserInfo(appleResponse.token, appleResponse.user);
 
           handlePostLoginSync(appleResponse.token);
 
@@ -434,7 +781,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Apple sign-in error:', error);
 
-      // 用户取消登录
+      // User canceled login
       if ((error as any)?.code === 'ERR_CANCELED') {
         setAuthState(prev => ({ ...prev, isLoading: false }));
         return false;
@@ -443,7 +790,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
-        error: 'Apple sign-in failed',
+        error: t('Apple sign-in failed'),
       }));
       return false;
     }
@@ -455,7 +802,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithWeChat = useCallback(async (): Promise<boolean> => {
     try {
       if (!wechatPromptAsync || typeof wechatPromptAsync !== 'function') {
-        Alert.alert('Error', 'WeChat login is not configured');
+        Alert.alert(t('Error'), t('WeChat login is not configured'));
         return false;
       }
 
@@ -511,30 +858,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   /**
    * Logout function
+   * Ensures all pending changes are synced before signing out
    */
   const logout = useCallback(async (): Promise<void> => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
-      // Remove token from storage
-      await removeAuthToken();
+      // Check if there are pending changes to sync
+      const pendingCount = await getPendingCount();
+      if (pendingCount > 0) {
+        // Show alert to inform user about pending changes
+        const isConnected = await NetInfo.fetch().then(state => state.isConnected);
 
-      setAuthState({
-        isAuthenticated: false,
-        isLoading: false,
-        user: null,
-        error: null,
-      });
+        if (isConnected) {
+          Alert.alert(
+            t('Pending Changes'),
+            t('You have {{count}} unsaved changes. We\'ll try to sync them before logging out.', { count: pendingCount }),
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            t('Offline Changes'),
+            t('You have {{count}} unsaved changes that cannot be synced while offline. These changes will be lost if you log out now.', { count: pendingCount }),
+            [
+              {
+                text: t('Cancel'),
+                style: 'cancel',
+                onPress: () => setAuthState(prev => ({ ...prev, isLoading: false }))
+              },
+              {
+                text: t('Log Out Anyway'),
+                style: 'destructive',
+                onPress: async () => {
+                  // User confirmed to log out without syncing
+                  await handleSyncSignOut();
+                }
+              }
+            ]
+          );
+          return; // Exit early to wait for user decision
+        }
+      }
 
-      setLastSyncTime(null);
+      // Use handleSyncSignOut to process synchronized sign out
+      // It will attempt to sync pending changes, then clear auth token and queue
+      await handleSyncSignOut();
     } catch (error) {
+      console.error('Logout error:', error);
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
-        error: 'Logout failed',
+        error: t('Logout failed'),
       }));
     }
-  }, []);
+  }, [handleSyncSignOut]);
 
   /**
    * Delete account function
@@ -571,7 +948,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
-        error: 'Failed to delete account',
+        error: t('Failed to delete account'),
       }));
       return false;
     }
@@ -606,6 +983,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     lastSyncTime,
     showSyncOptionsSheet,
     setSyncOptionsSheet: setShowSyncOptionsSheet,
+    isRefreshBill,
+    setIsRefreshBill,
   };
 
   return (
@@ -617,8 +996,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         onMerge={handleMerge}
         onClearAndDownload={handleClearAndDownload}
         onPushAndOverride={handlePushAndOverride}
-        onSignOut={handleSyncSignOut}
+        syncProgress={syncProgress}
+        syncOperation={syncOperation}
+        isSyncing={isSyncing}
       />
+      <GlobalJoinRequestsListener />
     </AuthContext.Provider>
   );
 };

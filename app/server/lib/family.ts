@@ -21,6 +21,18 @@ export interface FamilyMember {
   lastTransactionTime?: string;
 }
 
+export interface FamilyJoinRequest {
+  id: string;
+  familyId: string;
+  userId: string;
+  username: string;
+  userEmail?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt: string;
+  respondedAt?: string;
+  respondedBy?: string;
+}
+
 // 家庭空间服务
 export class FamilyService {
   /**
@@ -157,7 +169,63 @@ export class FamilyService {
   }
 
   /**
-   * 加入家庭空间
+   * 创建加入家庭空间的请求
+   */
+  static async createJoinRequest(
+    inviteCode: string,
+    userId: string,
+    userName: string,
+    userEmail?: string
+  ): Promise<FamilyJoinRequest | null> {
+    // 查找家庭空间
+    const space = await this.getFamilySpaceByInviteCode(inviteCode);
+    if (!space) {
+      return null;
+    }
+
+    // 检查用户是否已经是成员
+    const memberResult = await db.execute({
+      sql: `SELECT * FROM family_members WHERE family_id = ? AND user_id = ?`,
+      args: [space.id, userId],
+    });
+
+    if (memberResult.rows.length > 0) {
+      throw new Error('用户已经是家庭成员');
+    }
+
+    // 检查是否已有待处理的请求
+    const existingRequestResult = await db.execute({
+      sql: `SELECT * FROM family_join_requests WHERE family_id = ? AND user_id = ? AND status = 'pending'`,
+      args: [space.id, userId],
+    });
+
+    if (existingRequestResult.rows.length > 0) {
+      throw new Error('已有待处理的加入请求');
+    }
+
+    // 创建加入请求
+    const requestId = `join_req_${uuidv4()}`;
+    const now = new Date().toISOString();
+
+    await db.execute({
+      sql: `INSERT INTO family_join_requests (id, family_id, user_id, username, user_email, status, requested_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [requestId, space.id, userId, userName, userEmail, 'pending', now],
+    });
+
+    return {
+      id: requestId,
+      familyId: space.id,
+      userId,
+      username: userName,
+      userEmail,
+      status: 'pending',
+      requestedAt: now,
+    };
+  }
+
+  /**
+   * 加入家庭空间（保留原方法用于直接加入）
    */
   static async joinFamilySpace(
     inviteCode: string,
@@ -455,6 +523,152 @@ export class FamilyService {
     return {
       ...space,
       members,
+    };
+  }
+
+  /**
+   * 获取家庭的待处理加入请求
+   */
+  static async getPendingJoinRequests(familyId: string): Promise<FamilyJoinRequest[]> {
+    const result = await db.execute({
+      sql: `SELECT * FROM family_join_requests WHERE family_id = ? AND status = 'pending' ORDER BY requested_at DESC`,
+      args: [familyId],
+    });
+
+    return result.rows.map((row) => ({
+      id: row.id as string,
+      familyId: row.family_id as string,
+      userId: row.user_id as string,
+      username: row.username as string,
+      userEmail: row.user_email as string | undefined,
+      status: row.status as 'pending' | 'approved' | 'rejected',
+      requestedAt: row.requested_at as string,
+      respondedAt: row.responded_at as string | undefined,
+      respondedBy: row.responded_by as string | undefined,
+    }));
+  }
+
+  /**
+   * 批准加入请求
+   */
+  static async approveJoinRequest(
+    requestId: string,
+    approverId: string
+  ): Promise<boolean> {
+    // 获取请求详情
+    const requestResult = await db.execute({
+      sql: `SELECT * FROM family_join_requests WHERE id = ? AND status = 'pending'`,
+      args: [requestId],
+    });
+
+    if (requestResult.rows.length === 0) {
+      return false;
+    }
+
+    const request = requestResult.rows[0];
+    const familyId = request.family_id as string;
+    const userId = request.user_id as string;
+    const username = request.username as string;
+
+    // 验证批准者是否是家庭创建者
+    const isCreator = await this.isCreator(familyId, approverId);
+    if (!isCreator) {
+      return false;
+    }
+
+    // 检查用户是否已经是成员（防止重复加入）
+    const memberResult = await db.execute({
+      sql: `SELECT * FROM family_members WHERE family_id = ? AND user_id = ?`,
+      args: [familyId, userId],
+    });
+
+    if (memberResult.rows.length > 0) {
+      // 用户已经是成员，更新请求状态为已批准
+      await db.execute({
+        sql: `UPDATE family_join_requests SET status = 'approved', responded_at = ?, responded_by = ? WHERE id = ?`,
+        args: [new Date().toISOString(), approverId, requestId],
+      });
+      return true;
+    }
+
+    // 添加用户为家庭成员
+    await db.execute({
+      sql: `INSERT INTO family_members (id, family_id, user_id, username, is_creator, joined_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [`member_${uuidv4()}`, familyId, userId, username, 0, new Date().toISOString()],
+    });
+
+    // 更新请求状态
+    await db.execute({
+      sql: `UPDATE family_join_requests SET status = 'approved', responded_at = ?, responded_by = ? WHERE id = ?`,
+      args: [new Date().toISOString(), approverId, requestId],
+    });
+
+    return true;
+  }
+
+  /**
+   * 拒绝加入请求
+   */
+  static async rejectJoinRequest(
+    requestId: string,
+    rejecterId: string
+  ): Promise<boolean> {
+    // 获取请求详情
+    const requestResult = await db.execute({
+      sql: `SELECT * FROM family_join_requests WHERE id = ? AND status = 'pending'`,
+      args: [requestId],
+    });
+
+    if (requestResult.rows.length === 0) {
+      return false;
+    }
+
+    const request = requestResult.rows[0];
+    const familyId = request.family_id as string;
+
+    // 验证拒绝者是否是家庭创建者
+    const isCreator = await this.isCreator(familyId, rejecterId);
+    if (!isCreator) {
+      return false;
+    }
+
+    // 更新请求状态
+    await db.execute({
+      sql: `UPDATE family_join_requests SET status = 'rejected', responded_at = ?, responded_by = ? WHERE id = ?`,
+      args: [new Date().toISOString(), rejecterId, requestId],
+    });
+
+    return true;
+  }
+
+  /**
+   * 获取用户的加入请求状态
+   */
+  static async getUserJoinRequestStatus(
+    familyId: string,
+    userId: string
+  ): Promise<FamilyJoinRequest | null> {
+    const result = await db.execute({
+      sql: `SELECT * FROM family_join_requests WHERE family_id = ? AND user_id = ? ORDER BY requested_at DESC LIMIT 1`,
+      args: [familyId, userId],
+    });
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id as string,
+      familyId: row.family_id as string,
+      userId: row.user_id as string,
+      username: row.username as string,
+      userEmail: row.user_email as string | undefined,
+      status: row.status as 'pending' | 'approved' | 'rejected',
+      requestedAt: row.requested_at as string,
+      respondedAt: row.responded_at as string | undefined,
+      respondedBy: row.responded_by as string | undefined,
     };
   }
 }

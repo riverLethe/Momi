@@ -13,10 +13,11 @@ import {
 import { Crown, Users } from "lucide-react-native";
 import { useFamilyActions } from "./useFamilyActions";
 import { useTranslation } from "react-i18next";
+import { FamilySpace } from "@/types/family.types";
 
 interface FamilyFeatureSelectionProps {
-  onFamilyCreated: () => void;
-  onFamilyJoined: () => void;
+  onFamilyCreated: (familySpace: FamilySpace) => void;
+  onFamilyJoined: (familySpace: FamilySpace) => void;
 }
 
 export default function FamilyFeatureSelection({
@@ -30,17 +31,15 @@ export default function FamilyFeatureSelection({
 
   const handleCreateFamily = async () => {
     const result = await createFamilySpaceWithDefaultName();
-    if (result) {
-      onFamilyCreated();
-    }
+    if (!result) return
+    onFamilyCreated(result);
   };
 
   const handleJoinFamily = async () => {
     const result = await joinFamilyWithCode(joinCode);
-    if (result) {
-      setJoinCode("");
-      onFamilyJoined();
-    }
+    if (!result) return
+    setJoinCode("");
+    onFamilyJoined(result);
   };
 
   return (
@@ -76,19 +75,19 @@ export default function FamilyFeatureSelection({
         <YStack gap="$4">
           <YStack alignItems="center" gap="$3">
             <Users size={32} color={theme.green9?.get()} />
-            <H3 color="$color">Join Family</H3>
+            <H3 color="$color">{t("Join Family")}</H3>
             <Text color="$color10" textAlign="center" fontSize="$3">
-              Join someone else's family using an invite code
+              {t("Join someone else's family using an invite code")}
             </Text>
           </YStack>
 
           <XStack gap="$3">
             <Input
-              placeholder="Enter 6-digit invite code"
+              placeholder={t("Enter 6-digit invite code")}
               value={joinCode}
               onChangeText={setJoinCode}
               autoCapitalize="characters"
-              maxLength={6}
+              maxLength={7}
               flex={1}
             />
             <Button

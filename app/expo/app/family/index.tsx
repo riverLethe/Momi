@@ -6,9 +6,8 @@ import {
   Text,
   XStack,
   Button,
-  Spinner,
 } from "tamagui";
-import { useFamilyActions } from "@/components/family/useFamilyActions";
+import { useAuth } from "@/providers/AuthProvider";
 import FamilyFeatureSelection from "@/components/family/FamilyFeatureSelection";
 import FamilyInfo from "@/components/family/FamilyInfo";
 import { FamilySpace } from "@/types/family.types";
@@ -18,29 +17,31 @@ import { useTranslation } from "react-i18next";
 import FamilyHeader from "@/components/family/FamilyHeader";
 
 export default function FamilySpacesScreen() {
-  const { loadFamilySpace, isLoadingFamilySpace } = useFamilyActions();
-  const [familySpace, setFamilySpace] = useState<FamilySpace | null>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const { user, updateUser } = useAuth();
+  const [familySpace, setFamilySpace] = useState<FamilySpace | null>(user?.family || null);
   const theme = useTheme();
   const router = useRouter();
   const { t } = useTranslation();
 
   useEffect(() => {
-    loadFamilySpaceData();
-  }, []);
-
-  const loadFamilySpaceData = async () => {
-    const space = await loadFamilySpace();
-    setFamilySpace(space);
-    setIsInitialLoading(false);
-  };
+    // 直接使用用户的家庭信息初始化
+    setFamilySpace(user?.family || null);
+  }, [user?.family]);
 
   const handleFamilyUpdated = (updatedSpace: FamilySpace) => {
     setFamilySpace(updatedSpace);
+    // 更新用户信息中的家庭字段
+    if (user) {
+      updateUser({ ...user, family: updatedSpace });
+    }
   };
 
   const handleFamilyDeleted = () => {
     setFamilySpace(null);
+    // 更新用户信息，移除家庭字段
+    if (user) {
+      updateUser({ ...user, family: null });
+    }
   };
 
   return (
@@ -71,12 +72,7 @@ export default function FamilySpacesScreen() {
             )}
           </XStack>
           <YStack flex={1} paddingHorizontal="$2">
-            {isInitialLoading || isLoadingFamilySpace ? (
-              <YStack flex={1} alignItems="center" justifyContent="center">
-                <Spinner size="large" />
-                <Text marginTop="$4">Loading family space...</Text>
-              </YStack>
-            ) : familySpace ? (
+            {familySpace ? (
               <FamilyInfo
                 familySpace={familySpace}
                 onFamilyUpdated={handleFamilyUpdated}
@@ -84,8 +80,8 @@ export default function FamilySpacesScreen() {
               />
             ) : (
               <FamilyFeatureSelection
-                onFamilyCreated={loadFamilySpaceData}
-                onFamilyJoined={loadFamilySpaceData}
+                onFamilyCreated={handleFamilyUpdated}
+                onFamilyJoined={handleFamilyUpdated}
               />
             )}
           </YStack>

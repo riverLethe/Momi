@@ -11,6 +11,7 @@ import { Avatar, Text, XStack, YStack, useTheme } from "tamagui";
 import { useLocale } from "@/i18n/useLocale";
 import { SwipeableRow } from "../ui/SwipeableRow";
 import { formatCurrency } from "@/utils/format";
+import { useTranslation } from "react-i18next";
 
 interface BillListItemProps {
   item: Bill;
@@ -44,6 +45,10 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
   const router = useRouter();
   const { locale } = useLocale();
   const theme = useTheme();
+  const { t } = useTranslation();
+  // 检查是否为只读账单
+  const isReadOnly = item.isReadOnly || false;
+  const isDisabled = disabled || isReadOnly;
 
   // 使用useMemo缓存计算结果
   const categoryInfo = useMemo(() => {
@@ -89,8 +94,8 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
 
   return (
     <SwipeableRow
-      disabled={disabled}
-      onDelete={handleDelete}
+      disabled={isDisabled}
+      onDelete={isReadOnly ? undefined : handleDelete} // 只读账单不允许删除
       isOpen={isOpen}
       onSwipeOpen={onSwipeOpen}
       onSwipeClose={onSwipeClose}
@@ -99,11 +104,11 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handlePress}
-        disabled={disabled}
+        disabled={isDisabled}
         style={{
           paddingVertical: 8,
           paddingHorizontal: 16,
-          opacity: disabled ? 0.4 : 1,
+          opacity: isDisabled ? 0.4 : 1,
           backgroundColor: theme.card?.get(),
         }}
       >
@@ -114,12 +119,25 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
             </Avatar>
 
             <YStack>
-              <Text fontSize="$3" fontWeight="500" lineHeight={22} color="$color">
-                {categoryName}
-              </Text>
+              <XStack alignItems="center" gap="$1.5">
+                <Text fontSize="$3" fontWeight="500" lineHeight={22} color="$color">
+                  {categoryName}
+                </Text>
+                {item.isFamilyBill && (
+                  <Text fontSize="$1" color="$blue9" fontWeight="600">
+                    {t("Family")}
+                  </Text>
+                )}
+                {isReadOnly && (
+                  <Text fontSize="$1" color="$gray9" fontWeight="600">
+                    {t("Read Only")}
+                  </Text>
+                )}
+              </XStack>
               <Text fontSize="$2" color="$color9" lineHeight={16}>
                 {formattedDateTime}
                 {item.merchant && ` | ${item.merchant}`}
+                {item.isFamilyBill && item.creatorName && ` | ${item.creatorName}`}
               </Text>
             </YStack>
           </XStack>
@@ -128,7 +146,7 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
             <Text
               fontSize="$3"
               fontWeight="500"
-              color={disabled ? "$color9" : "$red10"}
+              color={isDisabled ? "$color9" : "$red10"}
             >
               -{formattedAmount}
             </Text>
@@ -149,6 +167,9 @@ export const BillListItem = React.memo(
       prevProps.item.category === nextProps.item.category &&
       prevProps.item.date === nextProps.item.date &&
       prevProps.item.merchant === nextProps.item.merchant &&
+      prevProps.item.isFamilyBill === nextProps.item.isFamilyBill &&
+      prevProps.item.isReadOnly === nextProps.item.isReadOnly &&
+      prevProps.item.creatorName === nextProps.item.creatorName &&
       prevProps.isOpen === nextProps.isOpen &&
       prevProps.disabled === nextProps.disabled
     );

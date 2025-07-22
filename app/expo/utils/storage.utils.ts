@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   FAMILY_SPACES: "momiq_family_spaces",
   NOTIFICATIONS: "momiq_notifications",
   NOTIFICATION_SETTINGS: "momiq_notification_settings",
+  VIEW_STORE: "momiq_view_store", // 视图模式存储
 };
 
 // Legacy key mapping for backward compatibility
