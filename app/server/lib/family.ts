@@ -210,7 +210,7 @@ export class FamilyService {
     await db.execute({
       sql: `INSERT INTO family_join_requests (id, family_id, user_id, username, user_email, status, requested_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [requestId, space.id, userId, userName, userEmail, 'pending', now],
+      args: [requestId, space.id, userId, userName, userEmail || null, 'pending', now],
     });
 
     return {
