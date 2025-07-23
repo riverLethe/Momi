@@ -47,6 +47,22 @@ export async function POST(request: NextRequest) {
       switch (action) {
         case "create":
         case "update": {
+          // Handle missing or invalid date
+          let billDate: string;
+          if (!bill.date) {
+            console.warn(`Bill ${bill.id} has missing date field, using fallback date`);
+            billDate = '1970-01-01T00:00:00.000Z'; // Use epoch as fallback for invalid dates
+          } else {
+            try {
+              billDate = typeof bill.date === 'string' 
+                ? new Date(bill.date).toISOString()
+                : new Date(bill.date).toISOString();
+            } catch (error) {
+              console.warn(`Bill ${bill.id} has invalid date format, using fallback date`);
+              billDate = '1970-01-01T00:00:00.000Z'; // Use epoch as fallback for invalid dates
+            }
+          }
+
           // Upsert bill – rely on ON CONFLICT for simplicity (SQLite/Turso)
           await db.execute({
             sql: `INSERT INTO bills (id, user_id, amount, category, description, bill_date, created_at, updated_at, is_deleted)
@@ -63,7 +79,7 @@ export async function POST(request: NextRequest) {
               bill.amount ?? 0,
               bill.category ?? null,
               bill.note ?? null,
-              bill.date ?? new Date().toISOString(),
+              billDate,
               bill.createdAt ?? new Date().toISOString(),
               new Date().toISOString(),
             ],

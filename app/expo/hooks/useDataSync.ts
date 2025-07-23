@@ -218,6 +218,14 @@ export const useDataSync = () => {
             const conflicts: any[] = [];
 
             remoteBills.forEach((remote: any) => {
+              // Convert string dates to Date objects for consistency
+              const normalizedRemote = {
+                ...remote,
+                date: new Date(remote.date),
+                createdAt: new Date(remote.createdAt),
+                updatedAt: new Date(remote.updatedAt),
+              };
+
               const idx = merged.findIndex((b: any) => b.id === remote.id);
 
               // Handle deleted bills
@@ -238,21 +246,21 @@ export const useDataSync = () => {
 
                 if (remoteUpdatedAt > localUpdatedAt) {
                   // Remote is newer, use it
-                  merged[idx] = remote;
+                  merged[idx] = normalizedRemote;
                 } else if (remoteUpdatedAt < localUpdatedAt) {
                   // Local is newer, keep it and track conflict
                   conflicts.push({
                     local: localBill,
-                    remote: remote,
+                    remote: normalizedRemote,
                     resolution: "kept-local",
                   });
                 } else {
                   // Same timestamp, keep remote for consistency
-                  merged[idx] = remote;
+                  merged[idx] = normalizedRemote;
                 }
               } else {
                 // No conflict, just add the remote bill
-                merged.push(remote);
+                merged.push(normalizedRemote);
               }
             });
 

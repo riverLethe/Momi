@@ -47,7 +47,7 @@ export const saveBill = async (
       creatorName: currentUser.name || "Local User",
       createdAt: new Date(),
       updatedAt: new Date(),
-      date: bill.date || new Date(),
+      date: bill.date || new Date(), // Ensure date is always set
     };
 
     await storage.setItem(STORAGE_KEYS.BILLS, [...bills, newBill]);
