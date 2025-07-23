@@ -310,9 +310,37 @@ export class SyncService {
       }),
     ]);
 
+    // 转换账单数据，将数据库字段名映射为客户端期望的字段名
+    const transformedBills = billsResult.rows.map((bill: any) => ({
+      id: bill.id,
+      amount: bill.amount,
+      category: bill.category,
+      description: bill.description,
+      date: new Date(bill.bill_date).toISOString(), // bill_date -> date
+      createdAt: new Date(bill.created_at).toISOString(), // created_at -> createdAt
+      updatedAt: new Date(bill.updated_at).toISOString(), // updated_at -> updatedAt
+      syncVersion: bill.sync_version,
+      familySpaceId: bill.family_space_id,
+      userId: bill.user_id,
+      isDeleted: bill.is_deleted,
+    }));
+
+    // 转换预算数据
+    const transformedBudgets = budgetsResult.rows.map((budget: any) => ({
+      id: budget.id,
+      category: budget.category,
+      amount: budget.amount,
+      period: budget.period,
+      createdAt: new Date(budget.created_at).toISOString(),
+      updatedAt: new Date(budget.updated_at).toISOString(),
+      syncVersion: budget.sync_version,
+      userId: budget.user_id,
+      isDeleted: budget.is_deleted,
+    }));
+
     return {
-      bills: billsResult.rows,
-      budgets: budgetsResult.rows,
+      bills: transformedBills,
+      budgets: transformedBudgets,
       lastSyncTimestamp: new Date().toISOString(),
     };
   }

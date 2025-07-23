@@ -200,10 +200,13 @@ export const useDataSync = () => {
             `Downloading bills since ${lastSyncTimeStr || "beginning"}`
           );
 
-          const remoteBills = await apiClient.sync.downloadBills(
+          const downloadResult = await apiClient.sync.downloadBills(
             token,
             lastSyncTimeStr || undefined
           );
+
+          // 正确提取bills数组
+          const remoteBills = downloadResult.success ? downloadResult.bills : [];
 
           if (Array.isArray(remoteBills) && remoteBills.length > 0) {
             console.info(`Downloaded ${remoteBills.length} bills from server`);
