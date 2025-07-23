@@ -195,21 +195,34 @@ export const useFamilyActions = () => {
         return null;
       }
 
-      const response = await apiClient.family.updateFamilyName(
-        token,
-        familySpace.id,
-        newName.trim()
-      );
+      // 立即更新本地数据并显示成功
+      const updatedSpace = { ...familySpace, name: newName.trim() };
+      setCurrentFamilySpace(updatedSpace);
+      Alert.alert(t("Success"), t("Family name updated"));
 
-      if (response.success) {
-        const updatedSpace = { ...familySpace, name: newName.trim() };
-        setCurrentFamilySpace(updatedSpace);
-        Alert.alert(t("Success"), t("Family name updated"));
-        return updatedSpace;
-      } else {
-        Alert.alert(t("Error"), t("Failed to update family name"));
-        return null;
-      }
+      // 后台发起请求
+      (async () => {
+        try {
+          const response = await apiClient.family.updateFamilyName(
+            token,
+            familySpace.id,
+            newName.trim()
+          );
+
+          if (!response.success) {
+            console.error("Background family name update failed");
+            // 如果后台请求失败，可以考虑回滚本地数据或者重试
+            // 这里暂时只记录错误，不影响用户体验
+          } else {
+            console.info("Background family name update completed successfully");
+          }
+        } catch (error) {
+          console.error("Background family name update error:", error);
+          // 同样，后台错误不影响用户体验
+        }
+      })();
+
+      return updatedSpace;
     } catch (error) {
       console.error("Error updating family name:", error);
       Alert.alert(t("Error"), t("Failed to update family name, please try again"));
@@ -303,26 +316,38 @@ export const useFamilyActions = () => {
                   return;
                 }
 
-                const response = await apiClient.family.removeMember(
-                  token,
-                  familySpace.id,
-                  memberId
+                // 立即更新本地数据并显示成功
+                const updatedMembers = familySpace.members.filter(
+                  (m) => m.id !== memberId
                 );
+                const updatedSpace = {
+                  ...familySpace,
+                  members: updatedMembers,
+                };
+                Alert.alert(t("Success"), t("Member removed successfully"));
+                resolve(updatedSpace);
 
-                if (response.success) {
-                  const updatedMembers = familySpace.members.filter(
-                    (m) => m.id !== memberId
-                  );
-                  const updatedSpace = {
-                    ...familySpace,
-                    members: updatedMembers,
-                  };
-                  Alert.alert(t("Success"), t("Member removed successfully"));
-                  resolve(updatedSpace);
-                } else {
-                  Alert.alert(t("Error"), t("Failed to remove member"));
-                  resolve(null);
-                }
+                // 后台发起请求
+                (async () => {
+                  try {
+                    const response = await apiClient.family.removeMember(
+                      token,
+                      familySpace.id,
+                      memberId
+                    );
+
+                    if (!response.success) {
+                      console.error("Background remove member failed");
+                      // 如果后台请求失败，可以考虑重试或者记录错误
+                      // 这里暂时只记录错误，不影响用户体验
+                    } else {
+                      console.info("Background remove member completed successfully");
+                    }
+                  } catch (error) {
+                    console.error("Background remove member error:", error);
+                    // 同样，后台错误不影响用户体验
+                  }
+                })();
               } catch (error) {
                 console.error("Failed to remove member:", error);
                 Alert.alert(t("Error"), t("Failed to remove member"));
@@ -358,19 +383,31 @@ export const useFamilyActions = () => {
                   return;
                 }
 
-                const response = await apiClient.family.deleteFamilySpace(
-                  token,
-                  familySpace.id
-                );
+                // 立即更新本地数据并显示成功
+                setCurrentFamilySpace(null);
+                Alert.alert(t("Success"), t("Family dissolved successfully"));
+                resolve(true);
 
-                if (response.success) {
-                  setCurrentFamilySpace(null);
-                  Alert.alert(t("Success"), t("Family dissolved successfully"));
-                  resolve(true);
-                } else {
-                  Alert.alert(t("Error"), t("Failed to dissolve family"));
-                  resolve(false);
-                }
+                // 后台发起请求
+                (async () => {
+                  try {
+                    const response = await apiClient.family.deleteFamilySpace(
+                      token,
+                      familySpace.id
+                    );
+
+                    if (!response.success) {
+                      console.error("Background family dissolution failed");
+                      // 如果后台请求失败，可以考虑重试或者记录错误
+                      // 这里暂时只记录错误，不影响用户体验
+                    } else {
+                      console.info("Background family dissolution completed successfully");
+                    }
+                  } catch (error) {
+                    console.error("Background family dissolution error:", error);
+                    // 同样，后台错误不影响用户体验
+                  }
+                })();
               } catch (error) {
                 console.error("Error dissolving family:", error);
                 Alert.alert(t("Error"), t("Failed to dissolve family"));
@@ -406,19 +443,31 @@ export const useFamilyActions = () => {
                   return;
                 }
 
-                const response = await apiClient.family.leaveFamilySpace(
-                  token,
-                  familySpace.id
-                );
+                // 立即更新本地数据并显示成功
+                setCurrentFamilySpace(null);
+                Alert.alert(t("Success"), t("Left family successfully"));
+                resolve(true);
 
-                if (response.success) {
-                  setCurrentFamilySpace(null);
-                  Alert.alert(t("Success"), t("Left family successfully"));
-                  resolve(true);
-                } else {
-                  Alert.alert(t("Error"), t("Failed to leave family"));
-                  resolve(false);
-                }
+                // 后台发起请求
+                (async () => {
+                  try {
+                    const response = await apiClient.family.leaveFamilySpace(
+                      token,
+                      familySpace.id
+                    );
+
+                    if (!response.success) {
+                      console.error("Background leave family failed");
+                      // 如果后台请求失败，可以考虑重试或者记录错误
+                      // 这里暂时只记录错误，不影响用户体验
+                    } else {
+                      console.info("Background leave family completed successfully");
+                    }
+                  } catch (error) {
+                    console.error("Background leave family error:", error);
+                    // 同样，后台错误不影响用户体验
+                  }
+                })();
               } catch (error) {
                 console.error("Error leaving family:", error);
                 Alert.alert(t("Error"), t("Failed to leave family"));

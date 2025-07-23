@@ -161,7 +161,7 @@ export default {
     Chat: "聊天",
     Accounts: "账户",
     Calendar: "日历",
-    "Welcome to MomiQ": "欢迎使用 MomiQ",
+    "Welcome to MomiQ": "欢迎使用抹米记账",
     "Your personal finance tracker to help you manage expenses and reach your financial goals":
       "您的个人财务追踪工具，帮助您管理支出并实现财务目标",
     "Record your first expense": "记录您的第一笔支出",
@@ -172,7 +172,8 @@ export default {
       "定义预算以追踪您的消费习惯",
     "Available after recording your first expense": "记录第一笔支出后可用",
     "Explore features": "探索功能",
-    "Discover all the features MomiQ has to offer": "探索 MomiQ 提供的所有功能",
+    "Discover all the features MomiQ has to offer":
+      "探索抹米记账提供的所有功能",
     "Budget Period": "预算周期",
     "Add Your First Bill": "添加您的第一笔账单",
     "Not Set": "未设置",
@@ -362,10 +363,10 @@ export default {
     year: "年",
 
     // CSV Export
-    "MomiQ Expense Bill Details": "MomiQ 账单明细",
+    "MomiQ Expense Bill Details": "抹米记账账单明细",
     Period: "周期",
     "Export Time": "导出时间",
-    "MomiQ Transaction Bill Details List": "MomiQ 账单明细列表",
+    "MomiQ Transaction Bill Details List": "抹米记账账单明细列表",
     "Created Time": "创建时间",
     "Transaction Time": "交易时间",
     Type: "类型",
@@ -431,7 +432,7 @@ export default {
     "No Bills Found": "暂无账单",
     "Please sign in to view family bills": "请登录以查看家庭账单",
     "Start tracking your bills to see reports": "开始跟踪您的账单以查看报表",
-    "Welcome to MomiQ AI Assistant": "欢迎使用 MomiQ AI 助手",
+    "Welcome to MomiQ AI Assistant": "欢迎使用抹米记账 AI 助手",
     "I can help you track expenses, manage your budget, and provide financial insights.":
       "我可以帮助您跟踪支出、管理预算并提供财务洞察。",
     "Hold the mic button and speak to start": "按住麦克风按钮并开始说话",
@@ -491,7 +492,7 @@ export default {
     "You have reached 100% of your monthly budget.": "您已用尽本月全部预算。",
     "You have reached 100% of your {{period}} budget.":
       "您已用尽{{period}}全部预算。",
-    "Open MomiQ to view insights.": "打开 MomiQ 查看洞察。",
+    "Open MomiQ to view insights.": "打开抹米记账查看洞察。",
     "Your weekly report is ready": "您的每周报告已准备好",
     weekly: "每周",
     monthly: "每月",
@@ -519,15 +520,15 @@ export default {
       "自定义您想要接收的通知",
     "iOS Widget Setup": "iOS小组件设置",
     "Add MomiQ widgets to your home screen for quick access":
-      "在主屏幕添加MomiQ小组件，快速访问应用功能",
+      "在主屏幕添加抹米记账小组件，快速访问应用功能",
     "Access Home Screen": "访问主屏幕",
     "On your home screen where you want to add the widget, press and hold until apps start jiggling":
       "在你想添加小组件的屏幕，长按，直到App开始晃动",
     "Add Widget": "添加小组件",
     "Tap the + button in the top left corner": '轻点左上角的"添加"按钮(+)',
-    "Find MomiQ": "查找MomiQ",
+    "Find MomiQ": "查找抹米记账",
     "Scroll through the list or search for 'MomiQ' to find our widgets":
-      '选择或者直接搜索"MomiQ"，找到小组件',
+      '选择或者直接搜索"抹米记账"，找到小组件',
     "Select Widget": "选择小组件",
     "Swipe left or right to choose the widget type, then tap 'Add Widget'":
       '左右滑动可以选择小组件的功能，找到你想要的记账功能，轻点"添加小组件"',

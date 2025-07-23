@@ -494,48 +494,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!syncToken) return;
 
     try {
-      setIsSyncing(true);
-      setSyncOperation(t('Pushing local data to server...'));
-      setSyncProgress(5);
       console.info('Executing push and override strategy');
-      // Upload all local bills as create operations to server
+      
+      // Close sync options sheet immediately
+      setShowSyncOptionsSheet(false);
+
+      // Upload all local bills as create operations to server in background
       const operations = localBills.map((bill) => ({
         action: 'create' as const,
         bill: bill
       }));
-      setSyncProgress(15);
 
-      console.info(`Uploading ${operations.length} local bills to override server data`);
+      console.info(`Uploading ${operations.length} local bills to override server data in background`);
 
-      // Process in batches for better reliability
-      const batchSize = 50;
-      const totalBatches = Math.ceil(operations.length / batchSize);
-      for (let i = 0; i < operations.length; i += batchSize) {
-        const batch = operations.slice(i, i + batchSize);
-        await apiClient.sync.uploadBills(syncToken, batch);
-        const currentBatch = Math.floor(i / batchSize) + 1;
-        console.info(`Uploaded batch ${currentBatch} of ${totalBatches}`);
-        // Calculate progress: 15% starting + 65% for upload (from 15% to 80%)
-        const uploadProgress = 15 + Math.round((currentBatch / totalBatches) * 65);
-        setSyncProgress(uploadProgress);
-      }
+      // Process in background without blocking UI
+      (async () => {
+        try {
+          // Process in batches for better reliability
+          const batchSize = 50;
+          const totalBatches = Math.ceil(operations.length / batchSize);
+          for (let i = 0; i < operations.length; i += batchSize) {
+            const batch = operations.slice(i, i + batchSize);
+            await apiClient.sync.uploadBills(syncToken, batch);
+            const currentBatch = Math.floor(i / batchSize) + 1;
+            console.info(`Uploaded batch ${currentBatch} of ${totalBatches}`);
+          }
 
-      // Clear offline queue
-      await clearQueue();
-      setSyncProgress(85);
-      // Update sync time
-      const newSyncTime = new Date();
-      await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
-      setLastSyncTime(newSyncTime);
-      setSyncProgress(100);
+          // Clear offline queue
+          await clearQueue();
+          // Update sync time
+          const newSyncTime = new Date();
+          await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+          setLastSyncTime(newSyncTime);
 
-      // Wait a moment to show 100% completion
-      setTimeout(() => {
-        setIsSyncing(false);
-        setSyncProgress(0);
-        // Close sync options sheet
-        setShowSyncOptionsSheet(false);
-      }, 1000);
+          console.info('Background push and override completed successfully');
+        } catch (backgroundError) {
+          console.error('Background push and override failed:', backgroundError);
+          // Fallback to regular sync on error
+          syncData();
+        }
+      })();
     } catch (err) {
       console.error('Push and override bills failed:', err);
       // Still try regular sync on error

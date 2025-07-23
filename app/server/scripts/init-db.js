@@ -160,6 +160,25 @@ async function initializeDatabase() {
       )
     `);
 
+    // 家庭加入请求表
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS family_join_requests (
+        id TEXT PRIMARY KEY,
+        family_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        user_email TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        responded_at DATETIME,
+        responded_by TEXT,
+        FOREIGN KEY (family_id) REFERENCES family_spaces (id),
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (responded_by) REFERENCES users (id),
+        UNIQUE(family_id, user_id)
+      )
+    `);
+
     // Create indexes
     await db.execute(
       `CREATE INDEX IF NOT EXISTS idx_bills_user_date ON bills (user_id, bill_date)`
@@ -178,6 +197,15 @@ async function initializeDatabase() {
     );
     await db.execute(
       `CREATE INDEX IF NOT EXISTS idx_family_members_family ON family_members (family_id)`
+    );
+    await db.execute(
+      `CREATE INDEX IF NOT EXISTS idx_join_requests_family ON family_join_requests (family_id)`
+    );
+    await db.execute(
+      `CREATE INDEX IF NOT EXISTS idx_join_requests_user ON family_join_requests (user_id)`
+    );
+    await db.execute(
+      `CREATE INDEX IF NOT EXISTS idx_join_requests_status ON family_join_requests (status)`
     );
 
 
