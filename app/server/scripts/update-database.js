@@ -313,77 +313,168 @@ async function runMigrations(db) {
   try {
     console.log("🔄 Migration 5: Converting datetime fields to timestamp format...");
     
-    // 检查是否需要转换时间格式
-    const sampleBill = await db.execute("SELECT created_at FROM bills LIMIT 1");
-    if (sampleBill.rows.length > 0) {
-      const createdAt = sampleBill.rows[0].created_at;
-      // 如果是字符串格式（ISO或DATETIME），则需要转换
-      if (typeof createdAt === 'string' && isNaN(parseInt(createdAt))) {
-        console.log("🔄 Converting bills table datetime fields to timestamps...");
+    // 检查 bills 表结构是否需要转换
+    const billsSchema = await db.execute("PRAGMA table_info(bills)");
+    const billsCreatedAtColumn = billsSchema.rows.find(col => col.name === 'created_at');
+    
+    if (billsCreatedAtColumn && billsCreatedAtColumn.type === 'DATETIME') {
+      console.log("🔄 Bills table structure needs conversion from DATETIME to INTEGER...");
+      
+      // 获取示例数据用于日志
+      const sampleBill = await db.execute("SELECT created_at FROM bills LIMIT 1");
+      if (sampleBill.rows.length > 0) {
+        console.log(`Sample datetime value: ${sampleBill.rows[0].created_at}`);
+      }
+      
+      // 步骤1: 创建新的临时表，使用正确的 INTEGER 类型
+       console.log("🔄 Creating temporary bills table with INTEGER timestamp fields...");
+       await db.execute(`
+         CREATE TABLE bills_temp (
+           id TEXT PRIMARY KEY,
+           user_id TEXT NOT NULL,
+           amount REAL NOT NULL,
+           category TEXT NOT NULL,
+           description TEXT,
+           bill_date INTEGER NOT NULL,
+           created_at INTEGER,
+           updated_at INTEGER,
+           sync_version INTEGER DEFAULT 1,
+           is_deleted BOOLEAN DEFAULT 0,
+           family_space_id TEXT,
+           merchant TEXT,
+           account TEXT,
+           FOREIGN KEY (user_id) REFERENCES users (id),
+           FOREIGN KEY (family_space_id) REFERENCES family_spaces (id)
+         )
+       `);
+      
+      // 步骤2: 将数据从旧表复制到新表，同时转换时间格式
+      const billsResult = await db.execute(`SELECT * FROM bills`);
+      console.log(`Converting ${billsResult.rows.length} bills...`);
+      
+      for (const bill of billsResult.rows) {
+        const billDate = typeof bill.bill_date === 'string' ? new Date(bill.bill_date).getTime() : bill.bill_date;
+        const createdAt = typeof bill.created_at === 'string' ? new Date(bill.created_at).getTime() : bill.created_at;
+        const updatedAt = typeof bill.updated_at === 'string' ? new Date(bill.updated_at).getTime() : bill.updated_at;
         
-        // 转换bills表的时间字段
-        await db.execute(`
-          UPDATE bills 
-          SET 
-            bill_date = CASE 
-              WHEN typeof(bill_date) = 'text' THEN strftime('%s', bill_date) * 1000
-              ELSE bill_date 
-            END,
-            created_at = CASE 
-              WHEN typeof(created_at) = 'text' THEN strftime('%s', created_at) * 1000
-              ELSE created_at 
-            END,
-            updated_at = CASE 
-              WHEN typeof(updated_at) = 'text' THEN strftime('%s', updated_at) * 1000
-              ELSE updated_at 
-            END
-          WHERE typeof(bill_date) = 'text' OR typeof(created_at) = 'text' OR typeof(updated_at) = 'text'
-        `);
-        
-        // 转换其他表的时间字段
-        const tables = [
-          { name: 'users', fields: ['created_at', 'updated_at', 'last_sync'] },
-          { name: 'user_sessions', fields: ['created_at', 'expires_at'] },
-          { name: 'family_spaces', fields: ['created_at'] },
-          { name: 'budgets', fields: ['created_at', 'updated_at'] },
-          { name: 'sync_logs', fields: ['created_at'] },
-          { name: 'data_conflicts', fields: ['created_at'] },
-          { name: 'family_members', fields: ['joined_at', 'last_transaction_time'] },
-          { name: 'family_join_requests', fields: ['requested_at', 'responded_at'] }
-        ];
-        
-        for (const table of tables) {
+        await db.execute({
+          sql: `INSERT INTO bills_temp (
+            id, user_id, amount, category, description, bill_date, 
+            created_at, updated_at, sync_version, is_deleted, 
+            family_space_id, merchant, account
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [
+            bill.id, bill.user_id, bill.amount, bill.category, bill.description,
+            billDate, createdAt, updatedAt, bill.sync_version, bill.is_deleted,
+            bill.family_space_id, bill.merchant, bill.account
+          ]
+        });
+      }
+      
+      // 步骤3: 删除旧表，重命名新表
+      console.log("🔄 Replacing old bills table...");
+      await db.execute(`DROP TABLE bills`);
+      await db.execute(`ALTER TABLE bills_temp RENAME TO bills`);
+      
+      console.log("✅ Bills table structure and data converted successfully");
+    } else {
+      console.log("✅ Bills table already uses INTEGER timestamps");
+    }
+    
+    // 检查 users 表结构是否需要转换
+    const usersSchema = await db.execute("PRAGMA table_info(users)");
+    const usersCreatedAtColumn = usersSchema.rows.find(col => col.name === 'created_at');
+    
+    if (usersCreatedAtColumn && usersCreatedAtColumn.type === 'DATETIME') {
+      console.log("🔄 Users table structure needs conversion from DATETIME to INTEGER...");
+      
+      // 转换 users 表的结构和数据
+       const tables = [
+         { 
+           name: 'users', 
+           fields: ['created_at', 'updated_at', 'last_sync'],
+           createSql: `
+             CREATE TABLE users_temp (
+               id TEXT PRIMARY KEY,
+               email TEXT UNIQUE NOT NULL,
+               name TEXT NOT NULL,
+               avatar TEXT,
+               provider TEXT NOT NULL,
+               provider_id TEXT,
+               created_at INTEGER,
+               updated_at INTEGER,
+               last_sync INTEGER,
+               is_deleted BOOLEAN DEFAULT 0
+             )
+           `
+         }
+       ];
+      
+      for (const table of tables) {
+        try {
+          console.log(`🔄 Converting ${table.name} table...`);
+          
+          // 暂时禁用外键约束
+          await db.execute('PRAGMA foreign_keys = OFF');
+          
+          // 创建临时表
+          await db.execute(table.createSql);
+          
+          // 获取原表数据
+          const rows = await db.execute(`SELECT * FROM ${table.name}`);
+          console.log(`Converting ${rows.rows.length} rows in ${table.name}...`);
+          
+          // 转换并插入数据
+          for (const row of rows.rows) {
+            const convertedRow = { ...row };
+            
+            // 转换时间字段
+            for (const field of table.fields) {
+              if (row[field] && typeof row[field] === 'string') {
+                convertedRow[field] = new Date(row[field]).getTime();
+              }
+            }
+            
+            // 构建插入语句
+            const columns = Object.keys(convertedRow);
+            const placeholders = columns.map(() => '?').join(', ');
+            const values = columns.map(col => convertedRow[col]);
+            
+            await db.execute({
+              sql: `INSERT INTO ${table.name}_temp (${columns.join(', ')}) VALUES (${placeholders})`,
+              args: values
+            });
+          }
+          
+          // 替换表
+          await db.execute(`DROP TABLE ${table.name}`);
+          await db.execute(`ALTER TABLE ${table.name}_temp RENAME TO ${table.name}`);
+          
+          // 重新启用外键约束
+          await db.execute('PRAGMA foreign_keys = ON');
+          
+          console.log(`✅ ${table.name} table structure and data converted successfully`);
+        } catch (error) {
+          console.log(`⚠️ Table ${table.name} conversion failed:`, error.message);
+          // 清理临时表
           try {
-            const updateFields = table.fields.map(field => 
-              `${field} = CASE 
-                WHEN typeof(${field}) = 'text' AND ${field} IS NOT NULL THEN strftime('%s', ${field}) * 1000
-                ELSE ${field} 
-              END`
-            ).join(', ');
-            
-            const whereConditions = table.fields.map(field => 
-              `typeof(${field}) = 'text'`
-            ).join(' OR ');
-            
-            await db.execute(`
-              UPDATE ${table.name} 
-              SET ${updateFields}
-              WHERE ${whereConditions}
-            `);
-            
-            console.log(`✅ Converted ${table.name} table datetime fields`);
-          } catch (error) {
-            console.log(`⚠️ Table ${table.name} may not exist or already converted:`, error.message);
+            await db.execute(`DROP TABLE IF EXISTS ${table.name}_temp`);
+          } catch (cleanupError) {
+            // 忽略清理错误
+          }
+          // 重新启用外键约束
+          try {
+            await db.execute('PRAGMA foreign_keys = ON');
+          } catch (fkError) {
+            // 忽略外键约束错误
           }
         }
-        
-        console.log("✅ Migration 5: All datetime fields converted to timestamps");
-      } else {
-        console.log("✅ Migration 5: Datetime fields already in timestamp format");
       }
     } else {
-      console.log("✅ Migration 5: No data to convert");
+      console.log("✅ Users table already uses INTEGER timestamps");
     }
+      
+    console.log("✅ Migration 5: All datetime fields converted to timestamps");
   } catch (error) {
     console.error("❌ Migration 5 failed:", error.message);
   }

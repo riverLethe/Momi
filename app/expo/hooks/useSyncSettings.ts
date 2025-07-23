@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { storage } from "@/utils/storage.utils";
 import { useAuth } from "@/providers/AuthProvider";
-import { useDataSync } from "./useDataSync";
 
 interface SyncSettings {
   autoSyncEnabled: boolean;
@@ -18,8 +17,7 @@ const DEFAULT_SYNC_SETTINGS: SyncSettings = {
 const SYNC_SETTINGS_KEY = "momiq_sync_settings";
 
 export const useSyncSettings = () => {
-  const { isAuthenticated } = useAuth();
-  const { syncData, lastSyncTime, isSyncing, isOnline } = useDataSync();
+  const { syncData, lastSyncTime, isSyncing, isOnline, isAuthenticated } = useAuth();
   const [settings, setSettings] = useState<SyncSettings>(DEFAULT_SYNC_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -72,26 +70,6 @@ export const useSyncSettings = () => {
       throw error;
     }
   }, [isAuthenticated, isOnline, syncData]);
-
-  // Auto sync effect
-  useEffect(() => {
-    if (!settings.autoSyncEnabled || !isAuthenticated || !isOnline) return;
-
-    const interval = setInterval(
-      () => {
-        syncData();
-      },
-      settings.syncInterval * 60 * 1000
-    ); // Convert minutes to milliseconds
-
-    return () => clearInterval(interval);
-  }, [
-    settings.autoSyncEnabled,
-    settings.syncInterval,
-    isAuthenticated,
-    isOnline,
-    syncData,
-  ]);
 
   // Format last sync time
   const getLastSyncText = useCallback(() => {

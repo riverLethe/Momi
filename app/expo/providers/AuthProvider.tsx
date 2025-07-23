@@ -26,6 +26,8 @@ const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
 
+
+
 // Complete the sign-in with web browser for OAuth flows
 WebBrowser.maybeCompleteAuthSession();
 
@@ -53,10 +55,12 @@ interface AuthContextType extends AuthState {
   updateUser: (userData: Partial<User>) => void;
   syncData: () => Promise<void>;
   lastSyncTime: Date | null;
+  isSyncing: boolean;
   showSyncOptionsSheet: boolean;
   setSyncOptionsSheet: (show: boolean) => void;
   isRefreshBill: boolean;
   setIsRefreshBill: (isRefresh: boolean) => void;
+  isOnline: boolean;
 }
 
 // Create auth context
@@ -81,6 +85,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [syncOperation, setSyncOperation] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRefreshBill, setIsRefreshBill] = useState(false);
+  
+  const [isOnline, setIsOnline] = useState(true);
+  
+  // Auto sync timer ref
+  const autoSyncTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Google Auth Request Setup
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
@@ -127,6 +136,134 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }),
     wechatServiceConfig ?? null
   );
+
+
+
+  // Monitor network status
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOnline(state.isConnected === true);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  /**
+   * Simplified push sync - only uploads local changes to remote
+   * This is used for automatic background sync
+   */
+  const pushSync = useCallback(async (): Promise<void> => {
+    if (!authState.isAuthenticated || !authState.user) return;
+
+    try {
+      // Get authentication token
+      const token = await getAuthToken();
+      if (!token) {
+        console.warn("No auth token available for push sync");
+        return;
+      }
+
+      // Check network status
+      const netInfo = await NetInfo.fetch();
+      const isOnline = netInfo.isConnected === true;
+
+      if (!isOnline) {
+        console.info('Device offline, skipping push sync');
+        return;
+      }
+
+      // Get offline operation queue
+      const queue = await getQueue();
+      if (queue.length === 0) {
+        console.info('No pending operations to push');
+        return;
+      }
+
+      console.info(`Push sync: uploading ${queue.length} queued operations...`);
+
+      // Process in batches for better reliability
+      const batchSize = 50;
+      for (let i = 0; i < queue.length; i += batchSize) {
+        const batch = queue.slice(i, i + batchSize);
+        
+        // 确保上传前将Date对象转换为时间戳，以匹配服务端格式
+        const normalizedBatch = batch.map((operation: any) => {
+          if (operation.bill) {
+            return {
+              ...operation,
+              bill: {
+                ...operation.bill,
+                date: operation.bill.date instanceof Date ? operation.bill.date.getTime() : operation.bill.date,
+                createdAt: operation.bill.createdAt instanceof Date ? operation.bill.createdAt.getTime() : operation.bill.createdAt,
+                updatedAt: operation.bill.updatedAt instanceof Date ? operation.bill.updatedAt.getTime() : operation.bill.updatedAt,
+              }
+            };
+          }
+          return operation;
+        });
+        
+        await apiClient.sync.uploadBills(token, normalizedBatch);
+        console.info(`Push sync: uploaded batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(queue.length / batchSize)}`);
+      }
+
+      // Clear queue after successful upload
+      await clearQueue();
+      
+      // Update last sync time
+      const newSyncTime = new Date();
+      await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
+      setLastSyncTime(newSyncTime);
+
+      console.info('Push sync completed successfully');
+    } catch (error) {
+      console.error('Push sync error:', error);
+      // Don't block user flow, handle error silently
+    }
+  }, [authState.isAuthenticated, authState.user]);
+
+  // Global auto push sync timer
+  useEffect(() => {
+    // Clear existing timer
+    if (autoSyncTimerRef.current) {
+      clearInterval(autoSyncTimerRef.current);
+      autoSyncTimerRef.current = null;
+    }
+
+    // Only start auto sync if user is authenticated
+    if (!authState.isAuthenticated || !authState.user) {
+      return;
+    }
+
+    console.info('Starting auto push sync timer (5 minute interval)');
+
+    // Set up new timer - push sync every 5 minutes
+    autoSyncTimerRef.current = setInterval(
+      async () => {
+        // Check if we're online
+        if (!isOnline) {
+          console.info('Auto push sync skipped: Device offline');
+          return;
+        }
+
+        console.info('Performing auto push sync...');
+        try {
+          await pushSync();
+        } catch (error) {
+          console.error('Auto push sync failed:', error);
+        }
+      },
+      5 * 60 * 1000 // 5 minutes in milliseconds
+    );
+
+    // Cleanup function
+    return () => {
+      if (autoSyncTimerRef.current) {
+        clearInterval(autoSyncTimerRef.current);
+        autoSyncTimerRef.current = null;
+      }
+    };
+  }, [authState.isAuthenticated, authState.user, isOnline, pushSync]);
+
 
   // Check if user is authenticated on mount
   useEffect(() => {
@@ -531,69 +668,123 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [syncToken, syncData]);
 
   const handlePushAndOverride = useCallback(async () => {
-    // Push and override strategy: Push all local bills and override remote bills
+    // Push and override strategy: Clear remote bills first, then push all local bills
     // This is useful when local data is the source of truth and you want to reset server data
     if (!syncToken) return;
 
     try {
+      setIsSyncing(true);
+      setSyncOperation(t('Clearing server data and uploading local bills...'));
+      setSyncProgress(10);
       console.info('Executing push and override strategy');
-      
-      // Close sync options sheet immediately
-      setShowSyncOptionsSheet(false);
 
-      // Upload all local bills as create operations to server in background
+      if (localBills.length === 0) {
+        setSyncProgress(50);
+        setSyncOperation(t('Clearing server data...'));
+        
+        // If no local bills, just clear server data
+        await apiClient.sync.uploadBills(syncToken, [], true);
+        
+        setSyncProgress(100);
+        setSyncOperation(t('Sync completed'));
+        
+        // Clear offline queue
+        await clearQueue();
+        
+        // Update sync time
+        const newSyncTime = new Date();
+        await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
+        setLastSyncTime(newSyncTime);
+        
+        // Refresh cache
+        storage.invalidateCache(STORAGE_KEYS.BILLS);
+        
+        setTimeout(async () => {
+          setIsRefreshBill(true);
+          setIsSyncing(false);
+          setSyncProgress(0);
+          setShowSyncOptionsSheet(false);
+        }, 1000);
+        
+        return;
+      }
+
+      // Step 1: Upload all local bills as create operations with override mode
       const operations = localBills.map((bill) => ({
         action: 'create' as const,
         bill: bill
       }));
 
-      console.info(`Uploading ${operations.length} local bills to override server data in background`);
+      console.info(`Uploading ${operations.length} local bills to server with override mode`);
+      setSyncProgress(25);
 
-      // Process in background without blocking UI
-      (async () => {
-        try {
-          // Process in batches for better reliability
-          const batchSize = 50;
-          const totalBatches = Math.ceil(operations.length / batchSize);
-          for (let i = 0; i < operations.length; i += batchSize) {
-            const batch = operations.slice(i, i + batchSize);
-            
-            // 确保上传前将Date对象转换为时间戳，以匹配服务端格式
-            const normalizedBatch = batch.map((operation: any) => ({
-              ...operation,
-              bill: {
-                ...operation.bill,
-                date: operation.bill.date instanceof Date ? operation.bill.date.getTime() : operation.bill.date,
-                createdAt: operation.bill.createdAt instanceof Date ? operation.bill.createdAt.getTime() : operation.bill.createdAt,
-                updatedAt: operation.bill.updatedAt instanceof Date ? operation.bill.updatedAt.getTime() : operation.bill.updatedAt,
-              }
-            }));
-            
-            await apiClient.sync.uploadBills(syncToken, normalizedBatch);
-            const currentBatch = Math.floor(i / batchSize) + 1;
-            console.info(`Uploaded batch ${currentBatch} of ${totalBatches}`);
+      // Process in batches for better reliability
+      const batchSize = 50;
+      const totalBatches = Math.ceil(operations.length / batchSize);
+      
+      for (let i = 0; i < operations.length; i += batchSize) {
+        const batch = operations.slice(i, i + batchSize);
+        const isFirstBatch = i === 0;
+        
+        // 确保上传前将Date对象转换为时间戳，以匹配服务端格式
+        const normalizedBatch = batch.map((operation: any) => ({
+          ...operation,
+          bill: {
+            ...operation.bill,
+            date: operation.bill.date instanceof Date ? operation.bill.date.getTime() : operation.bill.date,
+            createdAt: operation.bill.createdAt instanceof Date ? operation.bill.createdAt.getTime() : operation.bill.createdAt,
+            updatedAt: operation.bill.updatedAt instanceof Date ? operation.bill.updatedAt.getTime() : operation.bill.updatedAt,
           }
+        }));
+        
+        // Only enable override mode for the first batch
+        await apiClient.sync.uploadBills(syncToken, normalizedBatch, isFirstBatch);
+        const currentBatch = Math.floor(i / batchSize) + 1;
+        const progress = 25 + (currentBatch / totalBatches) * 50; // 25-75% for upload
+        setSyncProgress(Math.round(progress));
+        console.info(`Uploaded batch ${currentBatch} of ${totalBatches}`);
+      }
 
-          // Clear offline queue
-          await clearQueue();
-          // Update sync time
-          const newSyncTime = new Date();
-          await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
-          setLastSyncTime(newSyncTime);
+      setSyncProgress(75);
+      setSyncOperation(t('Cleaning local data...'));
 
-          console.info('Background push and override completed successfully');
-        } catch (backgroundError) {
-          console.error('Background push and override failed:', backgroundError);
-          // Fallback to regular sync on error
-          syncData();
-        }
-      })();
+      // Step 2: Clear offline queue since we've uploaded everything
+      await clearQueue();
+      setSyncProgress(90);
+
+      setSyncOperation(t('Updating sync status...'));
+
+      // Step 3: Update sync time
+      const newSyncTime = new Date();
+      await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
+      setLastSyncTime(newSyncTime);
+      setSyncProgress(95);
+
+      // Step 4: Refresh cache
+      storage.invalidateCache(STORAGE_KEYS.BILLS);
+      setSyncProgress(100);
+
+      setSyncOperation(t('Sync completed'));
+      console.info('Push and override completed successfully');
+
+      // Wait a moment to show 100% completion
+      setTimeout(async () => {
+        // 刷新数据提供者中的数据
+        setIsRefreshBill(true);
+        setIsSyncing(false);
+        setSyncProgress(0);
+        // Close sync options sheet
+        setShowSyncOptionsSheet(false);
+      }, 1000);
+
     } catch (err) {
       console.error('Push and override bills failed:', err);
+      setIsSyncing(false);
+      setSyncProgress(0);
       // Still try regular sync on error
       syncData();
     }
-  }, [syncToken, localBills, syncData]);
+  }, [syncToken, localBills, syncData, t]);
 
   /**
    * Handle synchronized sign out
@@ -1033,10 +1224,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateUser,
     syncData,
     lastSyncTime,
+    isSyncing,
     showSyncOptionsSheet,
     setSyncOptionsSheet: setShowSyncOptionsSheet,
     isRefreshBill,
     setIsRefreshBill,
+    isOnline,
   };
 
   return (

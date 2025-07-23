@@ -581,14 +581,14 @@ export const apiClient = {
       }
     },
 
-    uploadBills: async (token: string, bills: any[]): Promise<void> => {
+    uploadBills: async (token: string, bills: any[], override: boolean = false): Promise<void> => {
       const response = await fetch(`${API_URL}/api/sync/bills`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ bills }),
+        body: JSON.stringify({ bills, override }),
       });
 
       if (!response.ok) {

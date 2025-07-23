@@ -10,6 +10,7 @@ require("dotenv").config();
 
 const commands = {
   check: "检查数据库状态和表结构",
+  schema: "查看指定表的详细结构",
   update: "更新数据库结构（安全的增量更新）",
   reset: "重置数据库（危险操作，会删除所有数据）",
   migrate: "运行数据库迁移",
@@ -36,6 +37,9 @@ async function main() {
       case 'check':
         await checkDatabase();
         break;
+      case 'schema':
+        await showTableSchema();
+        break;
       case 'update':
         await updateDatabase();
         break;
@@ -58,17 +62,18 @@ async function main() {
 function showHelp() {
   console.log(`
 🗄️  MomiQ 数据库管理工具
-
 使用方法:
-  npm run db:manage <command>
+  npm run db:manage <command> [options]
 
 可用命令:
 ${Object.entries(commands).map(([cmd, desc]) => `  ${cmd.padEnd(10)} - ${desc}`).join('\n')}
 
 示例:
-  npm run db:manage check    # 检查数据库状态
-  npm run db:manage update   # 更新数据库结构
-  npm run db:manage help     # 显示此帮助信息
+  npm run db:manage check           # 检查数据库状态
+  npm run db:manage schema bills    # 查看 bills 表结构
+  npm run db:manage schema users    # 查看 users 表结构
+  npm run db:manage update          # 更新数据库结构
+  npm run db:manage help            # 显示此帮助信息
 
 环境变量:
   TURSO_DATABASE_URL  - Turso数据库URL（生产环境）
@@ -110,45 +115,187 @@ async function getDbClient() {
 }
 
 async function checkDatabase() {
-  console.log("🔍 检查数据库状态...");
+  console.log('🔍 检查数据库状态...');
   
   const { db, environment } = await getDbClient();
   
   try {
     // 检查表是否存在
-    const tables = ['users', 'bills', 'family_spaces', 'family_members', 'family_join_requests', 'user_sessions'];
+    const tables = await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
     
-    console.log("\n📋 表结构检查:");
-    for (const table of tables) {
-      try {
-        await db.execute(`SELECT 1 FROM ${table} LIMIT 1`);
-        console.log(`  ${table.padEnd(20)} ✅ 存在`);
-      } catch (error) {
-        console.log(`  ${table.padEnd(20)} ❌ 不存在`);
+    if (tables.rows.length === 0) {
+      console.log('❌ 数据库中没有找到任何表');
+      return;
+    }
+    
+    console.log(`✅ 找到 ${tables.rows.length} 个表:`);
+    
+    for (const table of tables.rows) {
+      const tableName = table.name || table[0];
+      console.log(`\n📋 表: ${tableName}`);
+      
+      // 获取表结构
+      const schema = await db.execute(`PRAGMA table_info(${tableName})`);
+      console.log('  字段:');
+      schema.rows.forEach(column => {
+        const name = column.name || column[1];
+        const type = column.type || column[2];
+        const notNull = column.notnull || column[3];
+        const defaultValue = column.dflt_value || column[4];
+        const pk = column.pk || column[5];
+        
+        let info = `    ${name} (${type})`;
+        if (pk) info += ' PRIMARY KEY';
+        if (notNull) info += ' NOT NULL';
+        if (defaultValue !== null) info += ` DEFAULT ${defaultValue}`;
+        
+        console.log(info);
+      });
+      
+      // 获取记录数
+      const count = await db.execute(`SELECT COUNT(*) as count FROM ${tableName}`);
+      const recordCount = count.rows[0].count || count.rows[0][0];
+      console.log(`  记录数: ${recordCount}`);
+    }
+    
+    console.log('\n✅ 数据库检查完成');
+    
+  } catch (error) {
+    console.error('❌ 检查数据库时出错:', error.message);
+    throw error;
+  } finally {
+    await db.close();
+  }
+}
+
+async function showTableSchema() {
+  const tableName = process.argv[3];
+  
+  if (!tableName) {
+    console.log('❌ 请指定要查看的表名');
+    console.log('使用方法: npm run db:manage schema <table_name>');
+    console.log('示例: npm run db:manage schema bills');
+    return;
+  }
+  
+  console.log(`🔍 查看表 "${tableName}" 的结构...`);
+  
+  const { db, environment } = await getDbClient();
+  
+  try {
+    // 检查表是否存在
+    const tableExists = await db.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
+      [tableName]
+    );
+    
+    if (tableExists.rows.length === 0) {
+      console.log(`❌ 表 "${tableName}" 不存在`);
+      
+      // 显示可用的表
+      const tables = await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+      if (tables.rows.length > 0) {
+        console.log('\n可用的表:');
+        tables.rows.forEach(table => {
+          const name = table.name || table[0];
+          console.log(`  - ${name}`);
+        });
+      }
+      return;
+    }
+    
+    console.log(`\n📋 表: ${tableName}`);
+    console.log('=' .repeat(50));
+    
+    // 获取表结构
+    const schema = await db.execute(`PRAGMA table_info(${tableName})`);
+    
+    console.log('\n🏗️  字段结构:');
+    console.log('字段名'.padEnd(20) + '类型'.padEnd(15) + '约束'.padEnd(25) + '默认值');
+    console.log('-'.repeat(80));
+    
+    schema.rows.forEach(column => {
+      const name = column.name || column[1];
+      const type = column.type || column[2];
+      const notNull = column.notnull || column[3];
+      const defaultValue = column.dflt_value || column[4];
+      const pk = column.pk || column[5];
+      
+      let constraints = [];
+      if (pk) constraints.push('PRIMARY KEY');
+      if (notNull) constraints.push('NOT NULL');
+      
+      const constraintStr = constraints.join(', ') || '-';
+      const defaultStr = defaultValue !== null ? defaultValue : '-';
+      
+      console.log(
+        name.padEnd(20) + 
+        type.padEnd(15) + 
+        constraintStr.padEnd(25) + 
+        defaultStr
+      );
+    });
+    
+    // 获取索引信息
+    const indexes = await db.execute(`PRAGMA index_list(${tableName})`);
+    if (indexes.rows.length > 0) {
+      console.log('\n🔍 索引:');
+      for (const index of indexes.rows) {
+        const indexName = index.name || index[1];
+        const unique = index.unique || index[2];
+        
+        const indexInfo = await db.execute(`PRAGMA index_info(${indexName})`);
+        const columns = indexInfo.rows.map(col => col.name || col[2]).join(', ');
+        
+        console.log(`  - ${indexName} (${columns})${unique ? ' [UNIQUE]' : ''}`);
       }
     }
-
-    // 检查bills表的family_space_id列
-    try {
-      const billsSchema = await db.execute("PRAGMA table_info(bills)");
-      const hasFamilySpaceId = billsSchema.rows.some(row => row.name === 'family_space_id');
-      console.log(`\n🔗 Bills表family_space_id列: ${hasFamilySpaceId ? '✅ 存在' : '❌ 缺失'}`);
-    } catch (error) {
-      console.log("\n🔗 无法检查Bills表结构");
+    
+    // 获取外键信息
+    const foreignKeys = await db.execute(`PRAGMA foreign_key_list(${tableName})`);
+    if (foreignKeys.rows.length > 0) {
+      console.log('\n🔗 外键约束:');
+      foreignKeys.rows.forEach(fk => {
+        const from = fk.from || fk[3];
+        const table = fk.table || fk[2];
+        const to = fk.to || fk[4];
+        console.log(`  - ${from} → ${table}.${to}`);
+      });
     }
-
-    // 统计数据
-    console.log("\n📊 数据统计:");
-    for (const table of tables) {
-      try {
-        const result = await db.execute(`SELECT COUNT(*) as count FROM ${table}`);
-        const count = result.rows[0]?.count || 0;
-        console.log(`  ${table.padEnd(20)} ${count} 条记录`);
-      } catch (error) {
-        console.log(`  ${table.padEnd(20)} 无法统计`);
+    
+    // 获取记录数和示例数据
+    const count = await db.execute(`SELECT COUNT(*) as count FROM ${tableName}`);
+    const recordCount = count.rows[0].count || count.rows[0][0];
+    console.log(`\n📊 记录数: ${recordCount}`);
+    
+    if (recordCount > 0) {
+      console.log('\n📄 示例数据 (前3条):');
+      const sample = await db.execute(`SELECT * FROM ${tableName} LIMIT 3`);
+      
+      if (sample.rows.length > 0) {
+        // 获取列名
+        const columns = schema.rows.map(col => col.name || col[1]);
+        
+        // 打印表头
+        console.log(columns.map(col => col.padEnd(15)).join(' | '));
+        console.log(columns.map(() => '-'.repeat(15)).join('-|-'));
+        
+        // 打印数据
+        sample.rows.forEach(row => {
+          const values = columns.map(col => {
+            const value = row[col] !== undefined ? row[col] : (row[columns.indexOf(col)] || '');
+            return String(value).padEnd(15);
+          });
+          console.log(values.join(' | '));
+        });
       }
     }
-
+    
+    console.log('\n✅ 表结构查看完成');
+    
+  } catch (error) {
+    console.error('❌ 查看表结构时出错:', error.message);
+    throw error;
   } finally {
     await db.close();
   }

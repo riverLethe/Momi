@@ -29,13 +29,22 @@ export async function POST(request: NextRequest) {
     // 2) Parse body
     const body = (await request.json()) as
       | BillSyncOperation[]
-      | { bills: BillSyncOperation[] };
+      | { bills: BillSyncOperation[]; override?: boolean };
     const operations: BillSyncOperation[] = Array.isArray(body)
       ? body
       : body?.bills || [];
+    const isOverrideMode = !Array.isArray(body) && body?.override === true;
 
     if (!Array.isArray(operations) || operations.length === 0) {
       return NextResponse.json({ success: true, uploaded: 0 });
+    }
+
+    // 3) 如果是覆盖模式，先清空用户的所有账单
+    if (isOverrideMode) {
+      await db.execute({
+        sql: `UPDATE bills SET is_deleted = 1, updated_at = ? WHERE user_id = ? AND is_deleted = 0`,
+        args: [new Date().toISOString(), user.id],
+      });
     }
 
     let uploaded = 0;
