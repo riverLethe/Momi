@@ -79,7 +79,7 @@ export const generateCategoryData = async (
     const billDate = new Date(bill.date);
     return (
       isWithinInterval(billDate, { start: startDate, end: endDate }) &&
-      (viewMode === "family" ? bill.isFamilyBill : !bill.isFamilyBill)
+      (viewMode === "family" ? true : !bill.isFamilyBill) // 家庭视图显示所有账单，个人视图只显示个人账单
     );
   });
 
@@ -89,7 +89,7 @@ export const generateCategoryData = async (
     return (
       isWithinInterval(txDate, { start: startDate, end: endDate }) &&
       tx.type === "expense" &&
-      (viewMode === "family" ? tx.isFamilyTransaction : !tx.isFamilyTransaction)
+      (viewMode === "family" ? true : !tx.isFamilyTransaction) // 家庭视图显示所有交易，个人视图只显示个人交易
     );
   });
 
@@ -217,7 +217,7 @@ const calculateCategoryExpense = (
     return (
       bill.category === categoryId &&
       isWithinInterval(billDate, { start: startDate, end: endDate }) &&
-      (viewMode === "family" ? bill.isFamilyBill : !bill.isFamilyBill)
+      (viewMode === "family" ? true : !bill.isFamilyBill) // 家庭视图显示所有账单，个人视图只显示个人账单
     );
   });
 
@@ -228,7 +228,7 @@ const calculateCategoryExpense = (
       tx.category === categoryId &&
       tx.type === "expense" &&
       isWithinInterval(txDate, { start: startDate, end: endDate }) &&
-      (viewMode === "family" ? tx.isFamilyTransaction : !tx.isFamilyTransaction)
+      (viewMode === "family" ? true : !tx.isFamilyTransaction) // 家庭视图显示所有交易，个人视图只显示个人交易
     );
   });
 
@@ -357,7 +357,7 @@ const calculateTotalExpenseForPeriod = (
     const billDate = new Date(bill.date);
     return (
       isWithinInterval(billDate, { start: startDate, end: endDate }) &&
-      (viewMode === "family" ? bill.isFamilyBill : !bill.isFamilyBill)
+      (viewMode === "family" ? true : !bill.isFamilyBill) // 家庭视图显示所有账单，个人视图只显示个人账单
     );
   });
 
@@ -367,7 +367,7 @@ const calculateTotalExpenseForPeriod = (
     return (
       tx.type === "expense" &&
       isWithinInterval(txDate, { start: startDate, end: endDate }) &&
-      (viewMode === "family" ? tx.isFamilyTransaction : !tx.isFamilyTransaction)
+      (viewMode === "family" ? true : !tx.isFamilyTransaction) // 家庭视图显示所有交易，个人视图只显示个人交易
     );
   });
 
@@ -1295,7 +1295,7 @@ async function generateCategoryDataFromRawData(
     const billDate = new Date(bill.date);
     return (
       isWithinInterval(billDate, { start: startDate, end: endDate }) &&
-      (viewMode === "family" ? bill.isFamilyBill : !bill.isFamilyBill)
+      (viewMode === "family" ? true : !bill.isFamilyBill) // 家庭视图显示所有账单，个人视图只显示个人账单
     );
   });
 
@@ -1305,7 +1305,7 @@ async function generateCategoryDataFromRawData(
     return (
       isWithinInterval(txDate, { start: startDate, end: endDate }) &&
       tx.type === "expense" &&
-      (viewMode === "family" ? tx.isFamilyTransaction : !tx.isFamilyTransaction)
+      (viewMode === "family" ? true : !tx.isFamilyTransaction) // 家庭视图显示所有交易，个人视图只显示个人交易
     );
   });
 
