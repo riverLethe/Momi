@@ -129,15 +129,15 @@ export async function GET(request: NextRequest) {
       args,
     });
 
-    // 转换数据格式
+    // 转换数据格式 - 不转换时间格式，直接返回原始数据
     const bills = result.rows.map((row: any) => ({
       id: row.id,
       amount: row.amount,
       category: row.category,
       notes: row.notes,
-      date: new Date(row.date),
-      createdAt: new Date(row.createdAt),
-      updatedAt: new Date(row.updatedAt),
+      date: row.date, // 直接返回原始时间数据
+      createdAt: row.createdAt, // 直接返回原始时间数据
+      updatedAt: row.updatedAt, // 直接返回原始时间数据
       createdBy: row.createdBy,
       creatorName: row.creatorName,
       isFamilyBill: Boolean(row.isFamilyBill),
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
 
     // 解析请求体
     const body = await request.json();
-    const { familyId, amount, category, notes, date, merchant } = body;
+    const { familyId, amount, category, notes, date, merchant, createdAt, updatedAt } = body;
 
     // 验证必需字段
     if (!familyId || !amount || !category) {
@@ -249,8 +249,11 @@ export async function POST(request: NextRequest) {
 
     // 生成账单ID
     const billId = `bill_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const now = new Date().toISOString();
-    const billDate = date ? new Date(date).toISOString() : now;
+    
+    // 使用客户端传来的时间数据，如果没有则使用null
+    const billDate = date || null;
+    const billCreatedAt = createdAt || null;
+    const billUpdatedAt = updatedAt || null;
 
     // 创建账单
     await db.execute({
@@ -262,9 +265,9 @@ export async function POST(request: NextRequest) {
         amount,
         category,
         notes || null,
-        billDate,
-        now,
-        now,
+        billDate, // 使用客户端传来的时间
+        billCreatedAt, // 使用客户端传来的时间
+        billUpdatedAt, // 使用客户端传来的时间
         familyId,
       ],
     });
@@ -276,15 +279,15 @@ export async function POST(request: NextRequest) {
       console.error("Failed to update last transaction time:", error);
     }
 
-    // 返回创建的账单
+    // 返回创建的账单 - 直接返回原始时间数据
     const bill = {
       id: billId,
       amount,
       category,
       notes,
-      date: new Date(billDate),
-      createdAt: new Date(now),
-      updatedAt: new Date(now),
+      date: billDate, // 直接返回原始时间数据
+      createdAt: billCreatedAt, // 直接返回原始时间数据
+      updatedAt: billUpdatedAt, // 直接返回原始时间数据
       createdBy: user.id,
       creatorName: user.email,
       isFamilyBill: true,

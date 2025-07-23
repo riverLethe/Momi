@@ -122,9 +122,9 @@ async function createTables(db) {
       avatar TEXT,
       provider TEXT NOT NULL,
       provider_id TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_sync DATETIME,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      last_sync INTEGER,
       is_deleted BOOLEAN DEFAULT 0
     )
   `);
@@ -135,8 +135,8 @@ async function createTables(db) {
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
       token TEXT UNIQUE NOT NULL,
-      expires_at DATETIME NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      expires_at INTEGER NOT NULL,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
       FOREIGN KEY (user_id) REFERENCES users (id)
     )
   `);
@@ -149,7 +149,7 @@ async function createTables(db) {
       created_by TEXT NOT NULL,
       creator_name TEXT NOT NULL,
       invite_code TEXT UNIQUE NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
       FOREIGN KEY (created_by) REFERENCES users (id)
     )
   `);
@@ -162,9 +162,11 @@ async function createTables(db) {
       amount REAL NOT NULL,
       category TEXT NOT NULL,
       description TEXT,
-      bill_date DATETIME NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      merchant TEXT,
+      account TEXT,
+      bill_date INTEGER NOT NULL,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
       sync_version INTEGER DEFAULT 1,
       family_space_id TEXT,
       is_deleted BOOLEAN DEFAULT 0,
@@ -181,8 +183,8 @@ async function createTables(db) {
       category TEXT NOT NULL,
       amount REAL NOT NULL,
       period TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
       sync_version INTEGER DEFAULT 1,
       is_deleted BOOLEAN DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users (id)
@@ -197,7 +199,7 @@ async function createTables(db) {
       operation TEXT NOT NULL,
       status TEXT NOT NULL,
       details TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
       FOREIGN KEY (user_id) REFERENCES users (id)
     )
   `);
@@ -212,7 +214,7 @@ async function createTables(db) {
       local_data TEXT NOT NULL,
       remote_data TEXT NOT NULL,
       is_resolved BOOLEAN DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
       FOREIGN KEY (user_id) REFERENCES users (id)
     )
   `);
@@ -225,8 +227,8 @@ async function createTables(db) {
       user_id TEXT NOT NULL,
       username TEXT NOT NULL,
       is_creator BOOLEAN DEFAULT 0,
-      joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_transaction_time DATETIME,
+      joined_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      last_transaction_time INTEGER,
       FOREIGN KEY (family_id) REFERENCES family_spaces (id),
       FOREIGN KEY (user_id) REFERENCES users (id),
       UNIQUE(family_id, user_id)
@@ -242,8 +244,8 @@ async function createTables(db) {
       username TEXT NOT NULL,
       user_email TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
-      requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      responded_at DATETIME,
+      requested_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      responded_at INTEGER,
       responded_by TEXT,
       FOREIGN KEY (family_id) REFERENCES family_spaces (id),
       FOREIGN KEY (user_id) REFERENCES users (id),
@@ -279,6 +281,111 @@ async function runMigrations(db) {
     console.log("✅ Migration 2: Foreign key constraints verified");
   } catch (error) {
     console.error("❌ Migration 2 failed:", error.message);
+  }
+
+  // 迁移3: 为bills表添加merchant字段
+  try {
+    console.log("🔄 Migration 3: Adding merchant to bills table...");
+    await db.execute(`ALTER TABLE bills ADD COLUMN merchant TEXT`);
+    console.log("✅ Migration 3: merchant column added");
+  } catch (error) {
+    if (error.message.includes("duplicate column name") || error.message.includes("already exists")) {
+      console.log("✅ Migration 3: merchant column already exists");
+    } else {
+      console.error("❌ Migration 3 failed:", error.message);
+    }
+  }
+
+  // 迁移4: 为bills表添加account字段
+  try {
+    console.log("🔄 Migration 4: Adding account to bills table...");
+    await db.execute(`ALTER TABLE bills ADD COLUMN account TEXT`);
+    console.log("✅ Migration 4: account column added");
+  } catch (error) {
+    if (error.message.includes("duplicate column name") || error.message.includes("already exists")) {
+      console.log("✅ Migration 4: account column already exists");
+    } else {
+      console.error("❌ Migration 4 failed:", error.message);
+    }
+  }
+
+  // 迁移5: 将时间字段从DATETIME转换为INTEGER时间戳
+  try {
+    console.log("🔄 Migration 5: Converting datetime fields to timestamp format...");
+    
+    // 检查是否需要转换时间格式
+    const sampleBill = await db.execute("SELECT created_at FROM bills LIMIT 1");
+    if (sampleBill.rows.length > 0) {
+      const createdAt = sampleBill.rows[0].created_at;
+      // 如果是字符串格式（ISO或DATETIME），则需要转换
+      if (typeof createdAt === 'string' && isNaN(parseInt(createdAt))) {
+        console.log("🔄 Converting bills table datetime fields to timestamps...");
+        
+        // 转换bills表的时间字段
+        await db.execute(`
+          UPDATE bills 
+          SET 
+            bill_date = CASE 
+              WHEN typeof(bill_date) = 'text' THEN strftime('%s', bill_date) * 1000
+              ELSE bill_date 
+            END,
+            created_at = CASE 
+              WHEN typeof(created_at) = 'text' THEN strftime('%s', created_at) * 1000
+              ELSE created_at 
+            END,
+            updated_at = CASE 
+              WHEN typeof(updated_at) = 'text' THEN strftime('%s', updated_at) * 1000
+              ELSE updated_at 
+            END
+          WHERE typeof(bill_date) = 'text' OR typeof(created_at) = 'text' OR typeof(updated_at) = 'text'
+        `);
+        
+        // 转换其他表的时间字段
+        const tables = [
+          { name: 'users', fields: ['created_at', 'updated_at', 'last_sync'] },
+          { name: 'user_sessions', fields: ['created_at', 'expires_at'] },
+          { name: 'family_spaces', fields: ['created_at'] },
+          { name: 'budgets', fields: ['created_at', 'updated_at'] },
+          { name: 'sync_logs', fields: ['created_at'] },
+          { name: 'data_conflicts', fields: ['created_at'] },
+          { name: 'family_members', fields: ['joined_at', 'last_transaction_time'] },
+          { name: 'family_join_requests', fields: ['requested_at', 'responded_at'] }
+        ];
+        
+        for (const table of tables) {
+          try {
+            const updateFields = table.fields.map(field => 
+              `${field} = CASE 
+                WHEN typeof(${field}) = 'text' AND ${field} IS NOT NULL THEN strftime('%s', ${field}) * 1000
+                ELSE ${field} 
+              END`
+            ).join(', ');
+            
+            const whereConditions = table.fields.map(field => 
+              `typeof(${field}) = 'text'`
+            ).join(' OR ');
+            
+            await db.execute(`
+              UPDATE ${table.name} 
+              SET ${updateFields}
+              WHERE ${whereConditions}
+            `);
+            
+            console.log(`✅ Converted ${table.name} table datetime fields`);
+          } catch (error) {
+            console.log(`⚠️ Table ${table.name} may not exist or already converted:`, error.message);
+          }
+        }
+        
+        console.log("✅ Migration 5: All datetime fields converted to timestamps");
+      } else {
+        console.log("✅ Migration 5: Datetime fields already in timestamp format");
+      }
+    } else {
+      console.log("✅ Migration 5: No data to convert");
+    }
+  } catch (error) {
+    console.error("❌ Migration 5 failed:", error.message);
   }
 }
 

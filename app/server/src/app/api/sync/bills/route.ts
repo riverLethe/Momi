@@ -47,29 +47,20 @@ export async function POST(request: NextRequest) {
       switch (action) {
         case "create":
         case "update": {
-          // Handle missing or invalid date
-          let billDate: string;
-          if (!bill.date) {
-            console.warn(`Bill ${bill.id} has missing date field, using fallback date`);
-            billDate = '1970-01-01T00:00:00.000Z'; // Use epoch as fallback for invalid dates
-          } else {
-            try {
-              billDate = typeof bill.date === 'string' 
-                ? new Date(bill.date).toISOString()
-                : new Date(bill.date).toISOString();
-            } catch (error) {
-              console.warn(`Bill ${bill.id} has invalid date format, using fallback date`);
-              billDate = '1970-01-01T00:00:00.000Z'; // Use epoch as fallback for invalid dates
-            }
-          }
+          // 直接使用客户端传来的时间数据，不做任何转换
+          const billDate = bill.date || null;
+          const createdAt = bill.createdAt || null;
+          const updatedAt = bill.updatedAt || null;
 
           // Upsert bill – rely on ON CONFLICT for simplicity (SQLite/Turso)
           await db.execute({
-            sql: `INSERT INTO bills (id, user_id, amount, category, description, bill_date, created_at, updated_at, is_deleted)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+            sql: `INSERT INTO bills (id, user_id, amount, category, description, merchant, account, bill_date, created_at, updated_at, is_deleted)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
                    ON CONFLICT(id) DO UPDATE SET amount = excluded.amount,
                                                category = excluded.category,
                                                description = excluded.description,
+                                               merchant = excluded.merchant,
+                                               account = excluded.account,
                                                bill_date = excluded.bill_date,
                                                updated_at = excluded.updated_at,
                                                is_deleted = 0`,
@@ -78,19 +69,23 @@ export async function POST(request: NextRequest) {
               user.id,
               bill.amount ?? 0,
               bill.category ?? null,
-              bill.note ?? null,
-              billDate,
-              bill.createdAt ?? new Date().toISOString(),
-              new Date().toISOString(),
+              bill.notes ?? null,
+              bill.merchant ?? null,
+              bill.account ?? null,
+              billDate, // 直接使用客户端传来的时间
+              createdAt, // 直接使用客户端传来的时间
+              updatedAt, // 直接使用客户端传来的时间
             ],
           });
           uploaded += 1;
           break;
         }
         case "delete": {
+          // 对于删除操作，使用客户端传来的updatedAt时间
+          const updatedAt = bill.updatedAt || null;
           await db.execute({
             sql: `UPDATE bills SET is_deleted = 1, updated_at = ? WHERE id = ? AND user_id = ?`,
-            args: [new Date().toISOString(), bill.id, user.id],
+            args: [updatedAt, bill.id, user.id],
           });
           uploaded += 1;
           break;

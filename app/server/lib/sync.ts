@@ -66,11 +66,14 @@ export class SyncService {
         }
       }
 
-      // Update user's last sync time
-      await db.execute({
-        sql: `UPDATE users SET last_sync = ?, updated_at = ? WHERE id = ?`,
-        args: [new Date().toISOString(), new Date().toISOString(), userId],
-      });
+      // Update user's last sync time - 使用客户端传来的时间戳
+      const lastSyncTime = clientData.lastSyncTimestamp || clientData.lastSyncTime;
+      if (lastSyncTime) {
+        await db.execute({
+          sql: `UPDATE users SET last_sync = ?, updated_at = ? WHERE id = ?`,
+          args: [lastSyncTime, lastSyncTime, userId],
+        });
+      }
 
       // Log sync operation
       await this.createSyncLog(userId, "sync", "success", {
@@ -78,6 +81,7 @@ export class SyncService {
         budgetsCount: syncedBudgets.length,
         conflictsCount: conflicts.length,
         deviceInfo,
+        syncTimestamp: lastSyncTime,
       });
 
       return {
@@ -120,19 +124,21 @@ export class SyncService {
     const familySpaceId = bill.familySpaceId || null;
 
     if (existingResult.rows.length === 0) {
-      // Insert new bill
+      // Insert new bill - 直接使用客户端传来的时间数据，不做任何转换
       await db.execute({
-        sql: `INSERT INTO bills (id, user_id, amount, category, description, bill_date, created_at, updated_at, sync_version, family_space_id)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO bills (id, user_id, amount, category, description, merchant, account, bill_date, created_at, updated_at, sync_version, family_space_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           bill.id,
           userId,
           bill.amount,
           bill.category,
-          bill.description || null,
-          bill.date,
-          bill.createdAt || new Date().toISOString(),
-          new Date().toISOString(),
+          bill.notes || null, // 使用notes而不是description
+          bill.merchant || null,
+          bill.account || null,
+          bill.date, // 直接使用客户端传来的date
+          bill.createdAt, // 直接使用客户端传来的createdAt
+          bill.updatedAt, // 直接使用客户端传来的updatedAt
           bill.syncVersion || 1,
           familySpaceId,
         ],
@@ -164,16 +170,18 @@ export class SyncService {
         };
       }
 
-      // Update existing bill
+      // Update existing bill - 直接使用客户端传来的时间数据
       await db.execute({
-        sql: `UPDATE bills SET amount = ?, category = ?, description = ?, bill_date = ?, updated_at = ?, sync_version = ?, family_space_id = ?
+        sql: `UPDATE bills SET amount = ?, category = ?, description = ?, merchant = ?, account = ?, bill_date = ?, updated_at = ?, sync_version = ?, family_space_id = ?
               WHERE id = ? AND user_id = ?`,
         args: [
           bill.amount,
           bill.category,
-          bill.description || null,
-          bill.date,
-          new Date().toISOString(),
+          bill.notes || null, // 使用notes而不是description
+          bill.merchant || null,
+          bill.account || null,
+          bill.date, // 直接使用客户端传来的date
+          bill.updatedAt, // 直接使用客户端传来的updatedAt
           (bill.syncVersion || 1) + 1,
           familySpaceId,
           bill.id,
@@ -209,7 +217,7 @@ export class SyncService {
     });
 
     if (existingResult.rows.length === 0) {
-      // Insert new budget
+      // Insert new budget - 直接使用客户端传来的时间数据
       await db.execute({
         sql: `INSERT INTO budgets (id, user_id, category, amount, period, created_at, updated_at, sync_version)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -219,8 +227,8 @@ export class SyncService {
           budget.category,
           budget.amount,
           budget.period,
-          budget.createdAt || new Date().toISOString(),
-          new Date().toISOString(),
+          budget.createdAt, // 直接使用客户端传来的createdAt
+          budget.updatedAt, // 直接使用客户端传来的updatedAt
           budget.syncVersion || 1,
         ],
       });
@@ -240,7 +248,7 @@ export class SyncService {
         };
       }
 
-      // Update existing budget
+      // Update existing budget - 直接使用客户端传来的时间数据
       await db.execute({
         sql: `UPDATE budgets SET category = ?, amount = ?, period = ?, updated_at = ?, sync_version = ?
               WHERE id = ? AND user_id = ?`,
@@ -248,7 +256,7 @@ export class SyncService {
           budget.category,
           budget.amount,
           budget.period,
-          new Date().toISOString(),
+          budget.updatedAt, // 直接使用客户端传来的updatedAt
           (budget.syncVersion || 1) + 1,
           budget.id,
           userId,
@@ -281,7 +289,7 @@ export class SyncService {
         operation,
         status,
         details ? JSON.stringify(details) : null,
-        new Date().toISOString(),
+        Date.now(), // 使用时间戳而不是ISO字符串
       ],
     });
   }
@@ -310,29 +318,31 @@ export class SyncService {
       }),
     ]);
 
-    // 转换账单数据，将数据库字段名映射为客户端期望的字段名
+    // 转换账单数据，将数据库字段名映射为客户端期望的字段名，但不转换时间格式
     const transformedBills = billsResult.rows.map((bill: any) => ({
       id: bill.id,
       amount: bill.amount,
       category: bill.category,
-      description: bill.description,
-      date: new Date(bill.bill_date).toISOString(), // bill_date -> date
-      createdAt: new Date(bill.created_at).toISOString(), // created_at -> createdAt
-      updatedAt: new Date(bill.updated_at).toISOString(), // updated_at -> updatedAt
+      notes: bill.description, // description -> notes
+      merchant: bill.merchant, // merchant字段
+      account: bill.account, // account字段
+      date: bill.bill_date, // 直接返回原始时间数据，不做转换
+      createdAt: bill.created_at, // 直接返回原始时间数据
+      updatedAt: bill.updated_at, // 直接返回原始时间数据
       syncVersion: bill.sync_version,
       familySpaceId: bill.family_space_id,
       userId: bill.user_id,
       isDeleted: bill.is_deleted,
     }));
 
-    // 转换预算数据
+    // 转换预算数据，不转换时间格式
     const transformedBudgets = budgetsResult.rows.map((budget: any) => ({
       id: budget.id,
       category: budget.category,
       amount: budget.amount,
       period: budget.period,
-      createdAt: new Date(budget.created_at).toISOString(),
-      updatedAt: new Date(budget.updated_at).toISOString(),
+      createdAt: budget.created_at, // 直接返回原始时间数据
+      updatedAt: budget.updated_at, // 直接返回原始时间数据
       syncVersion: budget.sync_version,
       userId: budget.user_id,
       isDeleted: budget.is_deleted,
@@ -341,7 +351,7 @@ export class SyncService {
     return {
       bills: transformedBills,
       budgets: transformedBudgets,
-      lastSyncTimestamp: new Date().toISOString(),
+      lastSyncTimestamp: lastSyncTimestamp, // 返回传入的时间戳，不生成新的
     };
   }
 
@@ -378,12 +388,11 @@ export class SyncService {
     userId: string,
     daysToKeep: number = 30
   ): Promise<number> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+    const cutoffTimestamp = Date.now() - (daysToKeep * 24 * 60 * 60 * 1000);
 
     const result = await db.execute({
       sql: "DELETE FROM sync_logs WHERE user_id = ? AND created_at < ?",
-      args: [userId, cutoffDate.toISOString()],
+      args: [userId, cutoffTimestamp],
     });
 
     return result.rowsAffected;
@@ -422,7 +431,7 @@ export class SyncService {
           data.category,
           data.description,
           data.date,
-          new Date().toISOString(),
+          data.updatedAt || data.updated_at, // 使用冲突数据中的时间信息
           conflict.resource_id,
           userId,
         ],
@@ -435,7 +444,7 @@ export class SyncService {
           data.category,
           data.amount,
           data.period,
-          new Date().toISOString(),
+          data.updatedAt || data.updated_at, // 使用冲突数据中的时间信息
           conflict.resource_id,
           userId,
         ],

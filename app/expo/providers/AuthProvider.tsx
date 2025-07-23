@@ -224,7 +224,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const batchSize = 50;
         for (let i = 0; i < queue.length; i += batchSize) {
           const batch = queue.slice(i, i + batchSize);
-          await apiClient.sync.uploadBills(token, batch);
+          
+          // 确保上传前将Date对象转换为时间戳，以匹配服务端格式
+          const normalizedBatch = batch.map((operation: any) => {
+            if (operation.bill) {
+              return {
+                ...operation,
+                bill: {
+                  ...operation.bill,
+                  date: operation.bill.date instanceof Date ? operation.bill.date.getTime() : operation.bill.date,
+                  createdAt: operation.bill.createdAt instanceof Date ? operation.bill.createdAt.getTime() : operation.bill.createdAt,
+                  updatedAt: operation.bill.updatedAt instanceof Date ? operation.bill.updatedAt.getTime() : operation.bill.updatedAt,
+                }
+              };
+            }
+            return operation;
+          });
+          
+          await apiClient.sync.uploadBills(token, normalizedBatch);
           console.info(`Uploaded batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(queue.length / batchSize)}`);
         }
 
@@ -255,10 +272,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const conflicts: any[] = [];
 
         remoteBills.forEach((remote: any) => {
-          const idx = merged.findIndex((b: any) => b.id === remote.id);
+          // 将服务端返回的时间戳转换为Date对象，以保持客户端数据一致性
+          const normalizedRemote = {
+            ...remote,
+            date: remote.date ? new Date(remote.date) : new Date(),
+            createdAt: remote.createdAt ? new Date(remote.createdAt) : new Date(),
+            updatedAt: remote.updatedAt ? new Date(remote.updatedAt) : new Date(),
+          };
+          
+          const idx = merged.findIndex((b: any) => b.id === normalizedRemote.id);
 
           // Handle deleted bills
-          if (remote.deleted) {
+          if (normalizedRemote.deleted) {
             if (idx !== -1) merged.splice(idx, 1);
             return;
           }
@@ -267,25 +292,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Potential conflict - check timestamps
             const localBill = merged[idx];
             const localUpdatedAt = new Date(localBill.updatedAt || localBill.createdAt).getTime();
-            const remoteUpdatedAt = new Date(remote.updatedAt || remote.createdAt).getTime();
+            const remoteUpdatedAt = new Date(normalizedRemote.updatedAt || normalizedRemote.createdAt).getTime();
 
             if (remoteUpdatedAt > localUpdatedAt) {
               // Remote is newer, use it
-              merged[idx] = remote;
+              merged[idx] = normalizedRemote;
             } else if (remoteUpdatedAt < localUpdatedAt) {
               // Local is newer, keep it and track conflict
               conflicts.push({
                 local: localBill,
-                remote: remote,
+                remote: normalizedRemote,
                 resolution: 'kept-local'
               });
             } else {
               // Same timestamp, keep remote for consistency
-              merged[idx] = remote;
+              merged[idx] = normalizedRemote;
             }
           } else {
             // No conflict, just add the remote bill
-            merged.push(remote);
+            merged.push(normalizedRemote);
           }
         });
 
@@ -301,7 +326,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Update sync time
       const newSyncTime = new Date();
-      await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+        await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
       setLastSyncTime(newSyncTime);
 
       // 刷新数据提供者中的数据
@@ -364,8 +389,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const conflicts: any[] = [];
 
           remoteBills.forEach((remote: any) => {
-            const idx = merged.findIndex((b: any) => b.id === remote.id);
-            if (remote.deleted) {
+            // 将服务端返回的时间戳转换为Date对象，以保持客户端数据一致性
+            const normalizedRemote = {
+              ...remote,
+              date: remote.date ? new Date(remote.date) : new Date(),
+              createdAt: remote.createdAt ? new Date(remote.createdAt) : new Date(),
+              updatedAt: remote.updatedAt ? new Date(remote.updatedAt) : new Date(),
+            };
+            
+            const idx = merged.findIndex((b: any) => b.id === normalizedRemote.id);
+            if (normalizedRemote.deleted) {
               // If remote bill is marked as deleted, remove from merged result
               if (idx !== -1) merged.splice(idx, 1);
               return;
@@ -375,21 +408,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               // If bill exists locally with same ID, keep the newest version
               const localBill = merged[idx];
               const localUpdatedAt = new Date(localBill.updatedAt || localBill.createdAt).getTime();
-              const remoteUpdatedAt = new Date(remote.updatedAt || remote.createdAt).getTime();
+              const remoteUpdatedAt = new Date(normalizedRemote.updatedAt || normalizedRemote.createdAt).getTime();
 
               if (remoteUpdatedAt > localUpdatedAt) {
-                merged[idx] = remote;
+                merged[idx] = normalizedRemote;
               } else if (remoteUpdatedAt < localUpdatedAt) {
                 // Local is newer, track conflict but keep local
                 conflicts.push({
                   local: localBill,
-                  remote: remote,
+                  remote: normalizedRemote,
                   resolution: 'kept-local'
                 });
               }
             } else {
               // If bill doesn't exist locally, add the remote bill
-              merged.push(remote);
+              merged.push(normalizedRemote);
             }
           });
 
@@ -402,7 +435,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSyncProgress(80);
           // Update sync time
           const newSyncTime = new Date();
-          await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+        await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
           setLastSyncTime(newSyncTime);
           setSyncProgress(90);
 
@@ -454,12 +487,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (Array.isArray(remoteBills) && remoteBills.length > 0) {
           console.info(`Downloaded ${remoteBills.length} bills from server`);
+          
+          // 将服务端返回的时间戳转换为Date对象，以保持客户端数据一致性
+          const normalizedBills = remoteBills.map((bill: any) => ({
+            ...bill,
+            date: bill.date ? new Date(bill.date) : new Date(),
+            createdAt: bill.createdAt ? new Date(bill.createdAt) : new Date(),
+            updatedAt: bill.updatedAt ? new Date(bill.updatedAt) : new Date(),
+          }));
+          
           // Save remote bills locally
-          await storage.setItem(STORAGE_KEYS.BILLS, remoteBills);
+          await storage.setItem(STORAGE_KEYS.BILLS, normalizedBills);
           setSyncProgress(85);
           // Update sync time
           const newSyncTime = new Date();
-          await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+        await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
           setLastSyncTime(newSyncTime);
           setSyncProgress(95);
 
@@ -515,7 +557,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const totalBatches = Math.ceil(operations.length / batchSize);
           for (let i = 0; i < operations.length; i += batchSize) {
             const batch = operations.slice(i, i + batchSize);
-            await apiClient.sync.uploadBills(syncToken, batch);
+            
+            // 确保上传前将Date对象转换为时间戳，以匹配服务端格式
+            const normalizedBatch = batch.map((operation: any) => ({
+              ...operation,
+              bill: {
+                ...operation.bill,
+                date: operation.bill.date instanceof Date ? operation.bill.date.getTime() : operation.bill.date,
+                createdAt: operation.bill.createdAt instanceof Date ? operation.bill.createdAt.getTime() : operation.bill.createdAt,
+                updatedAt: operation.bill.updatedAt instanceof Date ? operation.bill.updatedAt.getTime() : operation.bill.updatedAt,
+              }
+            }));
+            
+            await apiClient.sync.uploadBills(syncToken, normalizedBatch);
             const currentBatch = Math.floor(i / batchSize) + 1;
             console.info(`Uploaded batch ${currentBatch} of ${totalBatches}`);
           }
@@ -524,7 +578,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await clearQueue();
           // Update sync time
           const newSyncTime = new Date();
-          await storage.setItem("momiq_last_sync", newSyncTime.toISOString());
+          await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
           setLastSyncTime(newSyncTime);
 
           console.info('Background push and override completed successfully');

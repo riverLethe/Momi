@@ -116,7 +116,7 @@ export const useDataSync = () => {
 
       setSyncState((prev) => ({
         ...prev,
-        lastSyncTime: lastSyncStr ? new Date(lastSyncStr) : null,
+        lastSyncTime: lastSyncStr ? new Date(parseInt(lastSyncStr) || lastSyncStr) : null,
         pendingChanges: pendingChangesStr ? parseInt(pendingChangesStr, 10) : 0,
       }));
     } catch (error) {
@@ -187,7 +187,25 @@ export const useDataSync = () => {
             const batchSize = 50;
             for (let i = 0; i < queue.length; i += batchSize) {
               const batch = queue.slice(i, i + batchSize);
-              await apiClient.sync.uploadBills(token, batch);
+              
+              // 转换时间字段为时间戳格式，以匹配服务端期望的格式
+              const formattedBatch = batch.map(operation => ({
+                ...operation,
+                bill: {
+                  ...operation.bill,
+                  date: operation.bill.date instanceof Date 
+                    ? operation.bill.date.getTime() 
+                    : operation.bill.date,
+                  createdAt: operation.bill.createdAt instanceof Date 
+                    ? operation.bill.createdAt.getTime() 
+                    : operation.bill.createdAt,
+                  updatedAt: operation.bill.updatedAt instanceof Date 
+                    ? operation.bill.updatedAt.getTime() 
+                    : operation.bill.updatedAt,
+                }
+              }));
+              
+              await apiClient.sync.uploadBills(token, formattedBatch);
               console.info(
                 `Uploaded batch ${i / batchSize + 1} of ${Math.ceil(queue.length / batchSize)}`
               );
@@ -218,12 +236,12 @@ export const useDataSync = () => {
             const conflicts: any[] = [];
 
             remoteBills.forEach((remote: any) => {
-              // Convert string dates to Date objects for consistency
+              // 将服务端返回的时间戳转换为Date对象，以保持客户端数据一致性
               const normalizedRemote = {
                 ...remote,
-                date: new Date(remote.date),
-                createdAt: new Date(remote.createdAt),
-                updatedAt: new Date(remote.updatedAt),
+                date: remote.date ? new Date(remote.date) : new Date(),
+                createdAt: remote.createdAt ? new Date(remote.createdAt) : new Date(),
+                updatedAt: remote.updatedAt ? new Date(remote.updatedAt) : new Date(),
               };
 
               const idx = merged.findIndex((b: any) => b.id === remote.id);
@@ -284,7 +302,7 @@ export const useDataSync = () => {
 
           // STEP 4: update last sync time
           const newSyncTime = new Date();
-          await storage.setItem(LAST_SYNC_KEY, newSyncTime.toISOString());
+        await storage.setItem(LAST_SYNC_KEY, newSyncTime.getTime().toString());
           await savePendingChanges(0);
 
           console.info("Data sync completed successfully");

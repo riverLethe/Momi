@@ -99,9 +99,9 @@ export class DatabaseService {
         avatar TEXT,
         provider TEXT NOT NULL,
         provider_id TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_sync DATETIME,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        last_sync INTEGER,
         is_deleted BOOLEAN DEFAULT 0
       )
     `);
@@ -111,8 +111,8 @@ export class DatabaseService {
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         token TEXT UNIQUE NOT NULL,
-        expires_at DATETIME NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at INTEGER NOT NULL,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
     `);
@@ -124,9 +124,9 @@ export class DatabaseService {
         amount REAL NOT NULL,
         category TEXT NOT NULL,
         description TEXT,
-        bill_date DATETIME NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        bill_date INTEGER NOT NULL,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
         sync_version INTEGER DEFAULT 1,
         family_space_id TEXT,
         is_deleted BOOLEAN DEFAULT 0,
@@ -151,8 +151,8 @@ export class DatabaseService {
         category TEXT NOT NULL,
         amount REAL NOT NULL,
         period TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
         sync_version INTEGER DEFAULT 1,
         is_deleted BOOLEAN DEFAULT 0,
         FOREIGN KEY (user_id) REFERENCES users (id)
@@ -166,7 +166,7 @@ export class DatabaseService {
         operation TEXT NOT NULL,
         status TEXT NOT NULL,
         details TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
     `);
@@ -180,7 +180,7 @@ export class DatabaseService {
         local_data TEXT NOT NULL,
         remote_data TEXT NOT NULL,
         is_resolved BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
     `);
@@ -193,7 +193,7 @@ export class DatabaseService {
         created_by TEXT NOT NULL,
         creator_name TEXT NOT NULL,
         invite_code TEXT UNIQUE NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
         FOREIGN KEY (created_by) REFERENCES users (id)
       )
     `);
@@ -206,8 +206,8 @@ export class DatabaseService {
         user_id TEXT NOT NULL,
         username TEXT NOT NULL,
         is_creator BOOLEAN DEFAULT 0,
-        joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_transaction_time DATETIME,
+        joined_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        last_transaction_time INTEGER,
         FOREIGN KEY (family_id) REFERENCES family_spaces (id),
         FOREIGN KEY (user_id) REFERENCES users (id),
         UNIQUE(family_id, user_id)
@@ -223,8 +223,8 @@ export class DatabaseService {
         username TEXT NOT NULL,
         user_email TEXT,
         status TEXT NOT NULL DEFAULT 'pending',
-        requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        responded_at DATETIME,
+        requested_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        responded_at INTEGER,
         responded_by TEXT,
         FOREIGN KEY (family_id) REFERENCES family_spaces (id),
         FOREIGN KEY (user_id) REFERENCES users (id),
@@ -296,7 +296,7 @@ export class DatabaseService {
   static async cleanupExpiredSessions(): Promise<number> {
     const result = await db.execute({
       sql: "DELETE FROM user_sessions WHERE expires_at < ?",
-      args: [new Date().toISOString()],
+      args: [Date.now()],
     });
     return result.rowsAffected;
   }

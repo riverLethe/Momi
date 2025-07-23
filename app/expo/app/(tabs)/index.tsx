@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, ActivityIndicator } from "react-native";
 import Animated, {
   useSharedValue,
@@ -31,6 +31,8 @@ import BudgetUpdateModal from "@/components/budget/BudgetUpdateModal";
 import { useBudgets } from "@/hooks/useBudgets";
 import { syncBudgetWidgets } from "@/utils/budgetWidgetSync.utils";
 import type { Budgets, BudgetPeriod } from "@/utils/budget.utils";
+import { apiClient } from "@/utils/api";
+import { getAuthToken } from "@/utils/userPreferences.utils";
 
 export default function HomeScreenPager() {
   const { t } = useTranslation();
@@ -77,6 +79,14 @@ export default function HomeScreenPager() {
       scrollX.value = event.contentOffset.x;
     },
   });
+  useEffect(() => {
+    if (!user) return
+    const abc = async () => {
+      const token = await getAuthToken();
+      if (token) console.log(await apiClient.sync.downloadBills(token))
+    }
+    abc()
+  }, [user])
 
   const handleMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const idx = Math.round(e.nativeEvent.contentOffset.x / width);
