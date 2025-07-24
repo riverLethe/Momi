@@ -872,8 +872,8 @@ export async function fetchReportData(
     // 旧版本调用方式 - 需要获取数据
     selectedPeriodId = billsOrSelectedPeriodId as string;
     dataVersion = transactionsOrDataVersion as number;
-    forceRefresh = budgetsOrForceRefresh as boolean ?? false;
-    lightweight = selectedPeriodIdOrLightweight as boolean ?? false;
+    forceRefresh = (budgetsOrForceRefresh as boolean) ?? false;
+    lightweight = (selectedPeriodIdOrLightweight as boolean) ?? false;
 
     // 获取个人数据（小组件模式）
     const [billsData, transactionsData, budgetsData] = await Promise.all([
@@ -883,10 +883,11 @@ export async function fetchReportData(
     ]);
 
     // 对于家庭模式，目前只能使用个人数据，因为这里无法访问 DataProvider
-    bills = viewMode === "personal" 
-      ? billsData.filter(bill => !bill.isFamilyBill)
-      : billsData; // 暂时使用所有账单作为回退
-    
+    bills =
+      viewMode === "personal"
+        ? billsData.filter((bill) => !bill.isFamilyBill)
+        : billsData; // 暂时使用所有账单作为回退
+
     transactions = transactionsData;
     budgets = budgetsData;
   }
@@ -1600,4 +1601,29 @@ export async function fetchBudgetReportData(
       viewMode,
     };
   }
+}
+
+// 清除家庭相关的报告缓存
+export function clearFamilyReportCache(): void {
+  // 清除所有家庭视图相关的报告缓存
+  const familyCacheKeys = Object.keys(reportCache).filter((key) =>
+    key.includes("_family_")
+  );
+
+  familyCacheKeys.forEach((key) => {
+    delete reportCache[key];
+  });
+
+  // 清除所有家庭视图相关的预算报告缓存
+  const familyBudgetCacheKeys = Object.keys(budgetReportCache).filter((key) =>
+    key.includes("_family_")
+  );
+
+  familyBudgetCacheKeys.forEach((key) => {
+    delete budgetReportCache[key];
+  });
+
+  console.log(
+    `已清除 ${familyCacheKeys.length} 个家庭报告缓存和 ${familyBudgetCacheKeys.length} 个家庭预算报告缓存`
+  );
 }

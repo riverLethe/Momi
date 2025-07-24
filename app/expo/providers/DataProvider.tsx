@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Bill } from '@/types/bills.types';
 import { Transaction } from '@/types/transactions.types';
-import { getBills, getUpcomingBills } from '@/utils/bills.utils';
+import { getBills, getUpcomingBills, getFamilyBills, clearFamilyBillsCache } from '@/utils/bills.utils';
 import { getTransactions, getRecentTransactions } from '@/utils/transactions.utils';
 import { useAuth } from './AuthProvider';
 import { syncSpendingWidgets } from "@/utils/spendingWidgetSync.utils";
 import { storage } from '@/utils/storage.utils';
-import { getFamilyBills } from '@/utils/family-bills.utils';
+import { getFamilyBills as getFamilyBillsAPI } from '@/utils/family-bills.utils';
+import { clearFamilyReportCache } from '@/utils/reports.utils';
 
 // Define the data context type
 interface DataContextType {
@@ -30,11 +31,15 @@ interface DataContextType {
   refreshRecentTransactions: () => Promise<void>;
   // 家庭账单方法
   refreshFamilyBills: () => Promise<void>;
-  loadFamilyBillsByDateRange: (startDate: string, endDate: string) => Promise<Bill[]>;
   // 工具方法：按需获取指定视图模式的账单数据
   getBillsForViewMode: (viewMode: 'personal' | 'family') => Bill[];
-  dataVersion: number;
-  budgetVersion: number;
+  // 缓存管理方法
+  clearFamilyBillsCache: (familyId?: string) => Promise<void>;
+  // 版本控制 - 分离个人和家庭数据版本
+  dataVersion: number; // 个人数据版本
+  budgetVersion: number; // 个人预算版本
+  familyDataVersion: number; // 家庭数据版本
+  familyBudgetVersion: number; // 家庭预算版本
   /**
    * Manually bump the global data version so that consumers (e.g. report hooks,
    * widget sync) refresh their data. This should be called whenever some piece
@@ -43,6 +48,11 @@ interface DataContextType {
    */
   bumpDataVersion: () => void;
   bumpBudgetVersion: () => void;
+  bumpFamilyDataVersion: () => void;
+  bumpFamilyBudgetVersion: () => void;
+  // 获取指定视图模式的数据版本
+  getDataVersionForViewMode: (viewMode: 'personal' | 'family') => number;
+  getBudgetVersionForViewMode: (viewMode: 'personal' | 'family') => number;
 }
 
 // Create the data context
@@ -73,8 +83,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   });
   const [dataVersion, setDataVersion] = useState<number>(Date.now());
   const [budgetVersion, setBudgetVersion] = useState<number>(Date.now());
+  const [familyDataVersion, setFamilyDataVersion] = useState<number>(Date.now());
+  const [familyBudgetVersion, setFamilyBudgetVersion] = useState<number>(Date.now());
   const lastRefresh = React.useRef<number>(0);
-  const familyBillsCache = React.useRef<{ [familyId: string]: { bills: Bill[], timestamp: number } }>({});
 
   // 加载账单数据
   const loadBills = useCallback(async () => {
@@ -143,71 +154,58 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   ) => {
     const targetFamilyId = familyId || user?.family?.id;
-    if (!targetFamilyId) {
-      console.warn("No family ID available for loading family bills");
-      return [];
-    }
-
-    // 检查缓存
-    const cached = familyBillsCache.current[targetFamilyId];
-    const cacheAge = cached ? Date.now() - cached.timestamp : Infinity;
-    const maxCacheAge = 5 * 60 * 1000; // 5分钟
-
-    if (!options?.forceRefresh && cached && cacheAge < maxCacheAge) {
-      setFamilyBills(cached.bills);
-      return cached.bills;
-    }
 
     try {
       setIsFamilyBillsLoading(true);
 
-      const response = await getFamilyBills(targetFamilyId, {
-        startDate: options?.startDate,
-        endDate: options?.endDate,
-        limit: options?.limit || 1000,
-      });
+      // 使用统一的缓存管理系统
+      const bills = await getFamilyBills(
+        options?.forceRefresh || false,
+        async () => {
+          if (!targetFamilyId) return [];
+          // 网络请求函数
+          const response = await getFamilyBillsAPI(targetFamilyId);
+          return response.data.bills.map((bill: any) => ({
+            ...bill,
+            date: new Date(bill.date),
+            createdAt: new Date(bill.createdAt),
+            updatedAt: new Date(bill.updatedAt),
+            isFamilyBill: true,
+            familyId: targetFamilyId,
+            familyName: user?.family?.name || "Family",
+            // 家庭账单只读 - 只有创建者可以编辑
+            isReadOnly: bill.createdBy !== user?.id
+          }));
+        }
+      );
 
-      const bills = response.data?.bills || [];
+      setFamilyBills(bills);
 
-      // 标记这些账单为家庭账单
-      const processedFamilyBills: Bill[] = bills.map((bill: Bill) => ({
-        ...bill,
-        isFamilyBill: true,
-        familyId: targetFamilyId,
-        familyName: user?.family?.name || "Family",
-        // 家庭账单只读 - 只有创建者可以编辑
-        isReadOnly: bill.createdBy !== user?.id,
-      }));
+      // 家庭账单更新后，只更新家庭数据版本
+      const newVersion = Math.floor(Date.now() / 1000);
+      setFamilyDataVersion(newVersion);
+      setFamilyBudgetVersion(newVersion);
 
-      setFamilyBills(processedFamilyBills);
+      // 检查家庭报告缓存是否需要更新
+      if (options?.forceRefresh || familyDataVersion !== newVersion) {
+        // 清除家庭相关的报告缓存
+        try {
+          clearFamilyReportCache();
+        } catch (error) {
+          console.warn('清除家庭报告缓存时出错:', error);
+          // 如果清除缓存失败，不影响主要功能
+        }
+      }
 
-      // 更新缓存
-      familyBillsCache.current[targetFamilyId] = {
-        bills: processedFamilyBills,
-        timestamp: Date.now(),
-      };
-
-      return processedFamilyBills;
+      return bills;
     } catch (error) {
       console.error(`Failed to load family bills for ${targetFamilyId}:`, error);
+      setFamilyBills([]);
       return [];
     } finally {
       setIsFamilyBillsLoading(false);
     }
-  }, [user?.family?.id, user?.family?.name, user?.id]);
-
-  // 按日期范围加载家庭账单
-  const loadFamilyBillsByDateRange = useCallback(async (
-    startDate: string,
-    endDate: string,
-    familyId?: string
-  ) => {
-    return loadFamilyBills(familyId, {
-      startDate,
-      endDate,
-      forceRefresh: true, // 日期范围查询总是强制刷新
-    });
-  }, [loadFamilyBills]);
+  }, [user?.family?.id, user?.family?.name, user?.id, familyDataVersion]);
 
   // Function to refresh specific data
   const refreshData = useCallback(async (dataType: 'bills' | 'transactions' | 'all' = 'all') => {
@@ -226,6 +224,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
         // 如果用户有家庭，也刷新家庭账单
         if (user?.family?.id) {
+          // 清理家庭账单的缓存
+          await clearFamilyBillsCache();
           await loadFamilyBills(user.family.id, { forceRefresh: true });
         }
       }
@@ -343,6 +343,37 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setBudgetVersion(Date.now());
   }, []);
 
+  const bumpFamilyDataVersion = useCallback(() => {
+    setFamilyDataVersion(Date.now());
+  }, []);
+
+  const bumpFamilyBudgetVersion = useCallback(() => {
+    setFamilyBudgetVersion(Date.now());
+  }, []);
+
+  // 获取指定视图模式的数据版本
+  const getDataVersionForViewMode = useCallback((viewMode: 'personal' | 'family'): number => {
+    return viewMode === 'family' ? Math.max(dataVersion, familyDataVersion) : dataVersion;
+  }, [dataVersion, familyDataVersion]);
+
+  const getBudgetVersionForViewMode = useCallback((viewMode: 'personal' | 'family'): number => {
+    return viewMode === 'family' ? Math.max(budgetVersion, familyBudgetVersion) : budgetVersion;
+  }, [budgetVersion, familyBudgetVersion]);
+
+  // 清理家庭账单缓存
+  const clearFamilyBillsCacheMethod = useCallback(async (familyId?: string) => {
+    try {
+      await clearFamilyBillsCache();
+
+      // 如果是当前用户的家庭，清空状态
+      if (!familyId || familyId === user?.family?.id) {
+        setFamilyBills([]);
+      }
+    } catch (error) {
+      console.error("Failed to clear family bills cache:", error);
+    }
+  }, [user?.family?.id]);
+
   // Context value
   const contextValue: DataContextType = {
     // 个人数据
@@ -359,12 +390,20 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     refreshRecentTransactions,
     // 家庭账单方法
     refreshFamilyBills,
-    loadFamilyBillsByDateRange,
     getBillsForViewMode,
+    // 缓存管理方法
+    clearFamilyBillsCache: clearFamilyBillsCacheMethod,
+    // 版本控制
     dataVersion,
     budgetVersion,
+    familyDataVersion,
+    familyBudgetVersion,
     bumpDataVersion,
     bumpBudgetVersion,
+    bumpFamilyDataVersion,
+    bumpFamilyBudgetVersion,
+    getDataVersionForViewMode,
+    getBudgetVersionForViewMode,
   };
 
   return (

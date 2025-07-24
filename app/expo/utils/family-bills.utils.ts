@@ -1,6 +1,6 @@
-import { apiClient } from './api';
-import { getAuthToken } from './userPreferences.utils';
-import { Bill } from '@/types/bills.types';
+import { apiClient } from "./api";
+import { getAuthToken } from "./userPreferences.utils";
+import { Bill } from "@/types/bills.types";
 
 /**
  * 家庭账单工具函数
@@ -50,13 +50,13 @@ export const getFamilyBills = async (
   try {
     const token = await getAuthToken();
     if (!token) {
-      throw new Error('Authentication required');
+      throw new Error("Authentication required");
     }
 
     const response = await apiClient.family.getBills(token, familyId, options);
     return response;
   } catch (error) {
-    console.error('Failed to get family bills:', error);
+    console.error("Failed to get family bills:", error);
     throw error;
   }
 };
@@ -70,13 +70,13 @@ export const createFamilyBill = async (
   try {
     const token = await getAuthToken();
     if (!token) {
-      throw new Error('Authentication required');
+      throw new Error("Authentication required");
     }
 
     const response = await apiClient.family.createBill(token, billData);
     return response;
   } catch (error) {
-    console.error('Failed to create family bill:', error);
+    console.error("Failed to create family bill:", error);
     throw error;
   }
 };
@@ -91,7 +91,7 @@ export const getFamilyBillsPaginated = async (
   dateRange?: { startDate?: string; endDate?: string }
 ): Promise<FamilyBillsResponse> => {
   const offset = (page - 1) * pageSize;
-  
+
   return getFamilyBills(familyId, {
     limit: pageSize,
     offset,
@@ -108,9 +108,9 @@ export const getFamilyBillsByMonth = async (
   year: number,
   month: number
 ): Promise<FamilyBillsResponse> => {
-  const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-  const endDate = new Date(year, month, 0).toISOString().split('T')[0];
-  
+  const startDate = new Date(year, month - 1, 1).toISOString().split("T")[0];
+  const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+
   return getFamilyBills(familyId, {
     startDate,
     endDate,
@@ -157,8 +157,8 @@ export const refreshFamilyBills = async (
   // 获取最近30天的账单
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const startDate = thirtyDaysAgo.toISOString().split('T')[0];
-  
+  const startDate = thirtyDaysAgo.toISOString().split("T")[0];
+
   return getFamilyBills(familyId, {
     startDate,
     limit: 1000,
@@ -177,7 +177,7 @@ export const checkFamilyBillsPermission = async (
     await getFamilyBills(familyId, { limit: 1 });
     return true;
   } catch (error) {
-    console.error('Permission check failed:', error);
+    console.error("Permission check failed:", error);
     return false;
   }
 };

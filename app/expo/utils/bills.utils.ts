@@ -4,6 +4,21 @@ import { User } from "@/types/user.types";
 import { format, subDays, isWithinInterval } from "date-fns";
 import { addOperation as queueBillOperation } from "./offlineQueue.utils";
 
+// 家庭账单缓存接口
+interface FamilyBillsCache {
+  bills: Bill[];
+  timestamp: number;
+}
+
+// 缓存配置
+const CACHE_CONFIG = {
+  MEMORY_TTL: 2 * 60 * 1000, // 内存缓存2分钟
+  STORAGE_TTL: 10 * 60 * 1000, // 持久化缓存10分钟
+};
+
+// 内存缓存 - 用户只有一个家庭，不需要按familyId区分
+let familyBillsMemoryCache: FamilyBillsCache | null = null;
+
 /**
  * Generate a unique ID for bills
  */
@@ -338,4 +353,306 @@ export const filterBills = (bills: Bill[], query: BillQuery): Bill[] => {
   }
 
   return result;
+};
+
+// ==================== 家庭账单缓存管理 ====================
+
+/**
+ * 获取家庭账单缓存的存储键
+ */
+const getFamilyBillsStorageKey = (): string => {
+  return STORAGE_KEYS.FAMILY_BILLS;
+};
+
+/**
+ * 从持久化存储获取家庭账单缓存
+ */
+const getFamilyBillsFromStorage =
+  async (): Promise<FamilyBillsCache | null> => {
+    try {
+      const storageKey = getFamilyBillsStorageKey();
+      const cached = await storage.getItem<FamilyBillsCache>(storageKey);
+
+      if (cached) return cached; //家庭账单没有缓存有效期的说法,假设跟后端请求了接口,那么才更新缓存
+
+      return null;
+    } catch (error) {
+      console.error("Failed to get family bills from storage:", error);
+      return null;
+    }
+  };
+
+/**
+ * 保存家庭账单到持久化存储
+ */
+const saveFamilyBillsToStorage = async (bills: Bill[]): Promise<void> => {
+  try {
+    const storageKey = getFamilyBillsStorageKey();
+    const cacheData: FamilyBillsCache = {
+      bills,
+      timestamp: Date.now(),
+    };
+
+    await storage.setItem(storageKey, cacheData);
+  } catch (error) {
+    console.error("Failed to save family bills to storage:", error);
+  }
+};
+
+/**
+ * 获取家庭账单（带缓存）
+ * @param forceRefresh 是否强制刷新
+ * @param fetchFunction 获取数据的函数（需要familyId时在函数内部处理）
+ */
+export const getFamilyBills = async (
+  forceRefresh: boolean = false,
+  fetchFunction?: (familyId: string) => Promise<Bill[]>
+): Promise<Bill[]> => {
+  try {
+    // 1. 检查内存缓存
+    if (!forceRefresh && familyBillsMemoryCache) {
+      if (
+        Date.now() - familyBillsMemoryCache.timestamp <
+        CACHE_CONFIG.MEMORY_TTL
+      ) {
+        return familyBillsMemoryCache.bills;
+      }
+    }
+
+    // 2. 检查持久化缓存
+    if (!forceRefresh) {
+      const storageCache = await getFamilyBillsFromStorage();
+      if (storageCache) {
+        // 更新内存缓存
+        familyBillsMemoryCache = storageCache;
+        return storageCache.bills;
+      }
+    }
+
+    // 3. 从网络获取数据
+    if (fetchFunction) {
+      try {
+        // fetchFunction内部需要处理familyId的获取
+        const bills = await fetchFunction(""); // 传空字符串，函数内部处理familyId
+
+        // 更新缓存
+        await saveFamilyBillsCache(bills);
+
+        return bills;
+      } catch (networkError) {
+        console.error("Network request failed:", networkError);
+
+        // 网络请求失败时，尝试返回过期的缓存数据
+        const fallbackCache = await getFamilyBillsFromStorage();
+        if (fallbackCache) {
+          return fallbackCache.bills;
+        }
+
+        throw networkError;
+      }
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Failed to get family bills:", error);
+    return [];
+  }
+};
+
+/**
+ * 保存家庭账单到缓存
+ */
+export const saveFamilyBillsCache = async (bills: Bill[]): Promise<void> => {
+  try {
+    const cacheData: FamilyBillsCache = {
+      bills,
+      timestamp: Date.now(),
+    };
+
+    // 更新内存缓存
+    familyBillsMemoryCache = cacheData;
+
+    // 更新持久化缓存
+    await saveFamilyBillsToStorage(bills);
+  } catch (error) {
+    console.error("Failed to save family bills cache:", error);
+  }
+};
+
+/**
+ * 更新家庭账单缓存中的单个账单
+ */
+export const updateFamilyBillInCache = async (
+  updatedBill: Bill
+): Promise<void> => {
+  try {
+    // 更新内存缓存
+    if (familyBillsMemoryCache) {
+      const bills = familyBillsMemoryCache.bills;
+      const index = bills.findIndex((bill) => bill.id === updatedBill.id);
+
+      if (index !== -1) {
+        bills[index] = updatedBill;
+        familyBillsMemoryCache = {
+          bills,
+          timestamp: Date.now(),
+        };
+      }
+    }
+
+    // 更新持久化缓存
+    const storageCache = await getFamilyBillsFromStorage();
+    if (storageCache) {
+      const bills = storageCache.bills;
+      const index = bills.findIndex((bill) => bill.id === updatedBill.id);
+
+      if (index !== -1) {
+        bills[index] = updatedBill;
+        await saveFamilyBillsToStorage(bills);
+      }
+    }
+  } catch (error) {
+    console.error("Failed to update family bill in cache:", error);
+  }
+};
+
+/**
+ * 从家庭账单缓存中删除账单
+ */
+export const deleteFamilyBillFromCache = async (
+  billId: string
+): Promise<void> => {
+  try {
+    // 更新内存缓存
+    if (familyBillsMemoryCache) {
+      const bills = familyBillsMemoryCache.bills.filter(
+        (bill) => bill.id !== billId
+      );
+      familyBillsMemoryCache = {
+        bills,
+        timestamp: Date.now(),
+      };
+    }
+
+    // 更新持久化缓存
+    const storageCache = await getFamilyBillsFromStorage();
+    if (storageCache) {
+      const bills = storageCache.bills.filter((bill) => bill.id !== billId);
+      await saveFamilyBillsToStorage(bills);
+    }
+  } catch (error) {
+    console.error("Failed to delete family bill from cache:", error);
+  }
+};
+
+/**
+ * 添加账单到家庭账单缓存
+ */
+export const addFamilyBillToCache = async (newBill: Bill): Promise<void> => {
+  try {
+    // 更新内存缓存
+    if (familyBillsMemoryCache) {
+      const bills = [...familyBillsMemoryCache.bills, newBill];
+      familyBillsMemoryCache = {
+        bills,
+        timestamp: Date.now(),
+      };
+    }
+
+    // 更新持久化缓存
+    const storageCache = await getFamilyBillsFromStorage();
+    if (storageCache) {
+      const bills = [...storageCache.bills, newBill];
+      await saveFamilyBillsToStorage(bills);
+    }
+  } catch (error) {
+    console.error("Failed to add family bill to cache:", error);
+  }
+};
+
+/**
+ * 清理家庭账单缓存
+ */
+export const clearFamilyBillsCache = async (): Promise<void> => {
+  try {
+    // 清理内存缓存
+    familyBillsMemoryCache = null;
+
+    // 清理持久化缓存
+    const storageKey = getFamilyBillsStorageKey();
+    await storage.removeItem(storageKey);
+  } catch (error) {
+    console.error("Failed to clear family bills cache:", error);
+  }
+};
+
+/**
+ * 获取家庭账单统计信息
+ */
+export const getFamilyBillStats = async (
+  startDate: Date,
+  endDate: Date,
+  fetchFunction?: (familyId: string) => Promise<Bill[]>
+): Promise<BillStats> => {
+  try {
+    const bills = await getFamilyBills(false, fetchFunction);
+
+    // Filter bills within the date range
+    const filteredBills = bills.filter((bill) => {
+      const billDate = new Date(bill.date);
+      return isWithinInterval(billDate, { start: startDate, end: endDate });
+    });
+
+    // Calculate total amount
+    const totalAmount = filteredBills.reduce(
+      (total, bill) => total + bill.amount,
+      0
+    );
+
+    // Calculate category breakdown
+    const categoryMap = new Map<string, number>();
+
+    filteredBills.forEach((bill) => {
+      const currentAmount = categoryMap.get(bill.category) || 0;
+      categoryMap.set(bill.category, currentAmount + bill.amount);
+    });
+
+    const categoryBreakdown = Array.from(categoryMap.entries()).map(
+      ([category, amount]) => ({
+        category,
+        amount,
+        percentage: totalAmount > 0 ? (amount / totalAmount) * 100 : 0,
+      })
+    );
+
+    // Sort by amount descending
+    categoryBreakdown.sort((a, b) => b.amount - a.amount);
+
+    return {
+      totalAmount,
+      categoryBreakdown,
+    };
+  } catch (error) {
+    console.error("Failed to get family bill stats:", error);
+    return {
+      totalAmount: 0,
+      categoryBreakdown: [],
+    };
+  }
+};
+
+/**
+ * 过滤家庭账单
+ */
+export const filterFamilyBills = async (
+  query: BillQuery,
+  fetchFunction?: (familyId: string) => Promise<Bill[]>
+): Promise<Bill[]> => {
+  try {
+    const bills = await getFamilyBills(false, fetchFunction);
+    return filterBills(bills, query);
+  } catch (error) {
+    console.error("Failed to filter family bills:", error);
+    return [];
+  }
 };

@@ -4,6 +4,7 @@ import * as SecureStore from "expo-secure-store";
 // Storage keys
 export const STORAGE_KEYS = {
   BILLS: "momiq_bills",
+  FAMILY_BILLS: "momiq_family_bills", // 家庭账单缓存
   TRANSACTIONS: "momiq_transactions",
   REPORTS: "momiq_reports",
   USER_PREFERENCES: "momiq_user_preferences",

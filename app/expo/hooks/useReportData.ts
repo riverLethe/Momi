@@ -160,8 +160,12 @@ export const useSplitReportData = (
   viewMode: "personal" | "family",
   initialPeriodType: DatePeriodEnum = DatePeriodEnum.WEEK
 ) => {
-  const { dataVersion, budgetVersion, getBillsForViewMode, transactions } =
-    useData();
+  const {
+    getBillsForViewMode,
+    transactions,
+    getDataVersionForViewMode,
+    getBudgetVersionForViewMode,
+  } = useData();
   const { budgets } = useBudgets();
   const [periodType, setPeriodType] =
     useState<DatePeriodEnum>(initialPeriodType);
@@ -185,6 +189,10 @@ export const useSplitReportData = (
   const coreRequestIdRef = useRef<number>(0);
   const budgetRequestIdRef = useRef<number>(0);
 
+  // 获取当前视图模式的数据版本
+  const currentDataVersion = getDataVersionForViewMode(viewMode);
+  const currentBudgetVersion = getBudgetVersionForViewMode(viewMode);
+
   // 初始化周期选择器
   useEffect(() => {
     setPeriodSelectors(generatePeriodSelectors(periodType));
@@ -207,7 +215,7 @@ export const useSplitReportData = (
           transactions,
           budgets,
           selectedPeriodId,
-          dataVersion,
+          currentDataVersion,
           forceRefresh,
           /* lightweight = */ !forceRefresh
         );
@@ -230,7 +238,7 @@ export const useSplitReportData = (
       periodType,
       viewMode,
       selectedPeriodId,
-      dataVersion,
+      currentDataVersion,
       getBillsForViewMode,
       transactions,
       budgets,
@@ -253,7 +261,7 @@ export const useSplitReportData = (
           bills,
           budgets,
           selectedPeriodId,
-          budgetVersion,
+          currentBudgetVersion,
           forceRefresh
         );
 
@@ -275,7 +283,7 @@ export const useSplitReportData = (
       periodType,
       viewMode,
       selectedPeriodId,
-      budgetVersion,
+      currentBudgetVersion,
       getBillsForViewMode,
       budgets,
     ]
