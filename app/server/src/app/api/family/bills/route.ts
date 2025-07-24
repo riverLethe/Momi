@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
 
     // 获取家庭成员ID列表（排除当前用户）
     const otherMemberIds = members
-      .filter(member => member.userId !== user.id)
-      .map(member => member.userId);
+      .filter((member) => member.userId !== user.id)
+      .map((member) => member.userId);
 
     // 如果没有其他成员，返回空结果
     if (otherMemberIds.length === 0) {
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       FROM bills b
       LEFT JOIN users u ON b.user_id = u.id
       LEFT JOIN family_spaces fs ON b.family_space_id = fs.id
-      WHERE (b.user_id IN (${otherMemberIds.map(() => '?').join(',')}) OR (b.family_space_id = ? AND b.user_id != ?))
+      WHERE (b.user_id IN (${otherMemberIds.map(() => "?").join(",")}) OR (b.family_space_id = ? AND b.user_id != ?))
         AND b.is_deleted = 0
     `;
 
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
     let countSql = `
       SELECT COUNT(*) as total
       FROM bills b
-      WHERE (b.user_id IN (${otherMemberIds.map(() => '?').join(',')}) OR (b.family_space_id = ? AND b.user_id != ?))
+      WHERE (b.user_id IN (${otherMemberIds.map(() => "?").join(",")}) OR (b.family_space_id = ? AND b.user_id != ?))
         AND b.is_deleted = 0
     `;
     const countArgs: any[] = [...otherMemberIds, familyId, user.id];
@@ -219,7 +219,16 @@ export async function POST(request: NextRequest) {
 
     // 解析请求体
     const body = await request.json();
-    const { familyId, amount, category, notes, date, merchant, createdAt, updatedAt } = body;
+    const {
+      familyId,
+      amount,
+      category,
+      notes,
+      date,
+      merchant,
+      createdAt,
+      updatedAt,
+    } = body;
 
     // 验证必需字段
     if (!familyId || !amount || !category) {
@@ -249,7 +258,7 @@ export async function POST(request: NextRequest) {
 
     // 生成账单ID
     const billId = `bill_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // 使用客户端传来的时间数据，如果没有则使用null
     const billDate = date || null;
     const billCreatedAt = createdAt || null;

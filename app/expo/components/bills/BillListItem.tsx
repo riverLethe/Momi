@@ -124,20 +124,16 @@ const BillListItemComponent: React.FC<BillListItemProps> = ({
                   {categoryName}
                 </Text>
                 {item.isFamilyBill && (
-                  <Text fontSize="$1" color="$blue9" fontWeight="600">
-                    {t("Family")}
-                  </Text>
-                )}
-                {isReadOnly && (
-                  <Text fontSize="$1" color="$gray9" fontWeight="600">
-                    {t("Read Only")}
-                  </Text>
+                  <>
+                    <Text fontSize="$2" color="$blue9" fontWeight="600">
+                      {item.isFamilyBill && item.creatorName && ` (${item.creatorName})`}
+                    </Text>
+                  </>
                 )}
               </XStack>
               <Text fontSize="$2" color="$color9" lineHeight={16}>
                 {formattedDateTime}
                 {item.merchant && ` | ${item.merchant}`}
-                {item.isFamilyBill && item.creatorName && ` | ${item.creatorName}`}
               </Text>
             </YStack>
           </XStack>

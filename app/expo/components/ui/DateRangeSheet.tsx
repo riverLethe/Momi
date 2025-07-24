@@ -335,8 +335,9 @@ export const DateRangeSheet: React.FC<DateRangeSheetProps> = ({
       dismissOnSnapToBottom
     >
       <Sheet.Overlay />
-      <Sheet.Frame>
-        <Sheet.Handle />
+      <Sheet.Handle />
+
+      <Sheet.Frame backgroundColor="$card">
         <YStack f={1}>
           {renderContent()}
           <YStack padding="$5" space="$3">
