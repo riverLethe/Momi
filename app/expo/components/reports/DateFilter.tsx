@@ -32,7 +32,6 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   const [periodSheetOpen, setPeriodSheetOpen] = React.useState(false);
   const { viewMode, setViewMode } = useViewStore();
   const {
-    refreshFamilyBills,
     isFamilyBillsLoading,
   } = useData();
 
@@ -44,19 +43,11 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   // 处理视图模式切换
   const handleViewModeToggle = async (isFamily: boolean) => {
     const newMode = isFamily ? "family" : "personal";
-    
+
     // 更新视图模式
     setViewMode(newMode);
-    
-    // 如果切换到家庭模式，获取家庭账单数据
-    if (isFamily && hasFamily) {
-      try {
-        await refreshFamilyBills();
-      } catch (error) {
-        console.error("Failed to load family bills:", error);
-      }
-    }
-    
+
+
     // 通知父组件视图模式变化
     onViewModeChange?.(isFamily);
   };

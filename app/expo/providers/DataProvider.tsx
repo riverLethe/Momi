@@ -29,8 +29,6 @@ interface DataContextType {
   refreshData: (dataType?: 'bills' | 'transactions' | 'all') => Promise<void>;
   refreshUpcomingBills: () => Promise<void>;
   refreshRecentTransactions: () => Promise<void>;
-  // 家庭账单方法
-  refreshFamilyBills: () => Promise<void>;
   // 工具方法：按需获取指定视图模式的账单数据
   getBillsForViewMode: (viewMode: 'personal' | 'family') => Bill[];
   // 缓存管理方法
@@ -265,15 +263,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     await loadRecentTransactions();
   }, [loadRecentTransactions]);
 
-  // 刷新家庭账单
-  const refreshFamilyBills = useCallback(async () => {
-    const familyId = user?.family?.id;
-    if (!familyId) {
-      console.warn("No family ID available for refreshing family bills");
-      return;
-    }
-    await loadFamilyBills(familyId, { forceRefresh: true });
-  }, [user?.family?.id, loadFamilyBills]);
 
   // 按需获取指定视图模式的账单数据
   const getBillsForViewMode = useCallback((viewMode: 'personal' | 'family'): Bill[] => {
@@ -388,8 +377,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     refreshData,
     refreshUpcomingBills,
     refreshRecentTransactions,
-    // 家庭账单方法
-    refreshFamilyBills,
     getBillsForViewMode,
     // 缓存管理方法
     clearFamilyBillsCache: clearFamilyBillsCacheMethod,

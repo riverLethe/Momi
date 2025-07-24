@@ -92,32 +92,6 @@ export default function BillsScreen() {
 
   const theme = useTheme();
 
-  // 后台同步远程数据，不阻塞UI
-  useEffect(() => {
-    const syncData = async () => {
-      if (isAuthenticated && user?.id) {
-        try {
-          setSyncingRemote(true);
-          // 后台同步，不阻塞用户交互 - 使用智能同步
-          setTimeout(async () => {
-            try {
-              await syncRemoteData("bills", user.id, false); // 使用智能同步，不强制
-              await refreshData();
-            } catch (error) {
-              console.error("Failed to sync remote data:", error);
-            } finally {
-              setSyncingRemote(false);
-            }
-          }, 100);
-        } catch (error) {
-          console.error("Failed to sync remote data:", error);
-          setSyncingRemote(false);
-        }
-      }
-    };
-
-    syncData();
-  }, [isAuthenticated, user?.id, refreshData]);
 
   // 稳定化的params值，避免每次都重新创建对象
   const stableParams = useMemo(() => ({
