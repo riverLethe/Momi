@@ -18,7 +18,6 @@ import { storage, STORAGE_KEYS } from '@/utils/storage.utils';
 import { clearQueue, getPendingCount, getQueue } from '@/utils/offlineQueue.utils';
 import { apiClient } from '@/utils/api';
 import { SyncOptionsSheet } from '@/components/ui/SyncOptionsSheet';
-import { GlobalJoinRequestsListener } from '@/components/family/GlobalJoinRequestsListener';
 
 // Configure Google Sign-In
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -1245,7 +1244,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         syncOperation={syncOperation}
         isSyncing={isSyncing}
       />
-      <GlobalJoinRequestsListener />
     </AuthContext.Provider>
   );
 };

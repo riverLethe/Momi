@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // 获取查询参数
     const { searchParams } = new URL(request.url);
     const familyId = searchParams.get("familyId");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = parseInt(searchParams.get("limit") || "500");
     const offset = parseInt(searchParams.get("offset") || "0");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");

@@ -17,6 +17,7 @@ import NotificationProvider from "@/providers/NotificationProvider";
 import I18nProvider from "@/providers/I18nProvider";
 import ThemeProvider, { useTheme } from "@/providers/ThemeProvider";
 import { useViewStore } from "@/stores/viewStore";
+import { GlobalJoinRequestsListener } from "@/components/family/GlobalJoinRequestsListener";
 
 // Import i18n instance to initialize it
 import "@/i18n";
@@ -65,6 +66,7 @@ function AppContent() {
               </NotificationProvider>
             </ChatProvider>
           </DataProvider>
+          <GlobalJoinRequestsListener />
         </AuthProvider>
       </I18nProvider>
     </TamaguiProvider>

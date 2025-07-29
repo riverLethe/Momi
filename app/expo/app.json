@@ -61,7 +61,6 @@
       "expo-secure-store",
       "expo-asset",
       "expo-apple-authentication",
-      "@react-native-google-signin/google-signin",
       "./plugins/with-app-intents-quick-bill",
       [
         "expo-speech-recognition",

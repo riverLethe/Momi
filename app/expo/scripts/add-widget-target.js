@@ -127,7 +127,7 @@ EXT_LIST.forEach((EXT) => {
 
   // Ensure essential files & entitlements always added
   const widgetTargetUUID = (Object.entries(proj.pbxNativeTargetSection()).find(
-    ([, t]) => typeof t === "object" && (t.name || "") === EXT
+    ([, t]) => typeof t === "object" && (t.name || "").includes(EXT)
   ) || [])[0];
   if (!widgetTargetUUID) return;
 
