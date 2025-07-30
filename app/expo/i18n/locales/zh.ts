@@ -722,5 +722,6 @@ export default {
     "Logout failed": "退出登录失败",
     "Member List": "成员列表",
     Fruit: "水果",
+    "Manually added": "手动添加",
   },
 };

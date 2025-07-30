@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { Platform, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useRouter, useLocalSearchParams } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { YStack, XStack, Button, Text, Input, ScrollView, useTheme } from "tamagui";
 import {
   Calendar as CalendarIcon,
@@ -17,8 +17,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useData } from "@/providers/DataProvider";
-import { useViewStore } from "@/stores/viewStore";
-import { saveBill, getBills, updateBill } from "@/utils/bills.utils";
+import { saveBill } from "@/utils/bills.utils";
 import {
   EXPENSE_CATEGORIES,
   getCategoryIcon,
@@ -80,11 +79,8 @@ const CategoryItem: React.FC<CategoryItemProps> = React.memo(
 export default function AddBillScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const billId = typeof params.id === "string" ? params.id : "";
-  const { refreshData } = useData();
+  const { refreshData, setMunalCreatedBills } = useData();
   const { user } = useAuth();
-  const { viewMode, currentFamilySpace } = useViewStore();
   const theme = useTheme();
 
   const [amount, setAmount] = useState("0");
@@ -95,33 +91,12 @@ export default function AddBillScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
   // Calculator state
   const [firstOperand, setFirstOperand] = useState<number | null>(null);
   const [operator, setOperator] = useState<string | null>(null);
   const [shouldResetDisplay, setShouldResetDisplay] = useState(false);
 
-  // Load bill data if editing
-  useEffect(() => {
-    if (!billId) return;
-    setIsEditing(true);
-    const loadBillData = async () => {
-      try {
-        const bills = await getBills();
-        const bill = bills.find((b) => b.id === billId);
-        if (bill) {
-          setAmount(bill.amount.toString());
-          setSelectedCategory(bill.category);
-          setNotes(bill.notes || "");
-          setSelectedDate(new Date(bill.date));
-        }
-      } catch (error) {
-        console.error("Failed to load bill for editing:", error);
-      }
-    };
-    loadBillData();
-  }, [billId]);
 
   const handleDateChange = (_event: any, date?: Date) => {
     if (Platform.OS === "android") setShowDatePicker(false);
@@ -224,13 +199,11 @@ export default function AddBillScreen() {
         merchant: "",
         notes: notes,
         account: "Default",
-        isFamilyBill: viewMode === "family",
-        familyId: viewMode === "family" ? currentFamilySpace?.id : undefined,
-        familyName: viewMode === "family" ? currentFamilySpace?.name : undefined,
+        isFamilyBill: false
       } as const;
 
-      if (isEditing) await updateBill(billId, billData);
-      else await saveBill(billData, user || { id: "local-user", name: "Local User" });
+      const savedBill = await saveBill(billData, user || { id: "local-user", name: "Local User" });
+      setMunalCreatedBills([savedBill]);
 
       // Refresh data asynchronously to keep UI responsive
       setTimeout(async () => {

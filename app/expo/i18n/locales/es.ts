@@ -425,5 +425,6 @@ export default {
     "Logout failed": "Error al cerrar sesión",
     "Member List": "Lista de Miembros",
     Fruit: "Fruta",
+    "Manually added": "Añadido manualmente",
   },
 };

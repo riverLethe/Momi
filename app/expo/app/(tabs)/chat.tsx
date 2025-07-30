@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback } from "react";
+import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import {
   KeyboardAvoidingView,
   StatusBar,
@@ -46,7 +46,7 @@ import { useFinancialInsights } from "@/hooks/chat/useFinancialInsights";
 export default function ChatScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { refreshData, bills } = useData();
+  const { refreshData, bills, munalCreatedBills, setMunalCreatedBills } = useData();
   const { budgets } = useBudgets();
   const [inputText, setInputText] = useState("");
   const [isTextMode, setIsTextMode] = useState(false);
@@ -220,6 +220,21 @@ export default function ChatScreen() {
       },
     ]);
   };
+  useEffect(() => {
+    if (munalCreatedBills.length <= 0) return;
+    const expenseMessage = chatAPI.createMessage(
+      t("Manually added"),
+      false,
+      "text",
+      {
+        type: "expense_list",
+        expenses: munalCreatedBills
+      }
+    );
+    setMessages((prev) => [...prev, expenseMessage]);
+    setMunalCreatedBills([]);
+    setTimeout(() => scrollToBottom(), 50);
+  }, [munalCreatedBills]);
 
   /** Helper to display a user-visible error bubble */
   function showSystemError(text: string) {

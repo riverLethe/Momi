@@ -755,5 +755,6 @@ export default {
     MomiQ: "MomiQ",
     "Member List": "Member List",
     Fruit: "Fruit",
+    "Manually added": "Manually added",
   },
 };

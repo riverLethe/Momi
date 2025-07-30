@@ -51,6 +51,8 @@ interface DataContextType {
   // 获取指定视图模式的数据版本
   getDataVersionForViewMode: (viewMode: 'personal' | 'family') => number;
   getBudgetVersionForViewMode: (viewMode: 'personal' | 'family') => number;
+  munalCreatedBills: Bill[];
+  setMunalCreatedBills: (bills: Bill[]) => void;
 }
 
 // Create the data context
@@ -84,6 +86,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [familyDataVersion, setFamilyDataVersion] = useState<number>(Date.now());
   const [familyBudgetVersion, setFamilyBudgetVersion] = useState<number>(Date.now());
   const lastRefresh = React.useRef<number>(0);
+  const [munalCreatedBills, setMunalCreatedBills] = useState<Bill[]>([]);
 
   // 加载账单数据
   const loadBills = useCallback(async () => {
@@ -391,6 +394,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     bumpFamilyBudgetVersion,
     getDataVersionForViewMode,
     getBudgetVersionForViewMode,
+    munalCreatedBills,
+    setMunalCreatedBills,
   };
 
   return (
