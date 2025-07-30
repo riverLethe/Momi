@@ -75,12 +75,11 @@ export async function syncBudgetWidgets(
       }
 
       const budget = budgetReport.budget;
-      if (!budget || budget.amount == null) {
+      if (!budget) {
         // No budget configured; skip this widget update
         return;
       }
-
-      const total = budget.amount;
+      const total = budget.amount ?? 0;
       const spent = budget.spent;
       const remaining = budget.remaining;
 

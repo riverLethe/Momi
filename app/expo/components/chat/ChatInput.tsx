@@ -297,7 +297,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </YStack>
 
       {/* More options (gallery, camera, file) */}
-      {showMoreOptions && !isTextMode && (
+      {showMoreOptions && !isRecording && (
         <MoreOptions
           onPickImage={handlePickImageInternal}
           onTakePhoto={handleTakePhotoInternal}

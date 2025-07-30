@@ -5,6 +5,7 @@ import {
   Modal,
   View,
   TouchableWithoutFeedback,
+  GestureResponderEvent,
 } from "react-native";
 import { YStack, Text, useTheme } from "tamagui";
 import { useTranslation } from "react-i18next";
@@ -12,6 +13,7 @@ import { useTranslation } from "react-i18next";
 interface SingleImageProps {
   uri: string;
   small?: boolean;
+  onLongPress?: (event: GestureResponderEvent) => void;
 }
 
 /**
@@ -20,7 +22,7 @@ interface SingleImageProps {
  * If the source fails to load (e.g. the file has been deleted), a neutral placeholder
  * with the text "Damaged" is shown instead so the user is aware the file is missing.
  */
-export const SingleImage: React.FC<SingleImageProps> = ({ uri, small }) => {
+export const SingleImage: React.FC<SingleImageProps> = ({ uri, small, onLongPress }) => {
   const [error, setError] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const { t } = useTranslation();
@@ -48,7 +50,11 @@ export const SingleImage: React.FC<SingleImageProps> = ({ uri, small }) => {
 
   return (
     <>
-      <Pressable onPress={() => setPreviewVisible(true)}>
+      <Pressable 
+        onPress={() => setPreviewVisible(true)}
+        onLongPress={onLongPress}
+        delayLongPress={500}
+      >
         <Image
           source={{ uri }}
           style={{ width: size, height: size, borderRadius: 5 }}

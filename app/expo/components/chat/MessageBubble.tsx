@@ -24,7 +24,10 @@ const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message, onLongP
 
     // 媒体消息处理（图片 / 语音 / 文件）
     if (message.type === "image" && message.data?.uri) {
-      return <SingleImage uri={message.data.uri} />;
+      return <SingleImage
+        uri={message.data.uri}
+        onLongPress={message.isUser && onLongPress ? (event) => onLongPress(message) : undefined}
+      />;
     }
 
 
@@ -198,7 +201,12 @@ const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message, onLongP
               <XStack flexWrap="wrap" gap="$1" padding="$2">
                 {message.data.attachments.map((att: any) => {
                   if (att.type === "image") {
-                    return <SingleImage key={att.id} uri={att.uri} small />;
+                    return <SingleImage
+                      key={att.id}
+                      uri={att.uri}
+                      small
+                      onLongPress={message.isUser && onLongPress ? (event) => onLongPress(message) : undefined}
+                    />;
                   }
                   // file preview
                   return (

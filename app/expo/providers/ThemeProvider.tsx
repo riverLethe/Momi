@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Appearance } from 'react-native';
 import { getUserPreferences, updateUserPreferences } from '@/utils/userPreferences.utils';
 
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -27,7 +27,7 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-    const systemColorScheme = useColorScheme();
+    const systemColorScheme = Appearance.getColorScheme();
     const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
     const [actualTheme, setActualTheme] = useState<ActualTheme>('light');
 

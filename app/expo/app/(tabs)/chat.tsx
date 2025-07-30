@@ -6,6 +6,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
@@ -290,7 +291,7 @@ export default function ChatScreen() {
             onClearChat={handleClearChat}
           />
 
-          <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
             {/* Chat Messages */}
             <View flex={1} backgroundColor="$backgroundSoft">
               {messages.length === 0 ? (
