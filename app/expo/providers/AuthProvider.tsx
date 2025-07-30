@@ -18,6 +18,7 @@ import { storage, STORAGE_KEYS } from '@/utils/storage.utils';
 import { clearQueue, getPendingCount, getQueue } from '@/utils/offlineQueue.utils';
 import { apiClient } from '@/utils/api';
 import { SyncOptionsSheet } from '@/components/ui/SyncOptionsSheet';
+import { useRouter } from 'expo-router';
 
 // Configure Google Sign-In
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -84,9 +85,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [syncOperation, setSyncOperation] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRefreshBill, setIsRefreshBill] = useState(false);
-  
+  const router = useRouter();
+
   const [isOnline, setIsOnline] = useState(true);
-  
+
   // Auto sync timer ref
   const autoSyncTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -184,7 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const batchSize = 50;
       for (let i = 0; i < queue.length; i += batchSize) {
         const batch = queue.slice(i, i + batchSize);
-        
+
         // 确保上传前将Date对象转换为时间戳，以匹配服务端格式
         const normalizedBatch = batch.map((operation: any) => {
           if (operation.bill) {
@@ -200,14 +202,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
           return operation;
         });
-        
+
         await apiClient.sync.uploadBills(token, normalizedBatch);
         console.info(`Push sync: uploaded batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(queue.length / batchSize)}`);
       }
 
       // Clear queue after successful upload
       await clearQueue();
-      
+
       // Update last sync time
       const newSyncTime = new Date();
       await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
@@ -360,7 +362,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const batchSize = 50;
         for (let i = 0; i < queue.length; i += batchSize) {
           const batch = queue.slice(i, i + batchSize);
-          
+
           // 确保上传前将Date对象转换为时间戳，以匹配服务端格式
           const normalizedBatch = batch.map((operation: any) => {
             if (operation.bill) {
@@ -376,7 +378,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
             return operation;
           });
-          
+
           await apiClient.sync.uploadBills(token, normalizedBatch);
           console.info(`Uploaded batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(queue.length / batchSize)}`);
         }
@@ -415,7 +417,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             createdAt: remote.createdAt ? new Date(remote.createdAt) : new Date(),
             updatedAt: remote.updatedAt ? new Date(remote.updatedAt) : new Date(),
           };
-          
+
           const idx = merged.findIndex((b: any) => b.id === normalizedRemote.id);
 
           // Handle deleted bills
@@ -462,7 +464,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Update sync time
       const newSyncTime = new Date();
-        await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
+      await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
       setLastSyncTime(newSyncTime);
 
       // 刷新数据提供者中的数据
@@ -482,12 +484,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const handlePostLoginSync = useCallback(
     async (token: string) => {
+      router.back();
       try {
         const localBills = (await storage.getItem<any[]>(STORAGE_KEYS.BILLS)) || [];
 
-        // If no local bills, just run normal sync
+        // If no local bills, just download from server
         if (localBills.length === 0) {
-          syncData();
+          handleClearAndDownload(token);
           return;
         }
 
@@ -532,7 +535,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               createdAt: remote.createdAt ? new Date(remote.createdAt) : new Date(),
               updatedAt: remote.updatedAt ? new Date(remote.updatedAt) : new Date(),
             };
-            
+
             const idx = merged.findIndex((b: any) => b.id === normalizedRemote.id);
             if (normalizedRemote.deleted) {
               // If remote bill is marked as deleted, remove from merged result
@@ -571,7 +574,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSyncProgress(80);
           // Update sync time
           const newSyncTime = new Date();
-        await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
+          await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
           setLastSyncTime(newSyncTime);
           setSyncProgress(90);
 
@@ -598,7 +601,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [syncToken, localBills, syncData]);
 
-  const handleClearAndDownload = useCallback(async () => {
+  const handleClearAndDownload = useCallback(async (token?: string | null) => {
     // Clear and download strategy: Clear local bills and download all bills from remote
     // This is useful when you want to reset local data and use server as source of truth
     try {
@@ -612,10 +615,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Clear offline queue
       await clearQueue();
       setSyncProgress(40);
-
+      token = token ?? syncToken;
       // Download bills from remote
-      if (syncToken) {
-        const token = syncToken;
+      if (token) {
         setSyncProgress(50);
         const response = await apiClient.sync.downloadBills(token);
         const remoteBills = response.bills || [];
@@ -623,7 +625,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (Array.isArray(remoteBills) && remoteBills.length > 0) {
           console.info(`Downloaded ${remoteBills.length} bills from server`);
-          
+
           // 将服务端返回的时间戳转换为Date对象，以保持客户端数据一致性
           const normalizedBills = remoteBills.map((bill: any) => ({
             ...bill,
@@ -631,13 +633,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             createdAt: bill.createdAt ? new Date(bill.createdAt) : new Date(),
             updatedAt: bill.updatedAt ? new Date(bill.updatedAt) : new Date(),
           }));
-          
+
           // Save remote bills locally
           await storage.setItem(STORAGE_KEYS.BILLS, normalizedBills);
           setSyncProgress(85);
           // Update sync time
           const newSyncTime = new Date();
-        await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
+          await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
           setLastSyncTime(newSyncTime);
           setSyncProgress(95);
 
@@ -680,31 +682,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (localBills.length === 0) {
         setSyncProgress(50);
         setSyncOperation(t('Clearing server data...'));
-        
+
         // If no local bills, just clear server data
         await apiClient.sync.uploadBills(syncToken, [], true);
-        
+
         setSyncProgress(100);
         setSyncOperation(t('Sync completed'));
-        
+
         // Clear offline queue
         await clearQueue();
-        
+
         // Update sync time
         const newSyncTime = new Date();
         await storage.setItem("momiq_last_sync", newSyncTime.getTime().toString());
         setLastSyncTime(newSyncTime);
-        
+
         // Refresh cache
         storage.invalidateCache(STORAGE_KEYS.BILLS);
-        
+
         setTimeout(async () => {
           setIsRefreshBill(true);
           setIsSyncing(false);
           setSyncProgress(0);
           setShowSyncOptionsSheet(false);
         }, 1000);
-        
+
         return;
       }
 
@@ -720,11 +722,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Process in batches for better reliability
       const batchSize = 50;
       const totalBatches = Math.ceil(operations.length / batchSize);
-      
+
       for (let i = 0; i < operations.length; i += batchSize) {
         const batch = operations.slice(i, i + batchSize);
         const isFirstBatch = i === 0;
-        
+
         // 确保上传前将Date对象转换为时间戳，以匹配服务端格式
         const normalizedBatch = batch.map((operation: any) => ({
           ...operation,
@@ -735,7 +737,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             updatedAt: operation.bill.updatedAt instanceof Date ? operation.bill.updatedAt.getTime() : operation.bill.updatedAt,
           }
         }));
-        
+
         // Only enable override mode for the first batch
         await apiClient.sync.uploadBills(syncToken, normalizedBatch, isFirstBatch);
         const currentBatch = Math.floor(i / batchSize) + 1;

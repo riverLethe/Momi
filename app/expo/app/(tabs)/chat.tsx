@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import {
   KeyboardAvoidingView,
   StatusBar,
@@ -230,12 +230,44 @@ export default function ChatScreen() {
     setTimeout(() => scrollToBottom(), 50);
   }
 
+  /** Handle long press on user message to edit */
+  const handleLongPress = useCallback((message: Message) => {
+    if (!message.isUser) return;
+
+    // Fill the input with the message text for editing
+    setInputText(message.text || "");
+    setIsTextMode(true);
+
+    // Handle attachments if the message has them
+    if (message.data?.attachments && Array.isArray(message.data.attachments)) {
+      // Convert message attachments to the format expected by useChatAttachments
+      const messageAttachments = message.data.attachments.map((att: any) => ({
+        id: att.id || Date.now().toString(),
+        uri: att.uri,
+        type: att.type,
+        name: att.name,
+        width: att.width,
+        height: att.height,
+        mimeType: att.mimeType,
+      }));
+      replaceAttachments(messageAttachments);
+    } else {
+      // Clear attachments if the message doesn't have any
+      replaceAttachments([]);
+    }
+
+    // Optional: Remove the message from history so it doesn't get duplicated
+    // when the user sends the edited version
+    // setMessages(prev => prev.filter(msg => msg.id !== message.id));
+  }, [replaceAttachments]);
+
   const theme = useTheme();
 
   return (
     <TouchableWithoutFeedback
-      onPress={() => {
-        if (isTextMode) {
+      onPress={(event) => {
+        const isInput = (event.target as any).__internalInstanceHandle?.return?.key === "momiq-chat-input"
+        if (isTextMode && !isInput) {
           Keyboard.dismiss();
           setIsTextMode(false);
         }
@@ -272,6 +304,7 @@ export default function ChatScreen() {
                   loadMoreMessages={loadMoreMessages}
                   isLoadingMore={isLoadingMore}
                   hasMoreMessages={hasMoreMessages}
+                  onLongPress={handleLongPress}
                 />
               )}
             </View>

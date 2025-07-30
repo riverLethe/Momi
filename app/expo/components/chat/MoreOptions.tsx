@@ -23,7 +23,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
 
   return (
     <XStack
-      backgroundColor="$background"
+      backgroundColor="$card"
       borderTopWidth={1}
       borderTopColor="$borderColor"
       paddingVertical="$4"
@@ -34,7 +34,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
         <Pressable onPress={onPickImage}>
           <YStack
             alignItems="center"
-            backgroundColor="$card"
+            backgroundColor="$backgroundHover"
             borderRadius="$2"
             width="$6"
             height="$6"
@@ -57,7 +57,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
         <Pressable onPress={onTakePhoto}>
           <YStack
             alignItems="center"
-            backgroundColor="$card"
+            backgroundColor="$backgroundHover"
             borderRadius="$2"
             width="$6"
             height="$6"
@@ -80,7 +80,7 @@ export const MoreOptions: React.FC<MoreOptionsProps> = ({
         <Pressable onPress={onFileUpload}>
           <YStack
             alignItems="center"
-            backgroundColor="$card"
+            backgroundColor="$backgroundHover"
             borderRadius="$2"
             width="$6"
             height="$6"

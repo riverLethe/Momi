@@ -8,12 +8,14 @@ import i18n from "@/i18n";
 import { formatCurrency } from "@/utils/format";
 import FinancialInsights from "@/components/reports/FinancialInsights";
 import { ViewMoreButton } from "@/components/ui/ViewMoreButton";
+import { Pressable } from "react-native";
 
 interface MessageBubbleProps {
   message: Message;
+  onLongPress?: (message: Message) => void;
 }
 
-const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message }) => {
+const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message, onLongPress }) => {
   const theme = useTheme();
   // Memoize to avoid recomputation on re-renders of the same message
 
@@ -278,23 +280,33 @@ const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message }) => {
 
   const content = React.useMemo(() => renderMessageContent(message), [message]);
 
+  const handleLongPress = React.useCallback(() => {
+    if (onLongPress && message.isUser) {
+      onLongPress(message);
+    }
+  }, [onLongPress, message]);
+
   return (
     <XStack
       width="100%"
       marginBottom="$3"
-      alignItems="flex-end"
+      alignItems="center"
+      gap="$2"
       justifyContent={message.isUser ? "flex-end" : "flex-start"}
     >
-      <YStack
-        maxWidth="80%"
-        borderRadius={18}
-        paddingHorizontal="$4"
-        paddingVertical="$2.75"
-        borderBottomRightRadius={message.isUser ? 4 : 18}
-        borderBottomLeftRadius={message.isUser ? 18 : 4}
+      <Pressable
+        onLongPress={message.isUser ? handleLongPress : undefined}
+        style={{ maxWidth: "80%" }}
       >
-        {content}
-      </YStack>
+        <YStack
+          borderRadius={18}
+          paddingVertical="$2.75"
+          borderBottomRightRadius={message.isUser ? 4 : 18}
+          borderBottomLeftRadius={message.isUser ? 18 : 4}
+        >
+          {content}
+        </YStack>
+      </Pressable>
     </XStack>
   );
 };
@@ -302,7 +314,9 @@ const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message }) => {
 // Memoise to avoid re-render when message reference unchanged
 export const MessageBubble = React.memo(
   MessageBubbleComponent,
-  (prevProps, nextProps) => prevProps.message === nextProps.message
+  (prevProps, nextProps) =>
+    prevProps.message === nextProps.message &&
+    prevProps.onLongPress === nextProps.onLongPress
 );
 
 // Lazy load markdown renderer to reduce initial bundle size

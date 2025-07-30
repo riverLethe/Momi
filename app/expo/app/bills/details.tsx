@@ -229,12 +229,12 @@ export default function BillDetailsScreen() {
     if (bill?.isReadOnly) return;
     setActiveSheet("category");
   }, [bill?.isReadOnly]);
-  
+
   const handleOpenDateSheet = useCallback(() => {
     if (bill?.isReadOnly) return;
     setActiveSheet("date");
   }, [bill?.isReadOnly]);
-  
+
   const handleOpenAmountSheet = useCallback(() => {
     if (bill?.isReadOnly) return;
     setActiveSheet("amount");
@@ -317,35 +317,43 @@ export default function BillDetailsScreen() {
         </YStack>
 
         {/* 底部弹窗 */}
-        <DatePickerSheet
-          open={activeSheet === "date"}
-          onOpenChange={(open: boolean) => {
-            if (!open) setActiveSheet(null);
-          }}
-          initialDate={new Date(bill.date)}
-          onConfirm={(date) => handleUpdateField("date", date)}
-          key={`date-${changeUuid}`}
-        />
+        {
+          activeSheet === "date" && (
+            <DatePickerSheet
+              open={activeSheet === "date"}
+              onOpenChange={(open: boolean) => {
+                if (!open) setActiveSheet(null);
+              }}
+              initialDate={new Date(bill.date)}
+              onConfirm={(date) => handleUpdateField("date", date)}
+              key={`date-${changeUuid}`}
+            />
+          )
+        }
+        {
+          activeSheet === "category" && <CategorySelectSheet
+            isOpen={activeSheet === "category"}
+            setIsOpen={(open: boolean) => {
+              if (!open) setActiveSheet(null);
+            }}
+            selectedCategory={bill.category}
+            onCategoryChange={handleCategoryChange}
+            key={`category-${changeUuid}`}
+          />
+        }
 
-        <CategorySelectSheet
-          isOpen={activeSheet === "category"}
-          setIsOpen={(open: boolean) => {
-            if (!open) setActiveSheet(null);
-          }}
-          selectedCategory={bill.category}
-          onCategoryChange={handleCategoryChange}
-          key={`category-${changeUuid}`}
-        />
 
-        <AmountInputSheet
-          open={activeSheet === "amount"}
-          onOpenChange={(open: boolean) => {
-            if (!open) setActiveSheet(null);
-          }}
-          initialAmount={bill.amount}
-          onSubmit={(val) => handleUpdateField("amount", val)}
-          key={`amount-${changeUuid}`}
-        />
+        {
+          activeSheet === "amount" && (<AmountInputSheet
+            open={activeSheet === "amount"}
+            onOpenChange={(open: boolean) => {
+              if (!open) setActiveSheet(null);
+            }}
+            initialAmount={bill.amount}
+            onSubmit={(val) => handleUpdateField("amount", val)}
+            key={`amount-${changeUuid}`}
+          />)
+        }
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );

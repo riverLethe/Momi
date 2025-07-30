@@ -31,13 +31,7 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = async () => {
     try {
-      const success = await loginWithGoogle();
-      if (success) {
-        // 使用 setTimeout 确保状态更新后再导航
-        setTimeout(() => {
-          router.back();
-        }, 100);
-      }
+      await loginWithGoogle();
     } catch (error) {
       Alert.alert(t("Login Failed"), t("Google login failed. Please try again."));
     }
@@ -45,13 +39,7 @@ export default function LoginScreen() {
 
   const handleAppleLogin = async () => {
     try {
-      const success = await loginWithApple();
-      if (success) {
-        // 使用 setTimeout 确保状态更新后再导航
-        setTimeout(() => {
-          router.back();
-        }, 100);
-      }
+      await loginWithApple();
     } catch (error) {
       Alert.alert(t("Login Failed"), t("Apple login failed. Please try again."));
     }

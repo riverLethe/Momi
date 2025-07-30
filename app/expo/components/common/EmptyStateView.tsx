@@ -38,9 +38,9 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
   const router = useRouter();
 
   return (
-    <YStack flex={1} paddingHorizontal="$4" paddingVertical="$6" space="$5" justifyContent="center" alignItems="center">
+    <YStack flex={1} paddingHorizontal="$4" paddingVertical="$6" gap="$5" justifyContent="center" alignItems="center">
       {/* Logo and Title Section */}
-      <YStack alignItems="center" space="$2">
+      <YStack alignItems="center" gap="$2">
         <Image
           source={imageSrc}
           width={180}
@@ -50,7 +50,7 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
           borderRadius={32}
         />
 
-        <YStack space="$2" alignItems="center">
+        <YStack gap="$2" alignItems="center">
           <H4 textAlign="center" marginTop="$4" color="$color">
             {title}
           </H4>
@@ -62,7 +62,7 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
       </YStack>
 
       {!hideAction && (
-        <YStack space="$4" marginTop="$2" width="100%">
+        <YStack gap="$4" marginTop="$2" width="100%">
           <Card
             padding="$4"
             bordered
@@ -74,7 +74,7 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
             shadowRadius={8}
             onPress={onActionPress}
           >
-            <XStack alignItems="center" space="$3">
+            <XStack alignItems="center" gap="$3">
               <YStack
                 width={52}
                 height={52}

@@ -13,6 +13,7 @@ import { View, YStack, Text, useTheme } from "tamagui";
 // Data & Welcome -----------------------------------------------------------
 import { useData } from "@/providers/DataProvider";
 import { useAuth } from "@/providers/AuthProvider";
+import { useViewStore } from "@/stores/viewStore";
 import WelcomeScreen from "@/components/home/WelcomeScreen";
 
 // 懒加载PeriodPage组件，避免阻塞初始渲染
@@ -37,10 +38,15 @@ export default function HomeScreenPager() {
   // ---------------------------------------------------------------------
   // Global data status / decide what to show
   // ---------------------------------------------------------------------
-  const { bills, isLoading: dataLoading } = useData();
+  const { getBillsForViewMode, isLoading: dataLoading } = useData();
   const { user } = useAuth();
+  const { viewMode } = useViewStore();
   const initialLoading = dataLoading.initial;
-  const hasBills = bills.length > 0;
+
+  // 根据当前视图模式获取对应的账单数据
+  const currentBills = getBillsForViewMode(viewMode);
+  const hasBills = currentBills.length > 0;
+
   const insets = useSafeAreaInsets();
 
   const router = useRouter();
@@ -159,9 +165,6 @@ export default function HomeScreenPager() {
     </YStack>;
   }
 
-  if (!hasBills) {
-    return <WelcomeScreen onStartChatPress={() => router.push("/chat")} />;
-  }
 
   return (
     <>
@@ -179,31 +182,33 @@ export default function HomeScreenPager() {
           />
         </View>
 
-        <Animated.ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleMomentumScrollEnd}
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-          style={{ flex: 1 }}
-        >
-          {periodOrder.map((p, idx) => (
-            <View key={p} style={{ width }}>
-              <PeriodPage
-                periodType={p}
-                onPeriodTypeChange={handleExternalPeriodChange}
-                selectedPeriodId={selectedIds[p]}
-                onSelectedPeriodChange={(id: string) =>
-                  setSelectedIds((prev) => ({ ...prev, [p]: id }))
-                }
-                openBudgetModal={openBudgetModal}
-              />
-            </View>
-          ))}
-        </Animated.ScrollView>
+        {hasBills ? (
+          <Animated.ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handleMomentumScrollEnd}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            style={{ flex: 1 }}
+          >
+            {periodOrder.map((p, idx) => (
+              <View key={p} style={{ width }}>
+                <PeriodPage
+                  periodType={p}
+                  onPeriodTypeChange={handleExternalPeriodChange}
+                  selectedPeriodId={selectedIds[p]}
+                  onSelectedPeriodChange={(id: string) =>
+                    setSelectedIds((prev) => ({ ...prev, [p]: id }))
+                  }
+                  openBudgetModal={openBudgetModal}
+                />
+              </View>
+            ))}
+          </Animated.ScrollView>
 
+        ) : (<WelcomeScreen onStartChatPress={() => router.push("/chat")} />)}
       </View>
 
       {/* Global budget update modal */}

@@ -19,6 +19,8 @@ interface ChatMessagesProps {
     isLoadingMore?: boolean;
     /** Whether there are more messages to load */
     hasMoreMessages?: boolean;
+    /** Long press handler for editing user messages */
+    onLongPress?: (message: Message) => void;
 }
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
@@ -29,6 +31,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     loadMoreMessages,
     isLoadingMore = false,
     hasMoreMessages = false,
+    onLongPress,
 }) => {
     const { t } = useTranslation();
 
@@ -125,8 +128,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     }, [currentStreamedMessage, isThinking, t]);
 
     const renderItem = useCallback(({ item }: { item: Message }) => {
-        return <MessageBubble message={item} />;
-    }, []);
+        return <MessageBubble message={item} onLongPress={onLongPress} />;
+    }, [onLongPress]);
 
     const keyExtractor = useCallback((item: Message) => item.id, []);
 
@@ -166,4 +169,4 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             getItemLayout={undefined} // 让FlatList自动优化
         />
     );
-}; 
+};
