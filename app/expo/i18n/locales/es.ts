@@ -426,5 +426,7 @@ export default {
     "Member List": "Lista de Miembros",
     Fruit: "Fruta",
     "Manually added": "Añadido manualmente",
+    "Clearing server data and uploading local bills...": "Borrando datos del servidor y subiendo facturas locales...",
+    "Sync completed": "Sincronización completada",
   },
 };

@@ -756,5 +756,7 @@ export default {
     "Member List": "Member List",
     Fruit: "Fruit",
     "Manually added": "Manually added",
+    "Clearing server data and uploading local bills...": "Clearing server data and uploading local bills...",
+    "Sync completed": "Sync completed",
   },
 };

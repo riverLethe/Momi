@@ -8,7 +8,6 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { View, YStack, useTheme } from "tamagui";
 import { chatAPI, Message } from "@/utils/api";
@@ -291,7 +290,7 @@ export default function ChatScreen() {
       disabled={!isTextMode}
       accessible={false}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.get() }} edges={['top']}>
+      <View style={{ flex: 1, backgroundColor: theme.background?.get() }}>
         <StatusBar barStyle={theme.background?.get() === 'white' ? "dark-content" : "light-content"} />
         <Stack.Screen
           options={{
@@ -306,7 +305,7 @@ export default function ChatScreen() {
             onClearChat={handleClearChat}
           />
 
-          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? "padding" : "height"} keyboardVerticalOffset={0}>
             {/* Chat Messages */}
             <View flex={1} backgroundColor="$backgroundSoft">
               {messages.length === 0 ? (
@@ -345,7 +344,7 @@ export default function ChatScreen() {
             />
           </KeyboardAvoidingView>
         </YStack>
-      </SafeAreaView>
+      </View>
     </TouchableWithoutFeedback>
   );
 }

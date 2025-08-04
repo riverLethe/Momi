@@ -723,5 +723,7 @@ export default {
     "Member List": "成员列表",
     Fruit: "水果",
     "Manually added": "手动添加",
+    "Clearing server data and uploading local bills...": "清空服务器数据并上传本地账单...",
+    "Sync completed": "同步完成",
   },
 };
